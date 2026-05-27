@@ -1,0 +1,60 @@
+<?php
+
+namespace App\Filament\Resources\App\Modules\Shared\Models\Cities;
+
+use App\Filament\Resources\App\Modules\Shared\Models\Cities\Pages\CreateCity;
+use App\Filament\Resources\App\Modules\Shared\Models\Cities\Pages\EditCity;
+use App\Filament\Resources\App\Modules\Shared\Models\Cities\Pages\ListCities;
+use App\Filament\Resources\App\Modules\Shared\Models\Cities\Schemas\CityForm;
+use App\Filament\Resources\App\Modules\Shared\Models\Cities\Tables\CitiesTable;
+use App\Modules\Shared\Models\City;
+use BackedEnum;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+
+class CityResource extends Resource
+{
+    protected static ?string $model = City::class;
+
+    protected static ?string $slug = 'cities';
+
+    protected static ?string $modelLabel = 'Şehir';
+
+    protected static ?string $pluralModelLabel = 'Şehirler';
+
+    protected static ?string $navigationLabel = 'Şehirler';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Konfigürasyon';
+
+    protected static ?int $navigationSort = 10;
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMapPin;
+
+    public static function form(Schema $schema): Schema
+    {
+        return CityForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return CitiesTable::configure($table);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListCities::route('/'),
+            'create' => CreateCity::route('/create'),
+            'edit' => EditCity::route('/{record}/edit'),
+        ];
+    }
+}
