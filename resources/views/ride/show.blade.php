@@ -1347,11 +1347,26 @@
                 },
                 body: JSON.stringify(payload),
             });
-            const data = await res.json();
+            // Backend HTML hata sayfası dönerse (debug açık), json() patlar — yakala
+            let data;
+            try {
+                data = await res.json();
+            } catch (_) {
+                throw new Error('Sunucu beklenmedik bir cevap döndü. Tekrar dener misin?');
+            }
 
             if (!res.ok || !data.success) {
-                const firstErr = data.errors ? Object.values(data.errors)[0][0] : (data.message || 'Talep gönderilemedi.');
-                throw new Error(firstErr);
+                let msg;
+                if (data.errors) {
+                    msg = Object.values(data.errors)[0][0];
+                } else if (data.message && !data.message.includes('SQLSTATE')) {
+                    msg = data.message;
+                } else if (res.status === 422) {
+                    msg = 'Formda eksik veya hatalı alan var.';
+                } else {
+                    msg = 'Talep gönderilemedi. Birkaç saniye sonra tekrar dene.';
+                }
+                throw new Error(msg);
             }
 
             // Success

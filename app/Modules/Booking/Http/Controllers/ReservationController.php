@@ -156,7 +156,10 @@ class ReservationController extends Controller
             'passenger_count' => 1,
             'luggage_count' => 0,
             'scheduled_at' => now()->addMinutes(5)->toIso8601String(),
-            'source' => 'radar_quick',
+            // 'source' ENUM'da henüz 'radar_quick' yok — pickup_notes prefix'i ile ayırt
+            // ediliyor. Yeni ENUM değerini etkinleştirmek için ilgili migration'ı çalıştır:
+            // database/migrations/2026_05_28_200000_add_radar_quick_to_rides_source_enum.php
+            'source' => 'web',
         ]);
 
         return response()->json([
