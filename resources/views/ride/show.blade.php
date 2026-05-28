@@ -187,8 +187,129 @@
     <div class="drift-1 absolute top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-brand/10 blur-[120px] pointer-events-none"></div>
     <div class="drift-2 absolute top-[40rem] -right-32 w-[32rem] h-[32rem] rounded-full bg-brand/15 blur-[140px] pointer-events-none"></div>
 
+    {{-- ============ LIVE RADAR (en üstte — birincil deneyim) ============ --}}
+    <section id="canli-radar" class="relative px-6 pt-12 md:pt-20 pb-20 md:pb-28">
+        <div class="max-w-7xl mx-auto">
+
+            {{-- Section heading --}}
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
+                <div class="max-w-2xl">
+                    <div class="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-brand mb-4">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                        Canlı Radar
+                    </div>
+                    <h2 class="display-font text-4xl md:text-5xl text-white mb-4">
+                        Bölgendeki şoförler<br>
+                        <span class="text-zinc-500">şu an</span> hareket halinde.
+                    </h2>
+                    <p class="text-zinc-400 leading-relaxed">
+                        Konumunu paylaş, çevrendeki Ferogo araçlarını gerçek zamanlı izle. Bu önizleme salt okunur — çağırmak için rezervasyon formuna geç.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 backdrop-blur-sm shrink-0">
+                    <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    Salt okunur · Önizleme
+                </div>
+            </div>
+
+            {{-- Map + Rail grid --}}
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+                {{-- Map card --}}
+                <div class="lg:col-span-8 relative rounded-3xl border border-white/10 overflow-hidden bg-black/40 shadow-2xl shadow-black/40">
+                    <div id="ferogo-radar-map" class="relative w-full h-[520px] md:h-[600px]">
+                        {{-- Loading state --}}
+                        <div id="radar-loading" class="absolute inset-0 z-[401] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+                            <div class="relative w-16 h-16 mb-5">
+                                <div class="radar-ring"></div>
+                                <div class="radar-ring delay-1"></div>
+                                <div class="radar-ring delay-2"></div>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="radar-user-pin"></div>
+                                </div>
+                            </div>
+                            <div id="radar-loading-text" class="text-sm text-zinc-300 text-center max-w-xs">
+                                Konumun hazırlanıyor…<br>
+                                <span class="text-xs text-zinc-500">Tarayıcı izin isterse "İzin ver"e dokun.</span>
+                            </div>
+                            <button id="radar-fallback-btn" class="mt-5 hidden text-xs text-brand hover:text-brand-600 underline underline-offset-4">
+                                İzin vermeden İzmir merkezinden devam et
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Floating HUD chips --}}
+                    <div class="absolute top-4 left-4 z-[400] flex flex-col gap-2 pointer-events-none">
+                        <div class="inline-flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md text-xs">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 hud-live-dot"></span>
+                            <span class="text-white font-semibold">CANLI</span>
+                            <span class="text-zinc-500">·</span>
+                            <span class="text-zinc-400" id="radar-update-time">şimdi</span>
+                        </div>
+                        <div class="inline-flex items-center gap-3 px-3 py-2 rounded-xl bg-black/70 border border-white/10 backdrop-blur-md text-xs">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500">Müsait</div>
+                                <div class="text-base font-bold text-brand" id="radar-available-count">—</div>
+                            </div>
+                            <div class="w-px h-7 bg-white/10"></div>
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500">En yakın</div>
+                                <div class="text-base font-bold text-white" id="radar-nearest-eta">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Bottom CTA --}}
+                    <div class="absolute bottom-4 left-4 right-4 z-[400] flex items-center justify-between gap-3 pointer-events-none">
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md text-xs text-zinc-300 pointer-events-auto">
+                            <span class="text-brand">●</span> Senin konumun
+                            <span class="text-zinc-600 mx-1">|</span>
+                            <span class="inline-block w-2.5 h-2.5 rounded bg-brand"></span> Müsait şoför
+                            <span class="text-zinc-600 mx-1">|</span>
+                            <span class="inline-block w-2.5 h-2.5 rounded bg-zinc-600"></span> Yolculukta
+                        </div>
+                        <a href="{{ route('home') }}#rezervasyon" class="pointer-events-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition shadow-lg shadow-brand/30">
+                            Birini çağır
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        </a>
+                    </div>
+                </div>
+
+                {{-- Driver rail --}}
+                <div class="lg:col-span-4 flex flex-col gap-3">
+                    <div class="flex items-center justify-between px-1">
+                        <div class="text-xs uppercase tracking-[0.25em] text-zinc-500">Yakındaki Şoförler</div>
+                        <div class="text-[10px] text-zinc-600" id="radar-rail-meta">— bulundu</div>
+                    </div>
+                    <div id="radar-driver-rail" class="space-y-2.5">
+                        {{-- Skeletons --}}
+                        @for($i = 0; $i < 4; $i++)
+                            <div class="driver-rail-card border border-white/5 rounded-2xl p-4 animate-pulse">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-white/5"></div>
+                                    <div class="flex-1 space-y-2">
+                                        <div class="h-3 bg-white/5 rounded w-2/3"></div>
+                                        <div class="h-2 bg-white/5 rounded w-1/2"></div>
+                                    </div>
+                                    <div class="h-3 bg-white/5 rounded w-12"></div>
+                                </div>
+                            </div>
+                        @endfor
+                    </div>
+
+                    <div class="mt-2 p-4 rounded-2xl bg-gradient-to-br from-brand/15 to-transparent border border-brand/20">
+                        <div class="text-xs text-brand uppercase tracking-wider mb-1">Hatırlatma</div>
+                        <p class="text-xs text-zinc-300 leading-relaxed">
+                            Liste 3 saniyede bir güncellenir. Sürücüler yolculuk aldıkça <span class="text-zinc-500">gri</span>, müsait olduklarında <span class="text-brand">altın</span> görünür.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     {{-- ============ HERO ============ --}}
-    <section class="relative px-6 pt-12 md:pt-20 pb-20">
+    <section class="relative px-6 pt-4 pb-20">
         <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
 
             {{-- Left: copy --}}
@@ -304,127 +425,6 @@
                                 <div class="text-base font-bold text-white">Sigortalı</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    {{-- ============ LIVE RADAR ============ --}}
-    <section id="canli-radar" class="relative px-6 pt-4 pb-20 md:pb-28">
-        <div class="max-w-7xl mx-auto">
-
-            {{-- Section heading --}}
-            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
-                <div class="max-w-2xl">
-                    <div class="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-brand mb-4">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
-                        Canlı Radar
-                    </div>
-                    <h2 class="display-font text-4xl md:text-5xl text-white mb-4">
-                        Bölgendeki şoförler<br>
-                        <span class="text-zinc-500">şu an</span> hareket halinde.
-                    </h2>
-                    <p class="text-zinc-400 leading-relaxed">
-                        Konumunu paylaş, çevrendeki Ferogo araçlarını gerçek zamanlı izle. Bu önizleme salt okunur — çağırmak için rezervasyon formuna geç.
-                    </p>
-                </div>
-                <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 backdrop-blur-sm shrink-0">
-                    <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                    Salt okunur · Önizleme
-                </div>
-            </div>
-
-            {{-- Map + Rail grid --}}
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-                {{-- Map card --}}
-                <div class="lg:col-span-8 relative rounded-3xl border border-white/10 overflow-hidden bg-black/40 shadow-2xl shadow-black/40">
-                    <div id="ferogo-radar-map" class="relative w-full h-[520px] md:h-[600px]">
-                        {{-- Loading state --}}
-                        <div id="radar-loading" class="absolute inset-0 z-[401] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
-                            <div class="relative w-16 h-16 mb-5">
-                                <div class="radar-ring"></div>
-                                <div class="radar-ring delay-1"></div>
-                                <div class="radar-ring delay-2"></div>
-                                <div class="absolute inset-0 flex items-center justify-center">
-                                    <div class="radar-user-pin"></div>
-                                </div>
-                            </div>
-                            <div id="radar-loading-text" class="text-sm text-zinc-300 text-center max-w-xs">
-                                Konumun hazırlanıyor…<br>
-                                <span class="text-xs text-zinc-500">Tarayıcı izin isterse "İzin ver"e dokun.</span>
-                            </div>
-                            <button id="radar-fallback-btn" class="mt-5 hidden text-xs text-brand hover:text-brand-600 underline underline-offset-4">
-                                İzin vermeden İzmir merkezinden devam et
-                            </button>
-                        </div>
-                    </div>
-
-                    {{-- Floating HUD chips --}}
-                    <div class="absolute top-4 left-4 z-[400] flex flex-col gap-2 pointer-events-none">
-                        <div class="inline-flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md text-xs">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400 hud-live-dot"></span>
-                            <span class="text-white font-semibold">CANLI</span>
-                            <span class="text-zinc-500">·</span>
-                            <span class="text-zinc-400" id="radar-update-time">şimdi</span>
-                        </div>
-                        <div class="inline-flex items-center gap-3 px-3 py-2 rounded-xl bg-black/70 border border-white/10 backdrop-blur-md text-xs">
-                            <div>
-                                <div class="text-[10px] uppercase tracking-wider text-zinc-500">Müsait</div>
-                                <div class="text-base font-bold text-brand" id="radar-available-count">—</div>
-                            </div>
-                            <div class="w-px h-7 bg-white/10"></div>
-                            <div>
-                                <div class="text-[10px] uppercase tracking-wider text-zinc-500">En yakın</div>
-                                <div class="text-base font-bold text-white" id="radar-nearest-eta">—</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Bottom CTA --}}
-                    <div class="absolute bottom-4 left-4 right-4 z-[400] flex items-center justify-between gap-3 pointer-events-none">
-                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md text-xs text-zinc-300 pointer-events-auto">
-                            <span class="text-brand">●</span> Senin konumun
-                            <span class="text-zinc-600 mx-1">|</span>
-                            <span class="inline-block w-2.5 h-2.5 rounded bg-brand"></span> Müsait şoför
-                            <span class="text-zinc-600 mx-1">|</span>
-                            <span class="inline-block w-2.5 h-2.5 rounded bg-zinc-600"></span> Yolculukta
-                        </div>
-                        <a href="{{ route('home') }}#rezervasyon" class="pointer-events-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition shadow-lg shadow-brand/30">
-                            Birini çağır
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                        </a>
-                    </div>
-                </div>
-
-                {{-- Driver rail --}}
-                <div class="lg:col-span-4 flex flex-col gap-3">
-                    <div class="flex items-center justify-between px-1">
-                        <div class="text-xs uppercase tracking-[0.25em] text-zinc-500">Yakındaki Şoförler</div>
-                        <div class="text-[10px] text-zinc-600" id="radar-rail-meta">— bulundu</div>
-                    </div>
-                    <div id="radar-driver-rail" class="space-y-2.5">
-                        {{-- Skeletons --}}
-                        @for($i = 0; $i < 4; $i++)
-                            <div class="driver-rail-card border border-white/5 rounded-2xl p-4 animate-pulse">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-white/5"></div>
-                                    <div class="flex-1 space-y-2">
-                                        <div class="h-3 bg-white/5 rounded w-2/3"></div>
-                                        <div class="h-2 bg-white/5 rounded w-1/2"></div>
-                                    </div>
-                                    <div class="h-3 bg-white/5 rounded w-12"></div>
-                                </div>
-                            </div>
-                        @endfor
-                    </div>
-
-                    <div class="mt-2 p-4 rounded-2xl bg-gradient-to-br from-brand/15 to-transparent border border-brand/20">
-                        <div class="text-xs text-brand uppercase tracking-wider mb-1">Hatırlatma</div>
-                        <p class="text-xs text-zinc-300 leading-relaxed">
-                            Liste 3 saniyede bir güncellenir. Sürücüler yolculuk aldıkça <span class="text-zinc-500">gri</span>, müsait olduklarında <span class="text-brand">altın</span> görünür.
-                        </p>
                     </div>
                 </div>
             </div>
