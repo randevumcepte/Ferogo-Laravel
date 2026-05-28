@@ -329,7 +329,7 @@
                     @foreach([
                         ['01', 'Başvur', 'Aşağıdaki formu doldur — 2 dakika sürer.', '📝'],
                         ['02', 'Belge yükle', 'Ehliyet, SRC, ruhsat. Hepsi panelden.', '📋'],
-                        ['03', 'Eşleştir', 'Kendi aracın yoksa filomuzdan tahsis ederiz.', '🚗'],
+                        ['03', 'Aracını tanıt', 'Kendi premium aracını sisteme ekle, fotoğraf yükle.', '🚗'],
                         ['04', 'Yola çık', 'Onayını al, çevrimiçi ol, ilk yolculuğu kabul et.', '🛣'],
                     ] as $step)
                         <div class="relative text-center">
@@ -360,13 +360,13 @@
 
                 <ul class="space-y-3">
                     @foreach([
+                        'Adına / kullanımında premium sınıf bir araç (son 7 yıl)',
                         'En az 22 yaşında olmak',
                         'B sınıfı ehliyet (ticari için D / D1)',
                         'Geçerli SRC-2 belgesi (yoksa biz yönlendiririz)',
                         'Sabıka kaydı temiz olmak',
                         'En az 2 yıl sürüş deneyimi',
-                        'Sigara içilmeyen araç',
-                        'Profesyonel görünüm ve iletişim',
+                        'Sigara içilmeyen, bakımlı araç',
                         'Akıllı telefon (Android 9+ / iOS 14+)',
                     ] as $req)
                         <li class="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-brand/30 transition">
@@ -469,26 +469,20 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
-                        <label class="check-pill cursor-pointer">
+                    <div class="mb-5">
+                        <label class="check-pill cursor-pointer block max-w-sm">
                             <input type="checkbox" name="has_src" value="1" class="sr-only peer" {{ old('has_src') ? 'checked' : '' }}>
                             <div class="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
                                 <div class="w-5 h-5 rounded-md border-2 border-current flex items-center justify-center text-xs">✓</div>
                                 <span class="text-sm font-medium">SRC-2 belgem var</span>
                             </div>
                         </label>
-                        <label class="check-pill cursor-pointer">
-                            <input type="checkbox" name="has_vehicle" value="1" class="sr-only peer" {{ old('has_vehicle') ? 'checked' : '' }} onchange="document.getElementById('vehicle-info-wrap').classList.toggle('hidden', !this.checked)">
-                            <div class="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
-                                <div class="w-5 h-5 rounded-md border-2 border-current flex items-center justify-center text-xs">✓</div>
-                                <span class="text-sm font-medium">Kendi aracım var</span>
-                            </div>
-                        </label>
                     </div>
 
-                    <div id="vehicle-info-wrap" class="{{ old('has_vehicle') ? '' : 'hidden' }}">
-                        <label class="block text-xs font-medium text-zinc-400 mb-2">Araç bilgisi <span class="text-zinc-600">(marka, model, yıl)</span></label>
-                        <input type="text" name="vehicle_info" value="{{ old('vehicle_info') }}" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mercedes Vito 2021">
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-400 mb-2">Aracın <span class="text-zinc-600">(marka, model, yıl)</span></label>
+                        <input type="text" name="vehicle_info" value="{{ old('vehicle_info') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mercedes Vito 2021">
+                        <p class="text-xs text-zinc-500 mt-2">Premium sınıf, sigara içilmeyen, son 7 yıl içinde üretilmiş.</p>
                     </div>
                 </div>
 

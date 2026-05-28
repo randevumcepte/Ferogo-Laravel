@@ -32,8 +32,7 @@ class DriverApplicationController extends Controller
             'license_class' => ['required', Rule::in(['B', 'D', 'D1', 'E'])],
             'experience_band' => ['required', Rule::in(['under_1', '1_to_3', '3_to_5', '5_plus'])],
             'has_src' => ['nullable', 'boolean'],
-            'has_vehicle' => ['nullable', 'boolean'],
-            'vehicle_info' => ['nullable', 'string', 'max:255'],
+            'vehicle_info' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'kvkk' => ['accepted'],
         ]);
@@ -41,7 +40,7 @@ class DriverApplicationController extends Controller
         DriverApplication::create([
             ...$validated,
             'has_src' => (bool) ($validated['has_src'] ?? false),
-            'has_vehicle' => (bool) ($validated['has_vehicle'] ?? false),
+            'has_vehicle' => true,
             'status' => 'pending',
             'source' => 'web',
             'ip_address' => $request->ip(),
