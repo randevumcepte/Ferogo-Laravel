@@ -16,6 +16,10 @@ Route::get('/rezervasyon/{publicId}', [ReservationController::class, 'confirmati
 Route::post('/api/calculate-fare', [ReservationController::class, 'calculateFare'])
     ->name('reservation.calculate-fare');
 
+// AJAX: Canlı radar - hızlı sürücü talebi
+Route::post('/api/quick-request', [ReservationController::class, 'quickRequest'])
+    ->name('reservation.quick-request');
+
 // Sürücü başvuru sayfası
 Route::get('/surucu-olun', [DriverApplicationController::class, 'show'])
     ->name('driver.apply');

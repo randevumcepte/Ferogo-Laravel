@@ -431,6 +431,135 @@
         </div>
     </section>
 
+    {{-- ============ QUICK SELECT MODAL ============ --}}
+    <div id="quick-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center px-4 py-6">
+        <div id="quick-modal-backdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+
+        <div class="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl shadow-black/60 overflow-hidden max-h-[92vh] overflow-y-auto">
+            {{-- Header --}}
+            <div class="relative px-6 pt-6 pb-5 bg-gradient-to-br from-brand/15 via-brand/5 to-transparent border-b border-white/5">
+                <button type="button" id="quick-modal-close" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                <div class="text-xs uppercase tracking-[0.25em] text-brand mb-2">Hızlı Seç</div>
+                <div class="flex items-center gap-3">
+                    <div class="relative w-12 h-12 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-brand/40 flex items-center justify-center text-xl" id="qm-driver-icon">🚗</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <div class="text-lg font-bold text-white truncate" id="qm-driver-name">—</div>
+                            <span class="text-xs text-brand shrink-0" id="qm-driver-rating">★ —</span>
+                        </div>
+                        <div class="text-xs text-zinc-500 truncate" id="qm-driver-meta">—</div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Form --}}
+            <form id="quick-modal-form" class="px-6 py-6 space-y-5">
+                @csrf
+
+                {{-- Pickup --}}
+                <div>
+                    <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Alış noktası</label>
+                    <div class="flex items-start gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/10">
+                        <div class="w-2.5 h-2.5 rounded-full bg-brand mt-1.5 shrink-0 pulse-dot"></div>
+                        <div class="flex-1 min-w-0">
+                            <input type="text" id="qm-pickup-address" name="pickup_address" class="w-full bg-transparent text-sm text-white placeholder-zinc-600 focus:outline-none" placeholder="Konumun hazırlanıyor…" required>
+                            <div class="text-[10px] text-zinc-600 mt-0.5" id="qm-pickup-coords">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Dropoff --}}
+                <div>
+                    <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Nereye?</label>
+                    <div class="flex items-start gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/10 focus-within:border-brand/40 transition">
+                        <div class="w-2.5 h-2.5 rounded-sm bg-white mt-1.5 shrink-0"></div>
+                        <input type="text" id="qm-dropoff-address" name="dropoff_address" class="w-full bg-transparent text-sm text-white placeholder-zinc-600 focus:outline-none" placeholder="Adres, semt veya tesis adı" required>
+                    </div>
+                    <div id="qm-dropoff-suggestions" class="hidden mt-1.5 rounded-xl bg-zinc-900 border border-white/10 overflow-hidden divide-y divide-white/5 max-h-48 overflow-y-auto"></div>
+                </div>
+
+                {{-- Fare preview --}}
+                <div id="qm-fare-card" class="grid grid-cols-3 gap-2 p-3 rounded-xl bg-black/40 border border-white/5">
+                    <div>
+                        <div class="text-[9px] uppercase tracking-wider text-zinc-500">Mesafe</div>
+                        <div class="text-sm font-bold text-white" id="qm-fare-distance">—</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] uppercase tracking-wider text-zinc-500">Süre</div>
+                        <div class="text-sm font-bold text-white" id="qm-fare-duration">—</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] uppercase tracking-wider text-zinc-500">Tahmini</div>
+                        <div class="text-sm font-bold text-brand" id="qm-fare-total">—</div>
+                    </div>
+                </div>
+
+                {{-- Customer --}}
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Ad Soyad</label>
+                        <input type="text" name="customer_name" class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition" placeholder="Adın" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Telefon</label>
+                        <input type="tel" name="customer_phone" class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition" placeholder="0532 000 00 00" required>
+                    </div>
+                </div>
+
+                {{-- KVKK --}}
+                <label class="flex items-start gap-2.5 cursor-pointer">
+                    <input type="checkbox" name="kvkk_consent" class="mt-0.5 w-4 h-4 rounded bg-white/5 border-white/20 text-brand focus:ring-brand/40 focus:ring-offset-0" required>
+                    <span class="text-[11px] text-zinc-400 leading-relaxed">
+                        <a href="#" class="text-zinc-300 hover:text-brand underline underline-offset-2">KVKK aydınlatma metnini</a> okudum, kişisel verilerimin işlenmesine onay veriyorum.
+                    </span>
+                </label>
+
+                {{-- Error --}}
+                <div id="qm-error" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300"></div>
+
+                {{-- Submit --}}
+                <button type="submit" id="qm-submit" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-bold transition shadow-xl shadow-brand/30">
+                    <span id="qm-submit-text">Talebi Gönder</span>
+                    <svg id="qm-submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                </button>
+            </form>
+
+            {{-- Success state --}}
+            <div id="quick-modal-success" class="hidden px-6 py-10 text-center">
+                <div class="relative w-20 h-20 mx-auto mb-5">
+                    <div class="absolute inset-0 rounded-full bg-emerald-500/15 hud-live-dot"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Talebin iletildi!</h3>
+                <p class="text-sm text-zinc-400 leading-relaxed mb-6" id="qm-success-msg">—</p>
+                <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 text-left mb-6 space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-zinc-500">Onaylanan ücret</span>
+                        <span class="text-brand font-bold" id="qm-success-fare">—</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-zinc-500">Sürücü</span>
+                        <span class="text-white font-medium" id="qm-success-driver">—</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-zinc-500">Rezervasyon No</span>
+                        <span class="text-white font-mono text-[11px]" id="qm-success-id">—</span>
+                    </div>
+                </div>
+                <p class="text-[11px] text-zinc-500 mb-5">
+                    Sürücüye bildirim gönderildi. Birkaç dakika içinde seni telefondan arayacaktır.
+                </p>
+                <button type="button" id="quick-modal-done" class="w-full px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium text-sm transition">
+                    Tamam
+                </button>
+            </div>
+        </div>
+    </div>
+
     {{-- ============ MARQUEE STRIP ============ --}}
     <section class="relative py-6 border-y border-white/5 bg-black/40 backdrop-blur-sm marquee overflow-hidden">
         <div class="flex scroll-x whitespace-nowrap text-sm uppercase tracking-[0.3em] text-zinc-600">
@@ -730,10 +859,10 @@
     const TICK_MS = 1800;
     const PASSENGER_NAMES = ['Mehmet K.', 'Burak A.', 'Tolga Ş.', 'Emre D.', 'Serkan O.', 'Hakan Y.', 'Cem B.', 'Murat İ.', 'Onur G.', 'Kerem Ç.'];
     const VEHICLE_CLASSES = [
-        { label: 'Comfort',  type: 'available', icon: '💼' },
-        { label: 'Business', type: 'premium',   icon: '👔' },
-        { label: 'VIP',      type: 'premium',   icon: '♛'  },
-        { label: 'Comfort',  type: 'available', icon: '💼' },
+        { label: 'Easy',     slug: 'easy',     type: 'available', icon: '🚗' },
+        { label: 'Platinum', slug: 'platinum', type: 'premium',   icon: '👔' },
+        { label: 'VIP',      slug: 'vip',      type: 'premium',   icon: '♛'  },
+        { label: 'Easy',     slug: 'easy',     type: 'available', icon: '🚗' },
     ];
     const PLATES = ['35 AB 1234', '35 KZ 4471', '35 EM 8820', '35 BC 5532', '35 TR 9908', '35 FG 3217'];
 
@@ -753,6 +882,8 @@
     let userMarker = null;
     let drivers = [];
     let tickHandle = null;
+    let userCenterGlobal = null;
+    let userAddressGlobal = null;
 
     function userPinHtml() {
         return `
@@ -803,6 +934,7 @@
             name: PASSENGER_NAMES[idx % PASSENGER_NAMES.length],
             plate: PLATES[idx % PLATES.length],
             vclass: vc.label,
+            vSlug: vc.slug,
             vIcon: vc.icon,
             state: busy ? 'busy' : vc.type,
             rating: (4.6 + Math.random() * 0.39).toFixed(2),
@@ -855,25 +987,42 @@
             const dotColor = isBusy ? 'bg-zinc-500' : 'bg-brand';
             const statusText = isBusy ? 'Yolculukta' : 'Müsait';
             const statusClass = isBusy ? 'text-zinc-400' : 'text-brand';
+            const selectBtn = isBusy
+                ? `<div class="text-[10px] text-zinc-600 uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-white/5">Dolu</div>`
+                : `<button type="button" class="quick-select-btn group/btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-600 text-black text-[11px] font-bold uppercase tracking-wider transition shadow-md shadow-brand/30" data-driver-id="${d.id}">
+                        Seç
+                        <svg class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </button>`;
             return `
-                <div class="driver-rail-card border border-white/5 rounded-2xl p-3.5 flex items-center gap-3">
-                    <div class="relative w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/10 flex items-center justify-center text-lg">
+                <div class="driver-rail-card border border-white/5 rounded-2xl p-3.5 flex items-center gap-3" data-driver-id="${d.id}">
+                    <div class="relative w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/10 flex items-center justify-center text-lg shrink-0">
                         ${d.vIcon}
                         <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full ${dotColor} border-2 border-black"></span>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
                             <div class="text-sm font-semibold text-white truncate">${d.name}</div>
-                            <span class="text-[10px] text-brand">★ ${d.rating}</span>
+                            <span class="text-[10px] text-brand shrink-0">★ ${d.rating}</span>
                         </div>
                         <div class="text-[11px] text-zinc-500 truncate">${d.vclass} · ${d.plate}</div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-[11px] font-bold text-white">${km.toFixed(1)} km</span>
+                            <span class="text-zinc-700">·</span>
+                            <span class="text-[10px] ${statusClass} uppercase tracking-wider">${statusText} · ${mins} dk</span>
+                        </div>
                     </div>
-                    <div class="text-right shrink-0">
-                        <div class="text-sm font-bold text-white">${km.toFixed(1)} km</div>
-                        <div class="text-[10px] ${statusClass} uppercase tracking-wider">${statusText} · ${mins} dk</div>
-                    </div>
+                    <div class="shrink-0">${selectBtn}</div>
                 </div>`;
         }).join('');
+
+        // Bind select buttons
+        railEl.querySelectorAll('.quick-select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.driverId, 10);
+                const driver = drivers.find(x => x.id === id);
+                if (driver) openQuickModal(driver);
+            });
+        });
 
         const availableCount = drivers.filter(d => d.state !== 'busy').length;
         const nearestAvailable = sorted.find(({ d }) => d.state !== 'busy');
@@ -899,8 +1048,40 @@
         renderRail(userCenter);
     }
 
+    async function reverseGeocode(lat, lng) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=tr&zoom=18`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            return data.display_name || null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async function searchPlaces(query) {
+        if (query.length < 3) return [];
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tr&limit=5&accept-language=tr`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!res.ok) return [];
+            return await res.json();
+        } catch (_) {
+            return [];
+        }
+    }
+
     function startSimulation(center) {
         loadingEl.style.display = 'none';
+        userCenterGlobal = center;
+
+        // Async reverse geocode for pickup address
+        reverseGeocode(center[0], center[1]).then(addr => {
+            userAddressGlobal = addr;
+        });
 
         map = L.map('ferogo-radar-map', {
             zoomControl: false,
@@ -951,6 +1132,215 @@
     function fallbackToIzmir() {
         startSimulation(DEFAULT_CENTER);
     }
+
+    // ===== QUICK SELECT MODAL =====
+    const modalEl = document.getElementById('quick-modal');
+    const modalForm = document.getElementById('quick-modal-form');
+    const modalSuccess = document.getElementById('quick-modal-success');
+    const qmPickupInput = document.getElementById('qm-pickup-address');
+    const qmPickupCoords = document.getElementById('qm-pickup-coords');
+    const qmDropoffInput = document.getElementById('qm-dropoff-address');
+    const qmDropoffSuggestions = document.getElementById('qm-dropoff-suggestions');
+    const qmFareDistance = document.getElementById('qm-fare-distance');
+    const qmFareDuration = document.getElementById('qm-fare-duration');
+    const qmFareTotal = document.getElementById('qm-fare-total');
+    const qmError = document.getElementById('qm-error');
+    const qmSubmit = document.getElementById('qm-submit');
+    const qmSubmitText = document.getElementById('qm-submit-text');
+    const qmSubmitSpinner = document.getElementById('qm-submit-spinner');
+
+    let selectedDriver = null;
+    let selectedDropoff = null; // { lat, lng, display_name }
+    let dropoffSearchTimer = null;
+
+    function openQuickModal(driver) {
+        selectedDriver = driver;
+        selectedDropoff = null;
+
+        // Driver header
+        document.getElementById('qm-driver-icon').textContent = driver.vIcon;
+        document.getElementById('qm-driver-name').textContent = driver.name;
+        document.getElementById('qm-driver-rating').textContent = `★ ${driver.rating}`;
+        document.getElementById('qm-driver-meta').textContent = `${driver.vclass} · ${driver.plate}`;
+
+        // Reset form
+        modalForm.reset();
+        modalForm.classList.remove('hidden');
+        modalSuccess.classList.add('hidden');
+        qmError.classList.add('hidden');
+        qmDropoffSuggestions.classList.add('hidden');
+        qmFareDistance.textContent = '—';
+        qmFareDuration.textContent = '—';
+        qmFareTotal.textContent = '—';
+
+        // Pickup
+        if (userAddressGlobal) {
+            qmPickupInput.value = userAddressGlobal;
+        } else {
+            qmPickupInput.value = '';
+            qmPickupInput.placeholder = 'Konum adresini gir';
+        }
+        if (userCenterGlobal) {
+            qmPickupCoords.textContent = `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`;
+        }
+
+        // Open
+        modalEl.classList.remove('hidden');
+        modalEl.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => qmDropoffInput.focus(), 100);
+    }
+
+    function closeQuickModal() {
+        modalEl.classList.add('hidden');
+        modalEl.classList.remove('flex');
+        document.body.style.overflow = '';
+    }
+
+    document.getElementById('quick-modal-close').addEventListener('click', closeQuickModal);
+    document.getElementById('quick-modal-backdrop').addEventListener('click', closeQuickModal);
+    document.getElementById('quick-modal-done').addEventListener('click', closeQuickModal);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modalEl.classList.contains('hidden')) closeQuickModal();
+    });
+
+    // Dropoff autocomplete
+    qmDropoffInput.addEventListener('input', () => {
+        const q = qmDropoffInput.value.trim();
+        selectedDropoff = null;
+        clearTimeout(dropoffSearchTimer);
+        if (q.length < 3) {
+            qmDropoffSuggestions.classList.add('hidden');
+            updateFarePreview();
+            return;
+        }
+        dropoffSearchTimer = setTimeout(async () => {
+            const results = await searchPlaces(q);
+            if (!results.length) {
+                qmDropoffSuggestions.classList.add('hidden');
+                return;
+            }
+            qmDropoffSuggestions.innerHTML = results.map((r, i) => `
+                <button type="button" data-idx="${i}" class="qm-suggestion w-full text-left px-3 py-2.5 hover:bg-white/5 transition">
+                    <div class="text-xs text-white truncate">${r.display_name.split(',').slice(0, 2).join(',')}</div>
+                    <div class="text-[10px] text-zinc-500 truncate">${r.display_name.split(',').slice(2).join(',').trim()}</div>
+                </button>`).join('');
+            qmDropoffSuggestions.classList.remove('hidden');
+            qmDropoffSuggestions.querySelectorAll('.qm-suggestion').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const r = results[parseInt(btn.dataset.idx, 10)];
+                    selectedDropoff = { lat: parseFloat(r.lat), lng: parseFloat(r.lon), display_name: r.display_name };
+                    qmDropoffInput.value = r.display_name.split(',').slice(0, 2).join(',');
+                    qmDropoffSuggestions.classList.add('hidden');
+                    updateFarePreview();
+                });
+            });
+        }, 350);
+    });
+
+    function updateFarePreview() {
+        if (!selectedDriver || !userCenterGlobal || !selectedDropoff) {
+            qmFareDistance.textContent = '—';
+            qmFareDuration.textContent = '—';
+            qmFareTotal.textContent = '—';
+            return;
+        }
+        // Düz mesafe + %20 yol uzunluğu payı
+        const straight = distanceKm(userCenterGlobal, [selectedDropoff.lat, selectedDropoff.lng]);
+        const km = straight * 1.2;
+        const mins = Math.max(5, Math.round(km * 2.2 + 3));
+
+        // Hızlı yerel tahmin (backend'e gitmeden)
+        const rates = {
+            easy:     { base: 50,  perKm: 22, min: 150 },
+            platinum: { base: 100, perKm: 35, min: 250 },
+            vip:      { base: 200, perKm: 55, min: 500 },
+        };
+        const r = rates[selectedDriver.vSlug] || rates.easy;
+        const calc = Math.max(r.min, r.base + km * r.perKm);
+
+        qmFareDistance.textContent = `${km.toFixed(1)} km`;
+        qmFareDuration.textContent = `${mins} dk`;
+        qmFareTotal.textContent = `₺${Math.round(calc)}`;
+    }
+
+    // Submit
+    modalForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        qmError.classList.add('hidden');
+
+        if (!selectedDriver || !userCenterGlobal) {
+            qmError.textContent = 'Konum veya sürücü bilgisi eksik.';
+            qmError.classList.remove('hidden');
+            return;
+        }
+        if (!selectedDropoff) {
+            // Sadece text bırakış da kabul, ama mesafe hesaplayamayız → uyar
+            qmError.textContent = 'Lütfen önerilerden bir bırakış noktası seç.';
+            qmError.classList.remove('hidden');
+            return;
+        }
+
+        const fd = new FormData(modalForm);
+        const straight = distanceKm(userCenterGlobal, [selectedDropoff.lat, selectedDropoff.lng]);
+        const km = straight * 1.2;
+        const mins = Math.max(5, Math.round(km * 2.2 + 3));
+
+        const payload = {
+            vehicle_class_slug: selectedDriver.vSlug,
+            pickup_address: qmPickupInput.value.trim() || `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`,
+            pickup_lat: userCenterGlobal[0],
+            pickup_lng: userCenterGlobal[1],
+            dropoff_address: selectedDropoff.display_name,
+            dropoff_lat: selectedDropoff.lat,
+            dropoff_lng: selectedDropoff.lng,
+            customer_name: fd.get('customer_name'),
+            customer_phone: fd.get('customer_phone'),
+            preferred_driver_name: selectedDriver.name,
+            preferred_driver_plate: selectedDriver.plate,
+            distance_km: parseFloat(km.toFixed(2)),
+            duration_minutes: mins,
+            kvkk_consent: fd.get('kvkk_consent') ? 1 : 0,
+        };
+
+        qmSubmit.disabled = true;
+        qmSubmitText.textContent = 'Gönderiliyor…';
+        qmSubmitSpinner.classList.remove('hidden');
+
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const res = await fetch('{{ route('reservation.quick-request') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                const firstErr = data.errors ? Object.values(data.errors)[0][0] : (data.message || 'Talep gönderilemedi.');
+                throw new Error(firstErr);
+            }
+
+            // Success
+            modalForm.classList.add('hidden');
+            modalSuccess.classList.remove('hidden');
+            document.getElementById('qm-success-msg').textContent = data.message;
+            document.getElementById('qm-success-fare').textContent = `₺${Math.round(data.total_fare)}`;
+            document.getElementById('qm-success-driver').textContent = data.driver_name;
+            document.getElementById('qm-success-id').textContent = data.public_id.slice(-12).toUpperCase();
+        } catch (err) {
+            qmError.textContent = err.message;
+            qmError.classList.remove('hidden');
+        } finally {
+            qmSubmit.disabled = false;
+            qmSubmitText.textContent = 'Talebi Gönder';
+            qmSubmitSpinner.classList.add('hidden');
+        }
+    });
 
     function init() {
         if (!('geolocation' in navigator)) {
