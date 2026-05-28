@@ -391,13 +391,14 @@ class RideRequestController extends Controller
         $vClass = $v?->vehicleClass;
 
         return [
-            'id'            => $d->id,
-            'name'          => $shortName,
-            'rating'        => (float) $d->rating,
-            'trips'         => (int) $d->total_rides,
-            'vehicle_class' => $vClass?->name,
-            'vehicle_label' => $v ? trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) : null,
-            'plate'         => $v?->plate,
+            'id'                  => $d->id,
+            'name'                => $shortName,
+            'rating'              => (float) $d->rating,
+            'trips'               => (int) $d->total_rides,
+            'vehicle_class'       => $vClass?->name,
+            'vehicle_class_slug'  => $vClass?->slug,
+            'vehicle_label'       => $v ? trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) : null,
+            'plate'               => $v?->plate,
         ];
     }
 }

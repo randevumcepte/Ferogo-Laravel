@@ -1003,15 +1003,21 @@
             const res = await fetch(`${NEARBY_URL}?lat=${center[0]}&lng=${center[1]}&limit=3`, {
                 headers: { 'Accept': 'application/json' }
             });
-            if (!res.ok) return;
+            if (!res.ok) {
+                console.warn('[radar] nearby HTTP', res.status, await res.text().catch(() => ''));
+                return;
+            }
             const data = await res.json();
             const next = Array.isArray(data.drivers) ? data.drivers : [];
             realDriversTotalOnline = Number(data.total_online) || 0;
+            console.debug('[radar] nearby:', { total_online: realDriversTotalOnline, returned: next.length, drivers: next });
             const changed = next.length !== realDrivers.length
                 || next.some((d, i) => !realDrivers[i] || realDrivers[i].id !== d.id);
             realDrivers = next;
             if (changed && userCenterGlobal) renderRail(userCenterGlobal);
-        } catch (_) { /* sessizce yut — mock fallback */ }
+        } catch (err) {
+            console.error('[radar] nearby fetch failed:', err);
+        }
     }
 
     /** Mock kart tıklandığında gerçek sürücüyü seç (varsa). */
