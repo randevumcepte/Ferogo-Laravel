@@ -1,7 +1,9 @@
 <?php
 
 use App\Modules\Booking\Http\Controllers\ReservationController;
+use App\Modules\Booking\Http\Controllers\RideRequestController;
 use App\Modules\Driver\Http\Controllers\DriverApplicationController;
+use App\Modules\Driver\Http\Controllers\DriverPanelController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
@@ -32,3 +34,33 @@ Route::post('/surucu-olun', [DriverApplicationController::class, 'store'])
 
 // Yolculuk Yapın - yolcu landing
 Route::view('/yolculuk-yapin', 'ride.show')->name('ride.show');
+
+// ─────────────────────────────────────────────────────────
+// FAZ 3 — Ride Request / Accept akışı (müşteri tarafı)
+// ─────────────────────────────────────────────────────────
+Route::prefix('api/ride-requests')->name('ride_requests.')->group(function () {
+    Route::get('/nearby',                [RideRequestController::class, 'nearby'])->name('nearby');
+    Route::post('/',                     [RideRequestController::class, 'store'])->name('store');
+    Route::get('/{publicId}',            [RideRequestController::class, 'show'])->name('show');
+    Route::post('/{publicId}/cancel',    [RideRequestController::class, 'cancel'])->name('cancel');
+    Route::get('/{publicId}/messages',   [RideRequestController::class, 'messages'])->name('messages');
+    Route::post('/{publicId}/messages',  [RideRequestController::class, 'sendMessage'])->name('messages.send');
+});
+
+// ─────────────────────────────────────────────────────────
+// FAZ 3 — Sürücü Paneli (login + dashboard + actions)
+// ─────────────────────────────────────────────────────────
+Route::get('/surucu-giris',    [DriverPanelController::class, 'showLogin'])->name('driver.login');
+Route::post('/surucu-giris',   [DriverPanelController::class, 'login'])->name('driver.login.submit');
+Route::post('/surucu-cikis',   [DriverPanelController::class, 'logout'])->name('driver.logout');
+
+// Not: `auth` middleware'i kullanmıyoruz — Laravel'in default 'login' named route'u
+// yok ve Filament admin paneli farklı bir guard. Controller her metoda kendisi
+// `currentDriver()` ile auth kontrolü yapıp ya redirect ya da 401 JSON döner.
+Route::get('/surucu-paneli',                                 [DriverPanelController::class, 'panel'])->name('driver.panel');
+Route::get('/surucu-paneli/api/state',                       [DriverPanelController::class, 'state'])->name('driver.api.state');
+Route::post('/surucu-paneli/api/availability',               [DriverPanelController::class, 'setAvailability'])->name('driver.api.availability');
+Route::post('/surucu-paneli/api/offers/{publicId}/accept',   [DriverPanelController::class, 'acceptOffer'])->name('driver.api.accept');
+Route::post('/surucu-paneli/api/offers/{publicId}/reject',   [DriverPanelController::class, 'rejectOffer'])->name('driver.api.reject');
+Route::post('/surucu-paneli/api/active/message',             [DriverPanelController::class, 'sendMessage'])->name('driver.api.message');
+Route::post('/surucu-paneli/api/active/complete',            [DriverPanelController::class, 'completeRide'])->name('driver.api.complete');

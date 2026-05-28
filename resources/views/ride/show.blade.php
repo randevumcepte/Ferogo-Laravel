@@ -527,36 +527,95 @@
                 </button>
             </form>
 
-            {{-- Success state --}}
-            <div id="quick-modal-success" class="hidden px-6 py-10 text-center">
+            {{-- Waiting state: sürücüye teklif gönderildi, cevap bekleniyor --}}
+            <div id="quick-modal-waiting" class="hidden px-6 py-8 text-center">
                 <div class="relative w-20 h-20 mx-auto mb-5">
-                    <div class="absolute inset-0 rounded-full bg-emerald-500/15 hud-live-dot"></div>
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                    </div>
+                    <div class="absolute inset-0 rounded-full border-2 border-brand/30 pulse-dot"></div>
+                    <div class="absolute inset-2 rounded-full border-2 border-brand/50"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-3xl">📡</div>
                 </div>
-                <h3 class="text-xl font-bold text-white mb-2">Talebin iletildi!</h3>
-                <p class="text-sm text-zinc-400 leading-relaxed mb-6" id="qm-success-msg">—</p>
-                <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 text-left mb-6 space-y-2">
-                    <div class="flex justify-between text-xs">
-                        <span class="text-zinc-500">Onaylanan ücret</span>
-                        <span class="text-brand font-bold" id="qm-success-fare">—</span>
-                    </div>
-                    <div class="flex justify-between text-xs">
-                        <span class="text-zinc-500">Sürücü</span>
-                        <span class="text-white font-medium" id="qm-success-driver">—</span>
-                    </div>
-                    <div class="flex justify-between text-xs">
-                        <span class="text-zinc-500">Rezervasyon No</span>
-                        <span class="text-white font-mono text-[11px]" id="qm-success-id">—</span>
-                    </div>
+                <h3 class="text-xl font-bold text-white mb-1">
+                    <span id="qm-waiting-driver">—</span> çağrılıyor
+                </h3>
+                <p class="text-sm text-zinc-400 mb-6">Şoför cevap veriyor… <span id="qm-waiting-countdown" class="text-brand font-bold tabular-nums">60</span> sn</p>
+
+                <div class="p-3 rounded-xl bg-white/[0.03] border border-white/10 text-left mb-5">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Aday sırası</div>
+                    <div class="text-xs text-zinc-300" id="qm-waiting-progress">1 / —</div>
                 </div>
-                <p class="text-[11px] text-zinc-500 mb-5">
-                    Sürücüye bildirim gönderildi. Birkaç dakika içinde seni telefondan arayacaktır.
-                </p>
-                <button type="button" id="quick-modal-done" class="w-full px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium text-sm transition">
-                    Tamam
+
+                <button type="button" id="qm-waiting-cancel"
+                        class="w-full px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white font-medium text-sm transition">
+                    Vazgeç
                 </button>
+            </div>
+
+            {{-- Accepted state: sürücü kabul etti, aktif yolculuk + chat --}}
+            <div id="quick-modal-accepted" class="hidden">
+                <div class="px-6 pt-6 pb-4 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border-b border-white/5">
+                    <div class="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-emerald-300 font-bold mb-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>
+                        Şoför Yolda
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-brand/40 flex items-center justify-center text-xl">🚗</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-base font-bold text-white truncate" id="qm-accepted-name">—</div>
+                            <div class="text-[11px] text-zinc-400 truncate" id="qm-accepted-vehicle">—</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-xs text-brand font-bold" id="qm-accepted-rating">★ —</div>
+                            <div class="text-[10px] text-zinc-500" id="qm-accepted-trips">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 border-b border-white/5">
+                    <div class="bg-black/30 rounded-2xl p-3 space-y-2 text-xs">
+                        <div class="flex items-start gap-2.5">
+                            <div class="w-2 h-2 rounded-full bg-brand mt-1.5"></div>
+                            <div class="flex-1 text-zinc-300 truncate" id="qm-accepted-pickup">—</div>
+                        </div>
+                        <div class="flex items-start gap-2.5">
+                            <div class="w-2 h-2 rounded-sm bg-white mt-1.5"></div>
+                            <div class="flex-1 text-zinc-300 truncate" id="qm-accepted-dropoff">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Chat --}}
+                <div class="px-6 pt-4 pb-2">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Sürücüyle mesajlaş</div>
+                    <div id="qm-chat-list" class="h-48 overflow-y-auto p-2 rounded-xl bg-black/30 border border-white/5 space-y-2 text-xs"></div>
+                </div>
+                <form id="qm-chat-form" class="flex items-center gap-2 px-6 py-3 border-t border-white/5">
+                    <input id="qm-chat-input" type="text" maxlength="1000" autocomplete="off" required
+                           class="flex-1 bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none"
+                           placeholder="Şoföre mesaj…">
+                    <button type="submit" class="px-3 py-2 rounded-xl bg-brand hover:bg-brand-600 text-black text-xs font-bold transition">Gönder</button>
+                </form>
+
+                <div class="px-6 py-3 border-t border-white/5 text-center">
+                    <button type="button" id="quick-modal-done"
+                            class="text-xs text-zinc-500 hover:text-zinc-300 underline underline-offset-2">
+                        Pencereyi kapat
+                    </button>
+                </div>
+            </div>
+
+            {{-- Terminal state: kimse almadı / iptal --}}
+            <div id="quick-modal-terminal" class="hidden px-6 py-10 text-center">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-full bg-white/5 flex items-center justify-center text-3xl">😕</div>
+                <h3 class="text-xl font-bold text-white mb-2" id="qm-terminal-title">—</h3>
+                <p class="text-sm text-zinc-400 leading-relaxed mb-6" id="qm-terminal-msg">—</p>
+                <div class="flex gap-2">
+                    <button type="button" id="qm-terminal-close" class="flex-1 px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-zinc-300 font-medium transition">
+                        Kapat
+                    </button>
+                    <a href="{{ route('home') }}#rezervasyon" class="flex-1 px-4 py-3 rounded-2xl bg-brand hover:bg-brand-600 text-black text-sm font-bold transition text-center">
+                        Rezervasyon Yap
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -886,6 +945,31 @@
     let userCenterGlobal = null;
     let userAddressGlobal = null;
 
+    // === Gerçek sürücüler (DB'den, periyodik) — modal flow için
+    const NEARBY_URL = '{{ route('ride_requests.nearby') }}';
+    const VCLASS_ICONS = { easy: '🚗', platinum: '👔', vip: '♛' };
+    let realDrivers = [];
+    let realDriversHandle = null;
+
+    async function fetchRealDrivers(center) {
+        try {
+            const res = await fetch(`${NEARBY_URL}?lat=${center[0]}&lng=${center[1]}&limit=3`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            realDrivers = Array.isArray(data.drivers) ? data.drivers : [];
+        } catch (_) { /* sessizce yut — mock fallback */ }
+    }
+
+    /** Mock kart tıklandığında gerçek sürücüyü seç (varsa). */
+    function pickRealDriverFor(mock) {
+        if (!realDrivers.length) return null;
+        // Önce aynı vehicle_class'tan ara
+        return realDrivers.find(r => r.vehicle_class_slug === mock.vSlug)
+            || realDrivers[0];
+    }
+
     function userPinHtml() {
         return `
             <div class="relative w-[60px] h-[60px] flex items-center justify-center">
@@ -1153,6 +1237,11 @@
         renderRail(center);
         tickHandle = setInterval(() => tick(center), TICK_MS);
 
+        // Gerçek sürücüleri arka planda çek — modal seçimi için
+        fetchRealDrivers(center);
+        if (realDriversHandle) clearInterval(realDriversHandle);
+        realDriversHandle = setInterval(() => fetchRealDrivers(center), 8000);
+
         // Pause when off-screen
         const io = new IntersectionObserver((entries) => {
             entries.forEach(e => {
@@ -1172,9 +1261,16 @@
     }
 
     // ===== QUICK SELECT MODAL =====
+    const RIDE_REQ_URL  = '{{ route('ride_requests.store') }}';
+    const RIDE_REQ_SHOW = (id) => '{{ url('/api/ride-requests') }}/' + encodeURIComponent(id);
+    const POLL_STATUS_MS = 2000;
+    const POLL_CHAT_MS   = 2500;
+
     const modalEl = document.getElementById('quick-modal');
     const modalForm = document.getElementById('quick-modal-form');
-    const modalSuccess = document.getElementById('quick-modal-success');
+    const modalWaiting = document.getElementById('quick-modal-waiting');
+    const modalAccepted = document.getElementById('quick-modal-accepted');
+    const modalTerminal = document.getElementById('quick-modal-terminal');
     const qmPickupInput = document.getElementById('qm-pickup-address');
     const qmPickupCoords = document.getElementById('qm-pickup-coords');
     const qmDropoffInput = document.getElementById('qm-dropoff-address');
@@ -1187,25 +1283,48 @@
     const qmSubmitText = document.getElementById('qm-submit-text');
     const qmSubmitSpinner = document.getElementById('qm-submit-spinner');
 
-    let selectedDriver = null;
-    let selectedDropoff = null; // { lat, lng, display_name }
+    let selectedDriver = null;       // ekrandaki driver objesi (mock ya da real)
+    let selectedRealDriver = null;   // backend'e gönderilecek real driver
+    let selectedDropoff = null;      // { lat, lng, display_name }
     let dropoffSearchTimer = null;
 
+    // Ride request state (waiting/accepted)
+    let activeRequestId = null;
+    let statusPollHandle = null;
+    let chatPollHandle = null;
+    let waitingCountdownHandle = null;
+    let chatLastMessageId = 0;
+
+    function showStage(name) {
+        modalForm.classList.toggle('hidden', name !== 'form');
+        modalWaiting.classList.toggle('hidden', name !== 'waiting');
+        modalAccepted.classList.toggle('hidden', name !== 'accepted');
+        modalTerminal.classList.toggle('hidden', name !== 'terminal');
+    }
+
     function openQuickModal(driver) {
+        // Eğer gerçek sürücü varsa onu seç, yoksa mock'la devam (submit'te uyarı çıkar)
+        const real = driver.vehicle_class_slug ? driver : pickRealDriverFor(driver);
+        selectedRealDriver = real || null;
         selectedDriver = driver;
         selectedDropoff = null;
+        resetActiveRequest();
 
-        // Driver header
-        document.getElementById('qm-driver-icon').textContent = driver.vIcon;
-        document.getElementById('qm-driver-name').textContent = driver.name;
-        document.getElementById('qm-driver-rating').textContent = `★ ${driver.rating}`;
-        document.getElementById('qm-driver-badge').innerHTML = classBadge(driver.vSlug, driver.vclass);
-        document.getElementById('qm-driver-meta').textContent = driver.plate;
+        // Header — varsa real driver bilgileriyle göster (daha dürüst)
+        const display = real || driver;
+        const slug = display.vehicle_class_slug || display.vSlug || 'easy';
+        const cls  = display.vehicle_class || display.vclass || 'Easy';
+        const plate = display.plate || '—';
+        const rating = Number(display.rating || 0).toFixed(2);
+        document.getElementById('qm-driver-icon').textContent = VCLASS_ICONS[slug] || '🚗';
+        document.getElementById('qm-driver-name').textContent = display.name;
+        document.getElementById('qm-driver-rating').textContent = `★ ${rating}`;
+        document.getElementById('qm-driver-badge').innerHTML = classBadge(slug, cls);
+        document.getElementById('qm-driver-meta').textContent = plate;
 
         // Reset form
         modalForm.reset();
-        modalForm.classList.remove('hidden');
-        modalSuccess.classList.add('hidden');
+        showStage('form');
         qmError.classList.add('hidden');
         qmDropoffSuggestions.classList.add('hidden');
         qmFareDistance.textContent = '—';
@@ -1223,22 +1342,49 @@
             qmPickupCoords.textContent = `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`;
         }
 
-        // Open
         modalEl.classList.remove('hidden');
         modalEl.classList.add('flex');
         document.body.style.overflow = 'hidden';
         setTimeout(() => qmDropoffInput.focus(), 100);
     }
 
+    function resetActiveRequest() {
+        activeRequestId = null;
+        chatLastMessageId = 0;
+        if (statusPollHandle) { clearInterval(statusPollHandle); statusPollHandle = null; }
+        if (chatPollHandle) { clearInterval(chatPollHandle); chatPollHandle = null; }
+        if (waitingCountdownHandle) { clearInterval(waitingCountdownHandle); waitingCountdownHandle = null; }
+        const chat = document.getElementById('qm-chat-list');
+        if (chat) chat.innerHTML = '';
+    }
+
     function closeQuickModal() {
+        // Aktif waiting ise → cancel gönder (sürücü boşuna beklemesin)
+        const wasWaiting = !modalWaiting.classList.contains('hidden');
+        const idForCancel = activeRequestId;
+
         modalEl.classList.add('hidden');
         modalEl.classList.remove('flex');
         document.body.style.overflow = '';
+
+        if (wasWaiting && idForCancel) {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            try {
+                // keepalive: pencere kapansa bile request bitsin
+                fetch(`{{ url('/api/ride-requests') }}/${encodeURIComponent(idForCancel)}/cancel`, {
+                    method: 'POST',
+                    keepalive: true,
+                    headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                }).catch(() => {});
+            } catch (_) {}
+        }
+        resetActiveRequest();
     }
 
     document.getElementById('quick-modal-close').addEventListener('click', closeQuickModal);
     document.getElementById('quick-modal-backdrop').addEventListener('click', closeQuickModal);
     document.getElementById('quick-modal-done').addEventListener('click', closeQuickModal);
+    document.getElementById('qm-terminal-close').addEventListener('click', closeQuickModal);
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !modalEl.classList.contains('hidden')) closeQuickModal();
     });
@@ -1308,21 +1454,22 @@
         qmFareTotal.textContent = `₺${Math.round(calc)}`;
     }
 
-    // Submit
+    // ===== SUBMIT — gerçek ride_request yarat, bekleme ekranına geç =====
     modalForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         qmError.classList.add('hidden');
 
-        if (!selectedDriver || !userCenterGlobal) {
-            qmError.textContent = 'Konum veya sürücü bilgisi eksik.';
-            qmError.classList.remove('hidden');
-            return;
+        if (!userCenterGlobal) {
+            qmError.textContent = 'Konum bilgisi eksik. Konum izni ver veya sayfayı yenile.';
+            qmError.classList.remove('hidden'); return;
         }
         if (!selectedDropoff) {
-            // Sadece text bırakış da kabul, ama mesafe hesaplayamayız → uyar
             qmError.textContent = 'Lütfen önerilerden bir bırakış noktası seç.';
-            qmError.classList.remove('hidden');
-            return;
+            qmError.classList.remove('hidden'); return;
+        }
+        if (!selectedRealDriver) {
+            qmError.textContent = 'Şu an çevrimiçi gerçek sürücü yok. Birkaç saniye sonra tekrar dene ya da rezervasyon yap.';
+            qmError.classList.remove('hidden'); return;
         }
 
         const fd = new FormData(modalForm);
@@ -1330,21 +1477,36 @@
         const km = straight * 1.2;
         const mins = Math.max(5, Math.round(km * 2.2 + 3));
 
+        // Aday kuyruğu: seçilen + diğer real driver'lar (fallback)
+        const fallbacks = realDrivers
+            .filter(d => d.id !== selectedRealDriver.id)
+            .map(d => d.id);
+
+        // Yerel fiyat tahmini (Faz 5'te sunucudan dönecek)
+        const rates = {
+            easy:     { base: 50,  perKm: 22, min: 150 },
+            platinum: { base: 100, perKm: 35, min: 250 },
+            vip:      { base: 200, perKm: 55, min: 500 },
+        };
+        const r = rates[selectedRealDriver.vehicle_class_slug] || rates.easy;
+        const estFare = Math.max(r.min, r.base + km * r.perKm);
+
         const payload = {
-            vehicle_class_slug: selectedDriver.vSlug,
-            pickup_address: qmPickupInput.value.trim() || `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`,
-            pickup_lat: userCenterGlobal[0],
-            pickup_lng: userCenterGlobal[1],
-            dropoff_address: selectedDropoff.display_name,
-            dropoff_lat: selectedDropoff.lat,
-            dropoff_lng: selectedDropoff.lng,
-            customer_name: fd.get('customer_name'),
-            customer_phone: fd.get('customer_phone'),
-            preferred_driver_name: selectedDriver.name,
-            preferred_driver_plate: selectedDriver.plate,
-            distance_km: parseFloat(km.toFixed(2)),
-            duration_minutes: mins,
-            kvkk_consent: fd.get('kvkk_consent') ? 1 : 0,
+            vehicle_class_slug:    selectedRealDriver.vehicle_class_slug,
+            pickup_address:        qmPickupInput.value.trim() || `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`,
+            pickup_lat:            userCenterGlobal[0],
+            pickup_lng:            userCenterGlobal[1],
+            dropoff_address:       selectedDropoff.display_name,
+            dropoff_lat:           selectedDropoff.lat,
+            dropoff_lng:           selectedDropoff.lng,
+            customer_name:         fd.get('customer_name'),
+            customer_phone:        fd.get('customer_phone'),
+            distance_km:           parseFloat(km.toFixed(2)),
+            duration_minutes:      mins,
+            estimated_fare:        Math.round(estFare),
+            preferred_driver_id:   selectedRealDriver.id,
+            fallback_driver_ids:   fallbacks,
+            kvkk_consent:          fd.get('kvkk_consent') ? 1 : 0,
         };
 
         qmSubmit.disabled = true;
@@ -1353,44 +1515,28 @@
 
         try {
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
-            const res = await fetch('{{ route('reservation.quick-request') }}', {
+            const res = await fetch(RIDE_REQ_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrf,
-                    'Accept': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                 body: JSON.stringify(payload),
             });
-            // Backend HTML hata sayfası dönerse (debug açık), json() patlar — yakala
             let data;
-            try {
-                data = await res.json();
-            } catch (_) {
-                throw new Error('Sunucu beklenmedik bir cevap döndü. Tekrar dener misin?');
-            }
+            try { data = await res.json(); }
+            catch (_) { throw new Error('Sunucu beklenmedik bir cevap döndü.'); }
 
             if (!res.ok || !data.success) {
                 let msg;
-                if (data.errors) {
-                    msg = Object.values(data.errors)[0][0];
-                } else if (data.message && !data.message.includes('SQLSTATE')) {
-                    msg = data.message;
-                } else if (res.status === 422) {
-                    msg = 'Formda eksik veya hatalı alan var.';
-                } else {
-                    msg = 'Talep gönderilemedi. Birkaç saniye sonra tekrar dene.';
-                }
+                if (data.errors) msg = Object.values(data.errors)[0][0];
+                else if (data.message) msg = data.message;
+                else msg = 'Talep gönderilemedi. Tekrar dene.';
                 throw new Error(msg);
             }
 
-            // Success
-            modalForm.classList.add('hidden');
-            modalSuccess.classList.remove('hidden');
-            document.getElementById('qm-success-msg').textContent = data.message;
-            document.getElementById('qm-success-fare').textContent = `₺${Math.round(data.total_fare)}`;
-            document.getElementById('qm-success-driver').textContent = data.driver_name;
-            document.getElementById('qm-success-id').textContent = data.public_id.slice(-12).toUpperCase();
+            // Geçiş: waiting
+            activeRequestId = data.public_id;
+            applyStatus(data.status);
+            showStage('waiting');
+            startStatusPolling();
         } catch (err) {
             qmError.textContent = err.message;
             qmError.classList.remove('hidden');
@@ -1399,6 +1545,138 @@
             qmSubmitText.textContent = 'Talebi Gönder';
             qmSubmitSpinner.classList.add('hidden');
         }
+    });
+
+    // ===== WAITING — vazgeç butonu =====
+    document.getElementById('qm-waiting-cancel').addEventListener('click', async () => {
+        if (!activeRequestId) { closeQuickModal(); return; }
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            await fetch(`{{ url('/api/ride-requests') }}/${encodeURIComponent(activeRequestId)}/cancel`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+            });
+        } catch (_) {}
+        closeQuickModal();
+    });
+
+    // ===== STATUS POLLING =====
+    function startStatusPolling() {
+        if (statusPollHandle) clearInterval(statusPollHandle);
+        statusPollHandle = setInterval(pollStatusOnce, POLL_STATUS_MS);
+        pollStatusOnce();
+    }
+    async function pollStatusOnce() {
+        if (!activeRequestId) return;
+        try {
+            const res = await fetch(RIDE_REQ_SHOW(activeRequestId), { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success && data.status) applyStatus(data.status);
+        } catch (_) {}
+    }
+    function applyStatus(s) {
+        if (s.status === 'pending') {
+            // Waiting render
+            const drv = s.offered_driver || {};
+            document.getElementById('qm-waiting-driver').textContent = drv.name || 'Sürücü';
+            document.getElementById('qm-waiting-progress').textContent =
+                `${(s.current_index || 0) + 1} / ${s.total_candidates || 1}`;
+
+            // Countdown
+            if (waitingCountdownHandle) clearInterval(waitingCountdownHandle);
+            let remaining = Math.max(0, s.seconds_remaining || 0);
+            document.getElementById('qm-waiting-countdown').textContent = remaining;
+            waitingCountdownHandle = setInterval(() => {
+                remaining = Math.max(0, remaining - 1);
+                document.getElementById('qm-waiting-countdown').textContent = remaining;
+                if (remaining <= 0) clearInterval(waitingCountdownHandle);
+            }, 1000);
+
+            showStage('waiting');
+        } else if (s.status === 'accepted') {
+            if (waitingCountdownHandle) { clearInterval(waitingCountdownHandle); waitingCountdownHandle = null; }
+            renderAccepted(s);
+            startChatPolling();
+            showStage('accepted');
+        } else if (s.status === 'exhausted') {
+            stopAllPolling();
+            document.getElementById('qm-terminal-title').textContent = 'Şu an müsait sürücü yok';
+            document.getElementById('qm-terminal-msg').textContent =
+                'Aday sürücülerin tümü cevap vermedi. Birkaç dakika sonra tekrar dene veya rezervasyon formuna geç.';
+            showStage('terminal');
+        } else if (s.status === 'cancelled') {
+            stopAllPolling();
+            closeQuickModal();
+        }
+    }
+    function stopAllPolling() {
+        if (statusPollHandle) { clearInterval(statusPollHandle); statusPollHandle = null; }
+        if (chatPollHandle)   { clearInterval(chatPollHandle); chatPollHandle = null; }
+        if (waitingCountdownHandle) { clearInterval(waitingCountdownHandle); waitingCountdownHandle = null; }
+    }
+
+    // ===== ACCEPTED — chat + render =====
+    function renderAccepted(s) {
+        const drv = s.accepted_driver || {};
+        document.getElementById('qm-accepted-name').textContent = drv.name || 'Sürücü';
+        document.getElementById('qm-accepted-vehicle').textContent =
+            [drv.vehicle_class, drv.vehicle_label, drv.plate].filter(Boolean).join(' · ') || '—';
+        document.getElementById('qm-accepted-rating').textContent = `★ ${Number(drv.rating || 0).toFixed(2)}`;
+        document.getElementById('qm-accepted-trips').textContent = `${drv.trips || 0} yolculuk`;
+        document.getElementById('qm-accepted-pickup').textContent = qmPickupInput.value.trim();
+        document.getElementById('qm-accepted-dropoff').textContent = qmDropoffInput.value.trim();
+    }
+
+    function startChatPolling() {
+        if (chatPollHandle) clearInterval(chatPollHandle);
+        chatPollHandle = setInterval(pollChatOnce, POLL_CHAT_MS);
+        pollChatOnce();
+    }
+    async function pollChatOnce() {
+        if (!activeRequestId) return;
+        try {
+            const res = await fetch(
+                `{{ url('/api/ride-requests') }}/${encodeURIComponent(activeRequestId)}/messages?since_id=${chatLastMessageId}`,
+                { headers: { 'Accept': 'application/json' } }
+            );
+            if (!res.ok) return;
+            const data = await res.json();
+            (data.messages || []).forEach(appendChatMessage);
+        } catch (_) {}
+    }
+    function appendChatMessage(m) {
+        if (m.id <= chatLastMessageId) return;
+        chatLastMessageId = m.id;
+        const chat = document.getElementById('qm-chat-list');
+        const bubble = document.createElement('div');
+        const align = m.sender === 'customer' ? 'justify-end' : (m.sender === 'system' ? 'justify-center' : 'justify-start');
+        const bg = m.sender === 'customer' ? 'bg-brand text-black' : (m.sender === 'system' ? 'bg-white/5 text-zinc-400 italic text-[11px]' : 'bg-white/10');
+        bubble.className = `flex ${align}`;
+        bubble.innerHTML = `<div class="max-w-[80%] rounded-2xl px-3 py-2 ${bg}">${escapeChat(m.body)}</div>`;
+        chat.appendChild(bubble);
+        chat.scrollTop = chat.scrollHeight;
+    }
+    function escapeChat(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+    document.getElementById('qm-chat-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!activeRequestId) return;
+        const input = document.getElementById('qm-chat-input');
+        const body = input.value.trim();
+        if (!body) return;
+        input.value = '';
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const res = await fetch(`{{ url('/api/ride-requests') }}/${encodeURIComponent(activeRequestId)}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: JSON.stringify({ body }),
+            });
+            const data = await res.json();
+            if (data.success) appendChatMessage(data.message);
+        } catch (_) { alert('Mesaj gönderilemedi.'); }
     });
 
     function init() {

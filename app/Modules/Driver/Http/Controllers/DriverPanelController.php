@@ -93,20 +93,26 @@ class DriverPanelController extends Controller
         $driver = $this->currentDriver();
         if (! $driver) return response()->json(['authenticated' => false], 401);
 
-        // Mevcut teklif (varsa)
-        $offer = RideRequest::query()
-            ->where('offered_driver_id', $driver->id)
-            ->where('status', 'pending')
-            ->where('offer_expires_at', '>', now())
-            ->first();
-
         // Aktif yolculuk (kabul ettiğim, henüz tamamlanmamış)
+        // Ride.status: completed olduysa aktif sayma
         $activeRequest = RideRequest::query()
             ->with(['acceptedDriver.user', 'ride'])
             ->where('accepted_driver_id', $driver->id)
             ->where('status', 'accepted')
+            ->whereHas('ride', fn ($q) => $q->whereNotIn('status', ['completed', 'cancelled']))
             ->latest('accepted_at')
             ->first();
+
+        // Yeni teklif sadece aktif yolculuk yokken gösterilir (busy iken atla)
+        $offer = null;
+        if (! $activeRequest && $driver->availability_status !== 'busy') {
+            $offer = RideRequest::query()
+                ->where('offered_driver_id', $driver->id)
+                ->where('status', 'pending')
+                ->where('offer_expires_at', '>', now())
+                ->orderBy('created_at')
+                ->first();
+        }
 
         $lastMessageId = (int) request()->query('since_id', 0);
         $messages = [];
