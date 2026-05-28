@@ -997,6 +997,7 @@
     let realDrivers = [];
     let realDriversHandle = null;
 
+    let realDriversTotalOnline = 0;
     async function fetchRealDrivers(center) {
         try {
             const res = await fetch(`${NEARBY_URL}?lat=${center[0]}&lng=${center[1]}&limit=3`, {
@@ -1005,10 +1006,10 @@
             if (!res.ok) return;
             const data = await res.json();
             const next = Array.isArray(data.drivers) ? data.drivers : [];
+            realDriversTotalOnline = Number(data.total_online) || 0;
             const changed = next.length !== realDrivers.length
                 || next.some((d, i) => !realDrivers[i] || realDrivers[i].id !== d.id);
             realDrivers = next;
-            // Değişiklik varsa rail'i hemen tazele (bir sonraki tick'i bekleme)
             if (changed && userCenterGlobal) renderRail(userCenterGlobal);
         } catch (_) { /* sessizce yut — mock fallback */ }
     }
@@ -1678,7 +1679,14 @@
             qmError.classList.remove('hidden'); return;
         }
         if (!selectedRealDriver) {
-            qmError.textContent = 'Şu an çevrimiçi gerçek sürücü yok. Birkaç saniye sonra tekrar dene ya da rezervasyon yap.';
+            // Diagnostic: çevrimiçi var ama liste yüklemediyse → fetch'i tekrar zorla
+            if (realDriversTotalOnline > 0) {
+                qmError.textContent = `Sürücü listesi yüklenmedi (${realDriversTotalOnline} çevrimiçi var). Sayfayı yenile (Cmd+Shift+R) ve tekrar dene.`;
+            } else {
+                qmError.textContent = 'Şu an hiç çevrimiçi sürücü yok. Birkaç dakika sonra dene ya da rezervasyon formundan ilerle.';
+            }
+            // Son şans: bir kez daha fetch
+            if (userCenterGlobal) fetchRealDrivers(userCenterGlobal);
             qmError.classList.remove('hidden'); return;
         }
 

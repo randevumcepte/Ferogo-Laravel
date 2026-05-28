@@ -27,6 +27,10 @@ class VehicleClass extends Model
         'per_km_fare',
         'per_minute_fare',
         'minimum_fare',
+        'boarding_fee_trusted',
+        'boarding_fee_standard',
+        'boarding_fee_new',
+        'boarding_fee_suspicious',
         'sort_order',
         'is_active',
     ];
@@ -37,6 +41,10 @@ class VehicleClass extends Model
         'per_km_fare' => 'decimal:2',
         'per_minute_fare' => 'decimal:2',
         'minimum_fare' => 'decimal:2',
+        'boarding_fee_trusted' => 'decimal:2',
+        'boarding_fee_standard' => 'decimal:2',
+        'boarding_fee_new' => 'decimal:2',
+        'boarding_fee_suspicious' => 'decimal:2',
     ];
 
     public function tenant(): BelongsTo

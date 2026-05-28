@@ -41,19 +41,15 @@ class RideRequestController extends Controller
         $lat    = (float) $validated['lat'];
         $lng    = (float) $validated['lng'];
         $limit  = (int) ($validated['limit'] ?? 3);
-        $radius = 12.0; // km
 
-        $latDelta = $radius / 111.0;
-        $lngDelta = $radius / (111.0 * max(0.000001, cos(deg2rad($lat))));
-
+        // Tüm müsait sürücüleri çek (bbox YOK — demo aşamasında her şehirden
+        // test edilebilsin diye; üretimde driver sayısı çoğalınca bbox ekleriz)
         $candidates = Driver::query()
             ->with(['user:id,name', 'currentVehicle.vehicleClass'])
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
             ->whereNotNull('current_lat')
             ->whereNotNull('current_lng')
-            ->whereBetween('current_lat', [$lat - $latDelta, $lat + $latDelta])
-            ->whereBetween('current_lng', [$lng - $lngDelta, $lng + $lngDelta])
             ->limit(50)
             ->get();
 
@@ -66,9 +62,16 @@ class RideRequestController extends Controller
             ]);
         })->sortBy('distance_km')->take($limit)->values();
 
+        // Diagnostic counts — frontend hatalı mesaj göstermek için kullanabilir
+        $totalOnline = Driver::query()
+            ->where('approval_status', 'approved')
+            ->where('availability_status', 'online')
+            ->count();
+
         return response()->json([
-            'success' => true,
-            'drivers' => $scored,
+            'success'       => true,
+            'drivers'       => $scored,
+            'total_online'  => $totalOnline,
         ]);
     }
 

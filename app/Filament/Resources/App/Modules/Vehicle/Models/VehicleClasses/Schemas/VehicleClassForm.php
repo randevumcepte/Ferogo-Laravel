@@ -68,6 +68,42 @@ class VehicleClassForm
                 ->prefix('₺')
                 ->required(),
 
+            TextInput::make('boarding_fee_trusted')
+                ->label('İndi-Bindi · Güvenilir Müşteri (₺)')
+                ->numeric()
+                ->step(0.01)
+                ->prefix('₺')
+                ->default(99.00)
+                ->required()
+                ->helperText('5+ tamamlanmış yolculuk, güven skoru ≥ 70'),
+
+            TextInput::make('boarding_fee_standard')
+                ->label('İndi-Bindi · Standart Müşteri (₺)')
+                ->numeric()
+                ->step(0.01)
+                ->prefix('₺')
+                ->default(150.00)
+                ->required()
+                ->helperText('Telefon doğrulanmış, en az 1 tamamlanmış yolculuk'),
+
+            TextInput::make('boarding_fee_new')
+                ->label('İndi-Bindi · Yeni / Doğrulanmamış (₺)')
+                ->numeric()
+                ->step(0.01)
+                ->prefix('₺')
+                ->default(210.00)
+                ->required()
+                ->helperText('İlk kez gelen veya geçmişi olmayan müşteri'),
+
+            TextInput::make('boarding_fee_suspicious')
+                ->label('İndi-Bindi · Şüpheli / Riskli (₺)')
+                ->numeric()
+                ->step(0.01)
+                ->prefix('₺')
+                ->default(350.00)
+                ->required()
+                ->helperText('Geçmişte no-show, kara liste veya güven skoru < 25'),
+
             TextInput::make('sort_order')
                 ->label('Sıra')
                 ->numeric()

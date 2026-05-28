@@ -59,4 +59,37 @@ class CustomerTrust extends Model
             default                  => 'cok_riskli',
         };
     }
+
+    /**
+     * İndi-bindi (boarding_fee) katmanı.
+     *
+     *   trusted    → güven skoru ≥ 70 ve en az 5 tamamlanmış yolculuk
+     *   standard   → güven skoru ≥ 50 ve en az 1 tamamlanmış yolculuk
+     *   new        → tamamlanmış yolculuğu yok veya skor 25–49
+     *   suspicious → skor < 25, kara liste veya geçici ban
+     */
+    public function boardingFeeTier(): string
+    {
+        if ($this->is_blacklisted || $this->trust_score < 25 || $this->isBanned()) {
+            return 'suspicious';
+        }
+
+        if ($this->trust_score >= 70 && $this->total_completed >= 5) {
+            return 'trusted';
+        }
+
+        if ($this->trust_score >= 50 && $this->total_completed >= 1) {
+            return 'standard';
+        }
+
+        return 'new';
+    }
+
+    /**
+     * Hiç kaydı olmayan (ilk çağrı yapan) müşteri için varsayılan katman.
+     */
+    public static function defaultTierForNewPhone(): string
+    {
+        return 'new';
+    }
 }

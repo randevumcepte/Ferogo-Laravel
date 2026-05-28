@@ -55,6 +55,38 @@ class PricingRuleForm
                 ->prefix('₺')
                 ->required(),
 
+            TextInput::make('boarding_fee_trusted')
+                ->label('İndi-Bindi · Güvenilir (₺)')
+                ->numeric()
+                ->step(0.01)
+                ->prefix('₺')
+                ->placeholder('Boş bırakırsanız araç sınıfı varsayılanı kullanılır')
+                ->helperText('Şehir bazlı override. Boş = araç sınıfı değeri.'),
+
+            TextInput::make('boarding_fee_standard')
+                ->label('İndi-Bindi · Standart (₺)')
+                ->numeric()
+                ->step(0.01)
+                ->prefix('₺')
+                ->placeholder('Boş bırakırsanız araç sınıfı varsayılanı kullanılır')
+                ->helperText('Şehir bazlı override. Boş = araç sınıfı değeri.'),
+
+            TextInput::make('boarding_fee_new')
+                ->label('İndi-Bindi · Yeni (₺)')
+                ->numeric()
+                ->step(0.01)
+                ->prefix('₺')
+                ->placeholder('Boş bırakırsanız araç sınıfı varsayılanı kullanılır')
+                ->helperText('Şehir bazlı override. Boş = araç sınıfı değeri.'),
+
+            TextInput::make('boarding_fee_suspicious')
+                ->label('İndi-Bindi · Şüpheli (₺)')
+                ->numeric()
+                ->step(0.01)
+                ->prefix('₺')
+                ->placeholder('Boş bırakırsanız araç sınıfı varsayılanı kullanılır')
+                ->helperText('Şehir bazlı override. Boş = araç sınıfı değeri.'),
+
             TextInput::make('night_multiplier')
                 ->label('Gece Çarpanı')
                 ->numeric()

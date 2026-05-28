@@ -45,6 +45,9 @@ class ReservationService
                 ? Carbon::parse($data['scheduled_at'])
                 : null;
 
+            $normalizedPhone = $this->normalizePhone($data['customer_phone']);
+            $trustTier = $this->calculator->resolveTierForPhone($normalizedPhone);
+
             $fare = $this->calculator->calculate(
                 cityId: (int) $data['city_id'],
                 vehicleClassId: (int) $data['vehicle_class_id'],
@@ -52,6 +55,7 @@ class ReservationService
                 durationMinutes: (int) ($data['duration_minutes'] ?? 20),
                 extras: $data['extras'] ?? [],
                 scheduledAt: $scheduledAt,
+                customerTrustTier: $trustTier,
             );
 
             $customer = $this->resolveCustomer($data);
@@ -61,7 +65,7 @@ class ReservationService
                 'vehicle_class_id' => $data['vehicle_class_id'],
                 'customer_user_id' => $customer->id,
                 'customer_name' => $data['customer_name'],
-                'customer_phone' => $this->normalizePhone($data['customer_phone']),
+                'customer_phone' => $normalizedPhone,
                 'customer_tc_no' => $data['customer_tc_no'] ?? null,
                 'pickup_address' => $data['pickup_address'],
                 'pickup_lat' => $data['pickup_lat'] ?? 0,
@@ -77,6 +81,8 @@ class ReservationService
                 'estimated_distance_km' => $data['distance_km'] ?? null,
                 'estimated_duration_minutes' => $data['duration_minutes'] ?? null,
                 'base_fare' => $fare['base_fare'],
+                'boarding_fee' => $fare['boarding_fee'],
+                'customer_trust_tier' => $fare['customer_trust_tier'],
                 'distance_fare' => $fare['distance_fare'],
                 'time_fare' => $fare['time_fare'],
                 'extras_total' => $fare['extras_total'],
