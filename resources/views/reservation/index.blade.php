@@ -74,7 +74,7 @@
             <div class="max-w-4xl mx-auto text-center">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold uppercase tracking-wider mb-6 backdrop-blur-sm">
                     <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
-                    İzmir · 7/24 Aktif Hizmet
+                    İzmir · 7/24 Kesintisiz Hizmet
                 </div>
                 <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 tracking-tight drop-shadow-2xl">
                     Şehirde <span class="text-shimmer">premium</span> ulaşımın<br>en kolay yolu
