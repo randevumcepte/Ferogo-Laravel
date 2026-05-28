@@ -5,7 +5,6 @@ namespace App\Modules\Booking\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Services\ReservationService;
-use App\Modules\Driver\Models\Driver;
 use App\Modules\Pricing\Models\Extra;
 use App\Modules\Pricing\Services\FareCalculator;
 use App\Modules\Shared\Models\City;
@@ -13,8 +12,6 @@ use App\Modules\Vehicle\Models\VehicleClass;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 
 class ReservationController extends Controller
@@ -168,178 +165,6 @@ class ReservationController extends Controller
             'driver_name' => $validated['preferred_driver_name'],
             'message' => 'Talebin ' . $validated['preferred_driver_name'] . '\'e iletildi.',
         ]);
-    }
-
-    /**
-     * AJAX endpoint: kullanıcının konumuna en yakın N müsait sürücüyü döner.
-     * Bounding-box ön filtre + haversine sıralama (SQLite uyumlu).
-     */
-    public function nearbyDrivers(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'lat'    => ['required', 'numeric', 'between:-90,90'],
-            'lng'    => ['required', 'numeric', 'between:-180,180'],
-            'limit'  => ['nullable', 'integer', 'min:1', 'max:10'],
-            'radius' => ['nullable', 'numeric', 'min:0.5', 'max:50'], // km
-        ]);
-
-        $lat    = (float) $validated['lat'];
-        $lng    = (float) $validated['lng'];
-        $limit  = (int) ($validated['limit'] ?? 3);
-        $radius = (float) ($validated['radius'] ?? 10.0);
-
-        // ~1° lat ≈ 111 km, ~1° lng ≈ 111 * cos(lat) km
-        $latDelta = $radius / 111.0;
-        $lngDelta = $radius / (111.0 * max(0.000001, cos(deg2rad($lat))));
-
-        $candidates = Driver::query()
-            ->with(['user:id,name', 'currentVehicle.vehicleClass'])
-            ->where('approval_status', 'approved')
-            ->whereIn('availability_status', ['online', 'busy'])
-            ->whereNotNull('current_lat')
-            ->whereNotNull('current_lng')
-            ->whereBetween('current_lat', [$lat - $latDelta, $lat + $latDelta])
-            ->whereBetween('current_lng', [$lng - $lngDelta, $lng + $lngDelta])
-            ->limit(50)
-            ->get();
-
-        $scored = $candidates->map(function (Driver $d) use ($lat, $lng) {
-            $km = $this->haversineKm($lat, $lng, (float) $d->current_lat, (float) $d->current_lng);
-
-            // İsim gizliliği: "Mehmet Karaca" → "Mehmet K."
-            $fullName = $d->user?->name ?? 'Sürücü';
-            $parts = preg_split('/\s+/', trim($fullName));
-            $shortName = count($parts) > 1
-                ? $parts[0] . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.'
-                : $fullName;
-
-            $vehicle = $d->currentVehicle;
-            $vClass  = $vehicle?->vehicleClass;
-
-            return [
-                'id'                  => $d->id,
-                'name'                => $shortName,
-                'rating'              => (float) $d->rating,
-                'trips'               => (int) $d->total_rides,
-                'vehicle_class'       => $vClass?->name ?? 'Easy',
-                'vehicle_class_slug'  => $vClass?->slug ?? 'easy',
-                'vehicle_label'       => $vehicle ? trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) : null,
-                'plate'               => $vehicle?->plate,
-                'lat'                 => (float) $d->current_lat,
-                'lng'                 => (float) $d->current_lng,
-                'distance_km'         => round($km, 2),
-                'eta_minutes'         => max(1, (int) round($km * 2.4 + 0.8)), // ~25 km/saat şehir içi
-                'is_available'        => $d->availability_status === 'online',
-            ];
-        })->values();
-
-        $available = $scored->where('is_available', true)
-            ->sortBy('distance_km')
-            ->take($limit)
-            ->values();
-
-        return response()->json([
-            'success'         => true,
-            'drivers'         => $available,
-            'available_count' => $scored->where('is_available', true)->count(),
-            'total_count'     => $scored->count(),
-            'radius_km'       => $radius,
-        ]);
-    }
-
-    /**
-     * AJAX endpoint: Yer arama proxy'si.
-     * Nominatim'i sunucu tarafında çağırır, sonuçları 60 dk cache'ler.
-     * Browser'dan direkt çağrıya göre çok daha hızlı (cache hit + İzmir viewbox).
-     */
-    public function searchPlaces(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'q'   => ['required', 'string', 'min:2', 'max:120'],
-            'lat' => ['nullable', 'numeric', 'between:-90,90'],
-            'lng' => ['nullable', 'numeric', 'between:-180,180'],
-        ]);
-
-        $q = mb_strtolower(trim(preg_replace('/\s+/u', ' ', $validated['q'])));
-        if (mb_strlen($q) < 2) {
-            return response()->json(['success' => true, 'results' => []]);
-        }
-
-        // İzmir viewbox (geniş) — sonuçları bölgeye yaklaştırır, hız artar
-        // bbox: lon_min, lat_max, lon_max, lat_min
-        $viewbox = '26.5,38.85,27.85,38.05';
-        $cacheKey = 'places:' . md5($q . '|' . $viewbox);
-
-        $results = Cache::remember($cacheKey, now()->addHours(6), function () use ($q, $viewbox) {
-            try {
-                $response = Http::withHeaders([
-                        'User-Agent' => 'Ferogo/1.0 (+https://ferogo.com.tr)',
-                        'Accept-Language' => 'tr,en',
-                    ])
-                    ->timeout(4)
-                    ->connectTimeout(2)
-                    ->retry(1, 200)
-                    ->get('https://nominatim.openstreetmap.org/search', [
-                        'q' => $q,
-                        'format' => 'json',
-                        'limit' => 6,
-                        'countrycodes' => 'tr',
-                        'viewbox' => $viewbox,
-                        'bounded' => 0, // viewbox sadece bias, dışına da bakar
-                        'addressdetails' => 0,
-                        'dedupe' => 1,
-                    ]);
-
-                if (! $response->ok()) {
-                    return [];
-                }
-
-                return collect($response->json())
-                    ->map(function ($item) {
-                        $name = $item['display_name'] ?? '';
-                        $parts = array_map('trim', explode(',', $name));
-                        return [
-                            'lat'         => (float) ($item['lat'] ?? 0),
-                            'lng'         => (float) ($item['lon'] ?? 0),
-                            'display'     => $name,
-                            'primary'     => implode(', ', array_slice($parts, 0, 2)),
-                            'secondary'   => implode(', ', array_slice($parts, 2)),
-                            'type'        => $item['type'] ?? null,
-                            'importance'  => (float) ($item['importance'] ?? 0),
-                        ];
-                    })
-                    ->values()
-                    ->all();
-            } catch (\Throwable $e) {
-                return [];
-            }
-        });
-
-        // Eğer kullanıcı konumu verdiyse, sonuçları ona göre yeniden sırala
-        if (isset($validated['lat'], $validated['lng']) && ! empty($results)) {
-            $userLat = (float) $validated['lat'];
-            $userLng = (float) $validated['lng'];
-            usort($results, function ($a, $b) use ($userLat, $userLng) {
-                $da = $this->haversineKm($userLat, $userLng, $a['lat'], $a['lng']);
-                $db = $this->haversineKm($userLat, $userLng, $b['lat'], $b['lng']);
-                return $da <=> $db;
-            });
-        }
-
-        return response()->json([
-            'success' => true,
-            'results' => $results,
-        ]);
-    }
-
-    private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
-    {
-        $earthKm = 6371.0;
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
-        $a = sin($dLat / 2) ** 2
-            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
-        return 2 * $earthKm * asin(min(1.0, sqrt($a)));
     }
 
     /**

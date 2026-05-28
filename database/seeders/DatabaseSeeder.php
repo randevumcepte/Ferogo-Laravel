@@ -13,7 +13,6 @@ class DatabaseSeeder extends Seeder
             VehicleClassSeeder::class,
             ExtraSeeder::class,
             PricingRuleSeeder::class,
-            DemoDriverSeeder::class,
         ]);
     }
 }
