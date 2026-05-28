@@ -20,6 +20,10 @@ Route::post('/api/calculate-fare', [ReservationController::class, 'calculateFare
 Route::post('/api/quick-request', [ReservationController::class, 'quickRequest'])
     ->name('reservation.quick-request');
 
+// AJAX: Yer arama proxy (Nominatim + 60 dk cache + İzmir viewbox)
+Route::get('/api/search-places', [ReservationController::class, 'searchPlaces'])
+    ->name('reservation.search-places');
+
 // Sürücü başvuru sayfası
 Route::get('/surucu-olun', [DriverApplicationController::class, 'show'])
     ->name('driver.apply');

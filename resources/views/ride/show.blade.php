@@ -1061,15 +1061,39 @@
         }
     }
 
+    // === Adres arama — sunucu proxy + iptal + in-memory cache ===
+    const PLACES_URL = '{{ route('reservation.search-places') }}';
+    const placesCache = new Map(); // q -> results[] (session-içi)
+    let placesAbort = null;
+
     async function searchPlaces(query) {
-        if (query.length < 3) return [];
+        const q = query.trim().toLowerCase();
+        if (q.length < 2) return [];
+
+        // Cache hit — anında dön
+        if (placesCache.has(q)) return placesCache.get(q);
+
+        // Eski request'i iptal et — kullanıcı yazmaya devam ettiyse cevabı çöpe
+        if (placesAbort) placesAbort.abort();
+        placesAbort = new AbortController();
+
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tr&limit=5&accept-language=tr`, {
-                headers: { 'Accept': 'application/json' }
+            const res = await fetch(`${PLACES_URL}?q=${encodeURIComponent(q)}`, {
+                headers: { 'Accept': 'application/json' },
+                signal: placesAbort.signal,
             });
             if (!res.ok) return [];
-            return await res.json();
-        } catch (_) {
+            const data = await res.json();
+            const results = Array.isArray(data.results) ? data.results : [];
+
+            // Cache (LRU benzeri — 50 girdiyle sınırla)
+            if (placesCache.size >= 50) placesCache.delete(placesCache.keys().next().value);
+            placesCache.set(q, results);
+
+            return results;
+        } catch (err) {
+            if (err.name === 'AbortError') return [];
+            console.warn('[Ferogo] searchPlaces failed', err);
             return [];
         }
     }
@@ -1204,18 +1228,23 @@
         if (e.key === 'Escape' && !modalEl.classList.contains('hidden')) closeQuickModal();
     });
 
-    // Dropoff autocomplete
+    // Dropoff autocomplete — 180 ms debounce + iptal + stale-yanıt koruması
     qmDropoffInput.addEventListener('input', () => {
         const q = qmDropoffInput.value.trim();
         selectedDropoff = null;
         clearTimeout(dropoffSearchTimer);
-        if (q.length < 3) {
+        if (q.length < 2) {
             qmDropoffSuggestions.classList.add('hidden');
             updateFarePreview();
             return;
         }
         dropoffSearchTimer = setTimeout(async () => {
-            const results = await searchPlaces(q);
+            const currentQ = q; // snapshot
+            const results = await searchPlaces(currentQ);
+
+            // Kullanıcı bu sırada yazmaya devam ettiyse — bu cevabı atla
+            if (qmDropoffInput.value.trim() !== currentQ) return;
+
             if (!results.length) {
                 qmDropoffSuggestions.classList.add('hidden');
                 return;
@@ -1235,7 +1264,7 @@
                     updateFarePreview();
                 });
             });
-        }, 350);
+        }, 180);
     });
 
     function updateFarePreview() {

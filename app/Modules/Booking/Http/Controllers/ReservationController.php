@@ -12,6 +12,8 @@ use App\Modules\Vehicle\Models\VehicleClass;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 
 class ReservationController extends Controller
@@ -164,6 +166,68 @@ class ReservationController extends Controller
             'currency' => $ride->currency,
             'driver_name' => $validated['preferred_driver_name'],
             'message' => 'Talebin ' . $validated['preferred_driver_name'] . '\'e iletildi.',
+        ]);
+    }
+
+    /**
+     * AJAX endpoint: yer arama proxy'si.
+     * - Nominatim'i sunucudan çağırır (browser CORS/yavaşlık yok)
+     * - İzmir viewbox + bounded=1 ile sonuçları bölgeye odaklar (5-10x hız)
+     * - Aynı sorguyu 60 dk cache'ler — tekrarda 0 ms
+     * - Kısa timeout (3 sn) — kullanıcı askıda kalmaz
+     */
+    public function searchPlaces(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:120'],
+        ]);
+
+        $q = mb_strtolower(trim(preg_replace('/\s+/u', ' ', $validated['q'])));
+        if (mb_strlen($q) < 2) {
+            return response()->json(['success' => true, 'results' => []]);
+        }
+
+        $cacheKey = 'places:tr-izmir:v1:' . sha1($q);
+
+        $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
+            try {
+                // İzmir geniş viewbox: lon_min, lat_max, lon_max, lat_min
+                $response = Http::withHeaders([
+                    'User-Agent' => 'Ferogo/1.0 (+https://ferogo.com.tr)',
+                    'Accept-Language' => 'tr,en',
+                ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => $q,
+                    'format' => 'json',
+                    'addressdetails' => 0,
+                    'limit' => 6,
+                    'countrycodes' => 'tr',
+                    'viewbox' => '26.7,38.6,27.5,38.2',
+                    'bounded' => 0, // viewbox tercihli ama dışına da bakılsın
+                    'accept-language' => 'tr',
+                ]);
+
+                if (! $response->ok()) {
+                    return [];
+                }
+
+                $rows = $response->json();
+                if (! is_array($rows)) return [];
+
+                // Sadece UI'nın ihtiyacı olan alanları döndür (payload küçük)
+                return array_map(static fn ($r) => [
+                    'lat' => (float) ($r['lat'] ?? 0),
+                    'lon' => (float) ($r['lon'] ?? 0),
+                    'display_name' => (string) ($r['display_name'] ?? ''),
+                ], array_slice($rows, 0, 6));
+            } catch (\Throwable $e) {
+                report($e);
+                return [];
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'results' => $results,
         ]);
     }
 
