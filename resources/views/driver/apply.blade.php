@@ -1,0 +1,576 @@
+@extends('layouts.public')
+
+@section('title', 'Sürücü Olun · Ferogo · Kendi İşinin Patronu Ol')
+@section('description', 'Ferogo premium transfer ağına katıl. Esnek saatler, şeffaf %85 sürücü payı, haftalık ödeme, profesyonel destek. İzmir genelinde sürücü alımı.')
+
+@push('head')
+<style>
+    .ferogo-mesh {
+        background:
+            radial-gradient(circle at 15% 20%, rgba(240,192,64,0.22) 0%, transparent 35%),
+            radial-gradient(circle at 85% 10%, rgba(240,192,64,0.10) 0%, transparent 40%),
+            radial-gradient(circle at 50% 90%, rgba(240,192,64,0.14) 0%, transparent 45%),
+            #0a0a0a;
+    }
+    .ferogo-noise {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.94  0 0 0 0 0.75  0 0 0 0 0.25  0 0 0 0.045 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+    @keyframes ticker {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-2px); }
+    }
+    @keyframes drift-1 {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        50% { transform: translate(30px, -20px) rotate(2deg); }
+    }
+    @keyframes drift-2 {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        50% { transform: translate(-25px, 25px) rotate(-3deg); }
+    }
+    .drift-1 { animation: drift-1 12s ease-in-out infinite; }
+    .drift-2 { animation: drift-2 14s ease-in-out infinite; }
+    .ticker { animation: ticker 2.5s ease-in-out infinite; }
+    .display-font {
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        line-height: 0.92;
+    }
+    .glow-text {
+        text-shadow: 0 0 60px rgba(240,192,64,0.45);
+    }
+    .stat-card {
+        background: linear-gradient(135deg, rgba(240,192,64,0.10) 0%, rgba(255,255,255,0.02) 100%);
+        backdrop-filter: blur(20px);
+    }
+    .bento-card {
+        background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+        backdrop-filter: blur(12px);
+        transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s;
+    }
+    .bento-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(240,192,64,0.35);
+    }
+    .step-line {
+        background: linear-gradient(90deg, transparent 0%, rgba(240,192,64,0.5) 20%, rgba(240,192,64,0.5) 80%, transparent 100%);
+    }
+    .form-input {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        transition: all 0.2s;
+    }
+    .form-input:focus {
+        outline: none;
+        border-color: #F0C040;
+        background: rgba(240,192,64,0.04);
+        box-shadow: 0 0 0 4px rgba(240,192,64,0.08);
+    }
+    .check-pill input:checked + div {
+        background: rgba(240,192,64,0.12);
+        border-color: #F0C040;
+        color: #FDF0C1;
+    }
+    .marquee {
+        mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+        -webkit-mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+    }
+    @keyframes scroll-x {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+    .scroll-x { animation: scroll-x 35s linear infinite; }
+</style>
+@endpush
+
+@section('content')
+<div class="ferogo-mesh pt-24 relative overflow-hidden">
+
+    {{-- Noise overlay --}}
+    <div class="absolute inset-0 ferogo-noise opacity-[0.35] pointer-events-none mix-blend-overlay"></div>
+
+    {{-- Floating background shapes --}}
+    <div class="drift-1 absolute top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-brand/10 blur-[120px] pointer-events-none"></div>
+    <div class="drift-2 absolute top-[40rem] -right-32 w-[32rem] h-[32rem] rounded-full bg-brand/15 blur-[140px] pointer-events-none"></div>
+
+    {{-- ============ HERO ============ --}}
+    <section class="relative px-6 pt-12 md:pt-20 pb-24">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+
+            {{-- Left: copy --}}
+            <div class="lg:col-span-7">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-zinc-300 mb-8 backdrop-blur-sm">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Şu an İzmir'de <span class="text-white font-semibold">37 sürücü</span> alımı yapılıyor
+                </div>
+
+                <h1 class="display-font text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-white mb-8">
+                    Direksiyona<br>
+                    geç,<br>
+                    <span class="relative inline-block">
+                        <span class="text-brand glow-text">kazan</span><span class="text-brand">.</span>
+                    </span>
+                </h1>
+
+                <p class="text-lg md:text-xl text-zinc-300 leading-relaxed mb-10 max-w-xl">
+                    İzmir'in en hızlı büyüyen premium transfer ağına katıl. Esnek saatler, şeffaf kazanç, profesyonel destek — kendi işinin patronu sen ol.
+                </p>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="#basvuru" class="group inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-base transition-all shadow-2xl shadow-brand/30 hover:shadow-brand/50 hover:scale-[1.02]">
+                        Hemen Başvur
+                        <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </a>
+                    <a href="#nasil-olur" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium text-base transition backdrop-blur-sm">
+                        Nasıl olur?
+                    </a>
+                </div>
+
+                {{-- Inline mini-trust --}}
+                <div class="mt-10 flex items-center gap-4">
+                    <div class="flex -space-x-2">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border-2 border-black flex items-center justify-center text-xs font-bold text-zinc-400">MK</div>
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border-2 border-black flex items-center justify-center text-xs font-bold text-zinc-400">SY</div>
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border-2 border-black flex items-center justify-center text-xs font-bold text-zinc-400">AT</div>
+                        <div class="w-9 h-9 rounded-full bg-brand border-2 border-black flex items-center justify-center text-xs font-extrabold text-black">+200</div>
+                    </div>
+                    <div class="text-sm text-zinc-400">
+                        <span class="text-white font-semibold">200+ sürücü</span> bu hafta yola çıktı
+                    </div>
+                </div>
+            </div>
+
+            {{-- Right: floating earnings card --}}
+            <div class="lg:col-span-5 relative">
+                <div class="relative">
+                    {{-- Decorative orb behind card --}}
+                    <div class="absolute -inset-6 bg-brand/20 blur-3xl rounded-full"></div>
+
+                    {{-- Main earnings card --}}
+                    <div class="relative stat-card border border-white/10 rounded-3xl p-7 md:p-9 shadow-2xl shadow-black/40">
+                        <div class="flex items-start justify-between mb-6">
+                            <div>
+                                <div class="text-xs uppercase tracking-widest text-zinc-400 mb-2">Bu hafta</div>
+                                <div class="text-sm text-zinc-500">Ortalama sürücü kazancı</div>
+                            </div>
+                            <div class="px-2 py-1 rounded-md bg-emerald-500/15 text-emerald-300 text-xs font-bold ticker">↑ %18</div>
+                        </div>
+
+                        <div class="display-font text-6xl md:text-7xl text-white mb-1 tabular-nums">
+                            ₺<span id="counter-earnings">7.420</span>
+                        </div>
+                        <div class="text-sm text-zinc-500 mb-6">42 saat aktif çalışma · İzmir</div>
+
+                        {{-- Mini chart bars --}}
+                        <div class="flex items-end justify-between gap-1.5 h-20 mb-6">
+                            @foreach([42, 58, 35, 71, 49, 88, 95] as $i => $h)
+                                <div class="flex-1 rounded-t-md {{ $i === 6 ? 'bg-brand' : 'bg-zinc-700' }}" style="height: {{ $h }}%"></div>
+                            @endforeach
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 pt-5 border-t border-white/5">
+                            <div>
+                                <div class="text-xs text-zinc-500 mb-1">Sürücü payı</div>
+                                <div class="text-2xl font-bold text-brand">%85</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-zinc-500 mb-1">Ödeme</div>
+                                <div class="text-2xl font-bold text-white">Haftalık</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Floating mini badge --}}
+                    <div class="absolute -bottom-4 -left-4 bg-black border border-white/10 rounded-2xl px-4 py-3 shadow-2xl">
+                        <div class="flex items-center gap-2">
+                            <div class="w-9 h-9 rounded-full bg-brand/20 flex items-center justify-center text-brand">★</div>
+                            <div>
+                                <div class="text-xs text-zinc-500">Memnuniyet</div>
+                                <div class="text-base font-bold text-white">4.9/5</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ============ MARQUEE BRAND STRIP ============ --}}
+    <section class="relative py-6 border-y border-white/5 bg-black/40 backdrop-blur-sm marquee overflow-hidden">
+        <div class="flex scroll-x whitespace-nowrap text-sm uppercase tracking-[0.3em] text-zinc-600">
+            @for($i = 0; $i < 2; $i++)
+                <div class="flex items-center gap-12 px-6">
+                    <span>Mercedes Vito</span><span class="text-brand">·</span>
+                    <span>BMW 5 Series</span><span class="text-brand">·</span>
+                    <span>Audi A6</span><span class="text-brand">·</span>
+                    <span>Mercedes E-Class</span><span class="text-brand">·</span>
+                    <span>VW Caravelle</span><span class="text-brand">·</span>
+                    <span>Mercedes S-Class</span><span class="text-brand">·</span>
+                    <span>Range Rover</span><span class="text-brand">·</span>
+                </div>
+            @endfor
+        </div>
+    </section>
+
+    {{-- ============ STATS ============ --}}
+    <section class="relative px-6 py-20 md:py-28">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/5 rounded-3xl overflow-hidden border border-white/5">
+                @foreach([
+                    ['200+', 'Aktif sürücü'],
+                    ['₺28K', 'Aylık ortalama kazanç'],
+                    ['%85', 'Sürücü payı'],
+                    ['4.9', 'Sürücü memnuniyeti'],
+                ] as $stat)
+                    <div class="bg-black p-8 md:p-10 group hover:bg-zinc-950 transition">
+                        <div class="display-font text-5xl md:text-6xl text-white mb-3 group-hover:text-brand transition">{{ $stat[0] }}</div>
+                        <div class="text-sm text-zinc-500 uppercase tracking-wider">{{ $stat[1] }}</div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    {{-- ============ BENTO BENEFITS ============ --}}
+    <section class="relative px-6 py-20">
+        <div class="max-w-7xl mx-auto">
+            <div class="max-w-3xl mb-16">
+                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Neden Ferogo</div>
+                <h2 class="display-font text-4xl md:text-6xl text-white mb-6">
+                    Üç şey net:<br>
+                    <span class="text-zinc-500">kazanç,</span> esneklik, <span class="text-zinc-500">saygı.</span>
+                </h2>
+                <p class="text-lg text-zinc-400 leading-relaxed">
+                    Sürücü olmak bir mecburiyet değil, bir tercih olmalı. Biz koşulları öyle kuruyoruz ki sen sadece direksiyona ve müşteriye odaklan.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+
+                {{-- Big card --}}
+                <div class="bento-card md:col-span-2 md:row-span-2 rounded-3xl p-8 md:p-10 border border-white/5 relative overflow-hidden">
+                    <div class="absolute top-8 right-8 text-7xl opacity-10">💰</div>
+                    <div class="relative">
+                        <div class="text-xs uppercase tracking-[0.2em] text-brand mb-4">01 · Kazanç</div>
+                        <h3 class="display-font text-3xl md:text-5xl text-white mb-4">Sektörün en yüksek sürücü payı</h3>
+                        <p class="text-zinc-400 leading-relaxed mb-6 max-w-md">
+                            Her yolculuktan %85 sana, sadece %15 platform komisyonu. Tip'ler tamamen senin. Şeffaf bordro, anlık görüntüleme.
+                        </p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="px-3 py-1 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold">%85 pay</span>
+                            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-semibold">Tip senin</span>
+                            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-semibold">Şeffaf bordro</span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Medium card --}}
+                <div class="bento-card rounded-3xl p-7 border border-white/5">
+                    <div class="text-3xl mb-4">⏱</div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">02 · Esneklik</div>
+                    <h3 class="text-xl font-bold text-white mb-2">İstediğin saatte çevrimiçi ol</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed">Vardiya yok, hedef yok. Online'a geç, yolculuğu al, kapat. Sen yönet.</p>
+                </div>
+
+                {{-- Medium card --}}
+                <div class="bento-card rounded-3xl p-7 border border-white/5">
+                    <div class="text-3xl mb-4">⚡</div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">03 · Hızlı ödeme</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Her Cuma hesabında</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed">Haftalık otomatik ödeme. Acil ihtiyaçta anlık çekim de mümkün.</p>
+                </div>
+
+                {{-- Wide card --}}
+                <div class="bento-card md:col-span-2 rounded-3xl p-7 border border-white/5">
+                    <div class="flex items-start gap-5">
+                        <div class="w-14 h-14 rounded-2xl bg-brand/15 flex items-center justify-center text-2xl shrink-0">🛡</div>
+                        <div>
+                            <div class="text-xs uppercase tracking-[0.2em] text-brand mb-2">04 · Güvence</div>
+                            <h3 class="text-xl font-bold text-white mb-2">Sigorta, hukuki destek, 7/24 operasyon</h3>
+                            <p class="text-sm text-zinc-400 leading-relaxed">Kazaya, müşteri uyuşmazlığına, teknik soruna karşı arkanda profesyonel ekip ve sigorta var. Yalnız değilsin.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Small card --}}
+                <div class="bento-card rounded-3xl p-7 border border-white/5">
+                    <div class="text-3xl mb-4">👔</div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">05 · Müşteri</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Sadece premium müşteri</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed">Kurumsal, havalimanı, VIP. Pazarlık yok, fiyat net, müşteri kibar.</p>
+                </div>
+
+                {{-- Wide card --}}
+                <div class="bento-card md:col-span-2 rounded-3xl p-7 border border-white/5 relative overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 text-9xl opacity-5">🚀</div>
+                    <div class="relative">
+                        <div class="text-xs uppercase tracking-[0.2em] text-brand mb-2">06 · Onboarding</div>
+                        <h3 class="text-xl font-bold text-white mb-2">48 saatte yolda ol</h3>
+                        <p class="text-sm text-zinc-400 leading-relaxed max-w-md">Başvurudan ilk yolculuğa ortalama 2 gün. Belge yükleme, kısa eğitim, plaka eşleme — hepsi tek panelden.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ============ HOW IT WORKS ============ --}}
+    <section id="nasil-olur" class="relative px-6 py-20 md:py-28">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Süreç</div>
+                <h2 class="display-font text-4xl md:text-6xl text-white mb-5">Dört adım, iki gün.</h2>
+                <p class="text-lg text-zinc-400">Basit, hızlı, şeffaf — bürokrasi yok, takip senin elinde.</p>
+            </div>
+
+            {{-- Horizontal step flow --}}
+            <div class="relative">
+                <div class="absolute top-8 left-12 right-12 h-px step-line hidden md:block"></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-4 relative">
+                    @foreach([
+                        ['01', 'Başvur', 'Aşağıdaki formu doldur — 2 dakika sürer.', '📝'],
+                        ['02', 'Belge yükle', 'Ehliyet, SRC, ruhsat. Hepsi panelden.', '📋'],
+                        ['03', 'Eşleştir', 'Kendi aracın yoksa filomuzdan tahsis ederiz.', '🚗'],
+                        ['04', 'Yola çık', 'Onayını al, çevrimiçi ol, ilk yolculuğu kabul et.', '🛣'],
+                    ] as $step)
+                        <div class="relative text-center">
+                            <div class="relative inline-flex items-center justify-center w-16 h-16 rounded-full bg-black border-2 border-brand text-2xl mb-5 mx-auto">
+                                {{ $step[3] }}
+                            </div>
+                            <div class="text-xs font-mono text-brand mb-2">{{ $step[0] }}</div>
+                            <h3 class="text-xl font-bold text-white mb-2">{{ $step[1] }}</h3>
+                            <p class="text-sm text-zinc-400 leading-relaxed max-w-[200px] mx-auto">{{ $step[2] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ============ REQUIREMENTS ============ --}}
+    <section class="relative px-6 py-20">
+        <div class="max-w-5xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                <div>
+                    <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Gereksinimler</div>
+                    <h2 class="display-font text-4xl md:text-5xl text-white mb-5">Sende olmalı.</h2>
+                    <p class="text-zinc-400 leading-relaxed">
+                        Premium hizmet, profesyonel sürücüyle başlar. Aşağıdaki maddeler senin için zaten varsa, başvurun anında işleme alınır.
+                    </p>
+                </div>
+
+                <ul class="space-y-3">
+                    @foreach([
+                        'En az 22 yaşında olmak',
+                        'B sınıfı ehliyet (ticari için D / D1)',
+                        'Geçerli SRC-2 belgesi (yoksa biz yönlendiririz)',
+                        'Sabıka kaydı temiz olmak',
+                        'En az 2 yıl sürüş deneyimi',
+                        'Sigara içilmeyen araç',
+                        'Profesyonel görünüm ve iletişim',
+                        'Akıllı telefon (Android 9+ / iOS 14+)',
+                    ] as $req)
+                        <li class="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-brand/30 transition">
+                            <div class="w-6 h-6 rounded-full bg-brand/15 flex items-center justify-center text-brand text-sm shrink-0 mt-0.5">✓</div>
+                            <span class="text-zinc-200">{{ $req }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    {{-- ============ APPLICATION FORM ============ --}}
+    <section id="basvuru" class="relative px-6 py-20 md:py-28">
+        <div class="max-w-3xl mx-auto">
+
+            <div class="text-center mb-12">
+                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Başvuru</div>
+                <h2 class="display-font text-4xl md:text-6xl text-white mb-5">2 dakika. Aynı gün cevap.</h2>
+                <p class="text-lg text-zinc-400 max-w-xl mx-auto">
+                    Aşağıdaki formu doldur, ekip içinden bir kişi 24 saat içinde seninle iletişime geçsin.
+                </p>
+            </div>
+
+            @if(session('application_success'))
+                <div class="mb-8 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">✓</div>
+                    <div>
+                        <div class="text-emerald-200 font-semibold mb-1">Başvurun alındı.</div>
+                        <div class="text-sm text-emerald-100/80">24 saat içinde telefonla seni arayacağız. Hazırda dur.</div>
+                    </div>
+                </div>
+            @endif
+
+            @if($errors->any())
+                <div class="mb-8 p-5 rounded-2xl bg-red-500/10 border border-red-500/30">
+                    <div class="text-red-200 font-semibold mb-2">Lütfen şunları düzelt:</div>
+                    <ul class="list-disc list-inside text-sm text-red-100/80 space-y-1">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('driver.apply.store') }}" class="bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-10 space-y-8">
+                @csrf
+
+                {{-- Section: kişisel --}}
+                <div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Kişisel</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ad Soyad</label>
+                            <input type="text" name="full_name" value="{{ old('full_name') }}" required maxlength="120" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mehmet Yılmaz">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Telefon</label>
+                            <input type="tel" name="phone" value="{{ old('phone') }}" required maxlength="32" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="0532 000 00 00">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">E-posta <span class="text-zinc-600">(opsiyonel)</span></label>
+                            <input type="email" name="email" value="{{ old('email') }}" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="mehmet@ornek.com">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şehir</label>
+                            <select name="city_id" class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                <option value="">Seçiniz</option>
+                                @foreach($cities as $city)
+                                    <option value="{{ $city->id }}" {{ old('city_id') == $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Doğum yılı</label>
+                            <input type="number" name="birth_year" value="{{ old('birth_year') }}" min="1940" max="{{ date('Y') - 18 }}" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="1990">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Section: profesyonel --}}
+                <div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Sürüş profili</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ehliyet sınıfı</label>
+                            <select name="license_class" class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                @foreach(['B' => 'B', 'D1' => 'D1', 'D' => 'D', 'E' => 'E'] as $val => $label)
+                                    <option value="{{ $val }}" {{ old('license_class', 'B') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Deneyim</label>
+                            <select name="experience_band" class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                @foreach(['under_1' => '1 yıldan az', '1_to_3' => '1-3 yıl', '3_to_5' => '3-5 yıl', '5_plus' => '5 yıl ve üzeri'] as $val => $label)
+                                    <option value="{{ $val }}" {{ old('experience_band', '1_to_3') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+                        <label class="check-pill cursor-pointer">
+                            <input type="checkbox" name="has_src" value="1" class="sr-only peer" {{ old('has_src') ? 'checked' : '' }}>
+                            <div class="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
+                                <div class="w-5 h-5 rounded-md border-2 border-current flex items-center justify-center text-xs">✓</div>
+                                <span class="text-sm font-medium">SRC-2 belgem var</span>
+                            </div>
+                        </label>
+                        <label class="check-pill cursor-pointer">
+                            <input type="checkbox" name="has_vehicle" value="1" class="sr-only peer" {{ old('has_vehicle') ? 'checked' : '' }} onchange="document.getElementById('vehicle-info-wrap').classList.toggle('hidden', !this.checked)">
+                            <div class="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
+                                <div class="w-5 h-5 rounded-md border-2 border-current flex items-center justify-center text-xs">✓</div>
+                                <span class="text-sm font-medium">Kendi aracım var</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div id="vehicle-info-wrap" class="{{ old('has_vehicle') ? '' : 'hidden' }}">
+                        <label class="block text-xs font-medium text-zinc-400 mb-2">Araç bilgisi <span class="text-zinc-600">(marka, model, yıl)</span></label>
+                        <input type="text" name="vehicle_info" value="{{ old('vehicle_info') }}" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mercedes Vito 2021">
+                    </div>
+                </div>
+
+                {{-- Section: not --}}
+                <div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Eklemek istediğin</div>
+                    <textarea name="notes" rows="4" maxlength="1000" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 resize-none" placeholder="Bizimle paylaşmak istediğin bir şey varsa...">{{ old('notes') }}</textarea>
+                </div>
+
+                {{-- KVKK --}}
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" name="kvkk" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
+                    <span class="text-sm text-zinc-400 leading-relaxed">
+                        Kişisel verilerimin başvuru değerlendirme amacıyla işlenmesini ve benimle iletişim kurulmasını kabul ediyorum. <a href="#" class="text-brand hover:underline">KVKK Aydınlatma Metni</a>
+                    </span>
+                </label>
+
+                {{-- Submit --}}
+                <button type="submit" class="group w-full inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-lg transition-all shadow-2xl shadow-brand/30 hover:shadow-brand/50">
+                    Başvurumu Gönder
+                    <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                </button>
+
+                <p class="text-xs text-zinc-500 text-center">
+                    Telefonla görüşmek istersen → <a href="tel:+908508401377" class="text-brand hover:underline font-semibold">0850 840 13 77</a>
+                </p>
+            </form>
+        </div>
+    </section>
+
+    {{-- ============ FINAL CTA STRIP ============ --}}
+    <section class="relative px-6 py-16">
+        <div class="max-w-5xl mx-auto">
+            <div class="relative rounded-3xl bg-gradient-to-br from-brand/20 via-brand/5 to-transparent border border-brand/20 p-8 md:p-12 overflow-hidden">
+                <div class="absolute -right-12 -top-12 w-64 h-64 bg-brand/20 blur-3xl rounded-full"></div>
+                <div class="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div>
+                        <h3 class="display-font text-3xl md:text-4xl text-white mb-2">Sorun mu var?</h3>
+                        <p class="text-zinc-300">WhatsApp veya telefonla 7/24 erişebilirsin.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <a href="https://wa.me/908508401377" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition">
+                            💬 WhatsApp
+                        </a>
+                        <a href="tel:+908508401377" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black font-semibold transition hover:bg-zinc-200">
+                            📞 0850 840 13 77
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+@endsection
+
+@push('scripts')
+<script>
+    // Simple counter animation for hero earnings
+    (function() {
+        const el = document.getElementById('counter-earnings');
+        if (!el) return;
+        const target = 7420;
+        const duration = 1800;
+        const start = performance.now();
+        function step(now) {
+            const t = Math.min(1, (now - start) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const value = Math.floor(target * eased);
+            el.textContent = value.toLocaleString('tr-TR');
+            if (t < 1) requestAnimationFrame(step);
+        }
+        // start when in viewport
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    requestAnimationFrame(step);
+                    io.disconnect();
+                }
+            });
+        }, { threshold: 0.3 });
+        io.observe(el);
+    })();
+</script>
+@endpush

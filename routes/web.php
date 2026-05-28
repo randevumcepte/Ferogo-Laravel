@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Booking\Http\Controllers\ReservationController;
+use App\Modules\Driver\Http\Controllers\DriverApplicationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
@@ -14,3 +15,9 @@ Route::get('/rezervasyon/{publicId}', [ReservationController::class, 'confirmati
 // AJAX: canlı fiyat hesabı
 Route::post('/api/calculate-fare', [ReservationController::class, 'calculateFare'])
     ->name('reservation.calculate-fare');
+
+// Sürücü başvuru sayfası
+Route::get('/surucu-olun', [DriverApplicationController::class, 'show'])
+    ->name('driver.apply');
+Route::post('/surucu-olun', [DriverApplicationController::class, 'store'])
+    ->name('driver.apply.store');
