@@ -96,6 +96,56 @@
         </div>
     </footer>
 
+    {{-- Cookie Consent Banner --}}
+    <div id="cookie-consent" class="fixed bottom-0 inset-x-0 z-[100] translate-y-full transition-transform duration-500 ease-out" role="dialog" aria-live="polite" aria-label="Çerez bildirimi">
+        <div class="mx-auto max-w-4xl m-3 md:m-6">
+            <div class="bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 p-5 md:p-6">
+                <div class="flex flex-col md:flex-row md:items-center gap-5">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xl">🍪</span>
+                            <h3 class="text-white font-semibold text-base">Çerez Kullanımı</h3>
+                        </div>
+                        <p class="text-sm text-zinc-400 leading-relaxed">
+                            Web sitemizde deneyiminizi iyileştirmek, trafiği analiz etmek ve hizmetlerimizi geliştirmek için çerezler kullanıyoruz. <a href="#" class="text-brand hover:underline">Detaylı bilgi</a>.
+                        </p>
+                    </div>
+                    <div class="flex gap-2 md:flex-shrink-0">
+                        <button type="button" id="cookie-reject" class="flex-1 md:flex-none px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-sm font-medium transition">
+                            Reddet
+                        </button>
+                        <button type="button" id="cookie-accept" class="flex-1 md:flex-none px-5 py-2.5 rounded-full bg-brand hover:bg-brand-600 text-black text-sm font-bold transition shadow-lg shadow-brand/20">
+                            Kabul Et
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const STORAGE_KEY = 'cookie-consent';
+            const banner = document.getElementById('cookie-consent');
+            if (!banner) return;
+
+            if (localStorage.getItem(STORAGE_KEY)) return;
+
+            setTimeout(() => banner.classList.remove('translate-y-full'), 600);
+
+            function hide(decision) {
+                localStorage.setItem(STORAGE_KEY, decision);
+                localStorage.setItem(STORAGE_KEY + '-at', new Date().toISOString());
+                banner.classList.add('translate-y-full');
+                setTimeout(() => banner.remove(), 500);
+                document.dispatchEvent(new CustomEvent('cookie-consent', { detail: { decision } }));
+            }
+
+            document.getElementById('cookie-accept').addEventListener('click', () => hide('accepted'));
+            document.getElementById('cookie-reject').addEventListener('click', () => hide('rejected'));
+        })();
+    </script>
+
     @stack('scripts')
 </body>
 </html>
