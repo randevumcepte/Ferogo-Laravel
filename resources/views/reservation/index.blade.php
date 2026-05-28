@@ -205,12 +205,27 @@
 
                     <div>
                         <label class="block text-sm font-medium text-zinc-300 mb-2">📍 Alış Adresi</label>
-                        <input type="text" id="pickup-address" name="pickup_address" value="{{ old('pickup_address') }}" required
-                            placeholder="Adres aramaya başlayın..."
-                            autocomplete="off"
-                            class="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand focus:outline-none">
+                        <div class="relative">
+                            <input type="text" id="pickup-address" name="pickup_address" value="{{ old('pickup_address') }}" required
+                                placeholder="Adres aramaya başlayın..."
+                                autocomplete="off"
+                                class="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white focus:border-brand focus:outline-none">
+                            <button type="button" id="use-my-location" title="Konumumu kullan"
+                                class="absolute inset-y-0 right-0 flex items-center justify-center w-11 text-zinc-400 hover:text-brand transition-colors focus:outline-none focus:text-brand"
+                                aria-label="Konumumu kullan">
+                                <svg id="use-my-location-icon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M2 12h2m16 0h2M12 7a5 5 0 100 10 5 5 0 000-10z"/>
+                                    <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                                </svg>
+                                <svg id="use-my-location-spinner" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 hidden animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/>
+                                </svg>
+                            </button>
+                        </div>
                         <input type="hidden" id="pickup-lat" name="pickup_lat" value="{{ old('pickup_lat') }}">
                         <input type="hidden" id="pickup-lng" name="pickup_lng" value="{{ old('pickup_lng') }}">
+                        <p id="use-my-location-error" class="hidden mt-1 text-xs text-red-400"></p>
                     </div>
 
                     <div>
@@ -425,6 +440,66 @@
             el.addEventListener('keydown', e => {
                 if (e.key === 'Enter') e.preventDefault();
             });
+        });
+
+        // "Konumumu kullan" butonu: tarayıcı geolocation + reverse geocoding
+        const locBtn = document.getElementById('use-my-location');
+        const locIcon = document.getElementById('use-my-location-icon');
+        const locSpinner = document.getElementById('use-my-location-spinner');
+        const locError = document.getElementById('use-my-location-error');
+        const geocoder = new google.maps.Geocoder();
+
+        const setLocLoading = (loading) => {
+            locBtn.disabled = loading;
+            locIcon.classList.toggle('hidden', loading);
+            locSpinner.classList.toggle('hidden', !loading);
+        };
+        const showLocError = (msg) => {
+            locError.textContent = msg;
+            locError.classList.remove('hidden');
+        };
+        const clearLocError = () => {
+            locError.textContent = '';
+            locError.classList.add('hidden');
+        };
+
+        locBtn.addEventListener('click', () => {
+            clearLocError();
+            if (!navigator.geolocation) {
+                showLocError('Tarayıcınız konum servisini desteklemiyor.');
+                return;
+            }
+            setLocLoading(true);
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    geocoder.geocode({ location: { lat, lng }, language: 'tr', region: 'TR' }, (results, status) => {
+                        setLocLoading(false);
+                        if (status === 'OK' && results && results[0]) {
+                            pickupInput.value = results[0].formatted_address;
+                            document.getElementById('pickup-lat').value = lat;
+                            document.getElementById('pickup-lng').value = lng;
+                            FeroGoForm.calculateDistance();
+                        } else {
+                            showLocError('Konum adrese çevrilemedi. Lütfen manuel girin.');
+                        }
+                    });
+                },
+                (err) => {
+                    setLocLoading(false);
+                    if (err.code === err.PERMISSION_DENIED) {
+                        showLocError('Konum izni reddedildi. Tarayıcı ayarlarından izin verin.');
+                    } else if (err.code === err.POSITION_UNAVAILABLE) {
+                        showLocError('Konum bilgisi alınamadı.');
+                    } else if (err.code === err.TIMEOUT) {
+                        showLocError('Konum isteği zaman aşımına uğradı.');
+                    } else {
+                        showLocError('Konum alınırken bir hata oluştu.');
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
         });
     };
 </script>
