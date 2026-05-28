@@ -18,6 +18,11 @@ class RideRequest extends Model
         'public_id',
         'customer_name',
         'customer_phone',
+        'phone_verified_at',
+        'verification_token',
+        'client_ip',
+        'client_fingerprint',
+        'user_agent',
         'vehicle_class_id',
         'pickup_address',
         'pickup_lat',
@@ -37,18 +42,27 @@ class RideRequest extends Model
         'accepted_driver_id',
         'ride_id',
         'rejection_count',
+        'driver_arrived_at',
+        'customer_confirmed_at',
+        'no_show_at',
+        'captcha_passed',
     ];
 
     protected $casts = [
-        'pickup_lat'           => 'decimal:7',
-        'pickup_lng'           => 'decimal:7',
-        'dropoff_lat'          => 'decimal:7',
-        'dropoff_lng'          => 'decimal:7',
-        'distance_km'          => 'decimal:2',
-        'estimated_fare'       => 'decimal:2',
-        'candidate_driver_ids' => 'array',
-        'offer_expires_at'     => 'datetime',
-        'accepted_at'          => 'datetime',
+        'pickup_lat'            => 'decimal:7',
+        'pickup_lng'            => 'decimal:7',
+        'dropoff_lat'           => 'decimal:7',
+        'dropoff_lng'           => 'decimal:7',
+        'distance_km'           => 'decimal:2',
+        'estimated_fare'        => 'decimal:2',
+        'candidate_driver_ids'  => 'array',
+        'offer_expires_at'      => 'datetime',
+        'accepted_at'           => 'datetime',
+        'phone_verified_at'     => 'datetime',
+        'driver_arrived_at'     => 'datetime',
+        'customer_confirmed_at' => 'datetime',
+        'no_show_at'            => 'datetime',
+        'captcha_passed'        => 'boolean',
     ];
 
     protected static function booted(): void
@@ -102,7 +116,7 @@ class RideRequest extends Model
 
     public function isTerminal(): bool
     {
-        return in_array($this->status, ['accepted', 'exhausted', 'cancelled'], true);
+        return in_array($this->status, ['accepted', 'exhausted', 'cancelled', 'no_show'], true);
     }
 
     public function offerExpired(): bool

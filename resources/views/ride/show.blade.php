@@ -527,6 +527,44 @@
                 </button>
             </form>
 
+            {{-- OTP step: telefon doğrulama (yeni telefon ya da süresi geçmiş token) --}}
+            <div id="quick-modal-otp" class="hidden px-6 py-6 space-y-5">
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand/15 border border-brand/30 flex items-center justify-center text-3xl">📱</div>
+                    <h3 class="text-xl font-bold text-white mb-1">Telefonunu doğrula</h3>
+                    <p class="text-sm text-zinc-400">
+                        <span id="qm-otp-phone-label" class="text-zinc-200 font-medium">—</span> numarasına<br>
+                        6 haneli kod gönderdik.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Doğrulama kodu</label>
+                    <input id="qm-otp-code" type="text" inputmode="numeric" maxlength="6" pattern="\d{6}"
+                           class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.4em] font-mono text-white placeholder-zinc-600 focus:outline-none transition"
+                           placeholder="000000" autocomplete="one-time-code">
+                </div>
+
+                <div id="qm-otp-dev" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200">
+                    <span class="font-bold">DEV mode:</span> Kodun → <span id="qm-otp-dev-code" class="font-mono"></span>
+                </div>
+
+                <div id="qm-otp-error" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300"></div>
+
+                <button type="button" id="qm-otp-verify" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-bold transition shadow-xl shadow-brand/30">
+                    <span id="qm-otp-verify-text">Doğrula ve Devam Et</span>
+                    <svg id="qm-otp-verify-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                </button>
+
+                <div class="flex items-center justify-between text-xs">
+                    <button type="button" id="qm-otp-resend" disabled
+                            class="text-zinc-500 hover:text-brand disabled:hover:text-zinc-500 disabled:cursor-not-allowed underline underline-offset-2 transition">
+                        Tekrar gönder (<span id="qm-otp-countdown">60</span>s)
+                    </button>
+                    <button type="button" id="qm-otp-back" class="text-zinc-500 hover:text-zinc-300 transition">← Numarayı düzelt</button>
+                </div>
+            </div>
+
             {{-- Waiting state: sürücüye teklif gönderildi, cevap bekleniyor --}}
             <div id="quick-modal-waiting" class="hidden px-6 py-8 text-center">
                 <div class="relative w-20 h-20 mx-auto mb-5">
@@ -594,6 +632,14 @@
                            placeholder="Şoföre mesaj…">
                     <button type="submit" class="px-3 py-2 rounded-xl bg-brand hover:bg-brand-600 text-black text-xs font-bold transition">Gönder</button>
                 </form>
+
+                {{-- 60sn müşteri onay butonu — sürücüye "müşterim gerçek, geliyorum" sinyali --}}
+                <div id="qm-confirm-bar" class="hidden px-6 py-3 border-t border-white/5">
+                    <button type="button" id="qm-confirm-btn"
+                            class="w-full px-4 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition">
+                        Sürücüyü gördüm, geliyorum
+                    </button>
+                </div>
 
                 <div class="px-6 py-3 border-t border-white/5 text-center">
                     <button type="button" id="quick-modal-done"
@@ -1261,16 +1307,86 @@
     }
 
     // ===== QUICK SELECT MODAL =====
-    const RIDE_REQ_URL  = '{{ route('ride_requests.store') }}';
-    const RIDE_REQ_SHOW = (id) => '{{ url('/api/ride-requests') }}/' + encodeURIComponent(id);
-    const POLL_STATUS_MS = 2000;
-    const POLL_CHAT_MS   = 2500;
+    const RIDE_REQ_URL    = '{{ route('ride_requests.store') }}';
+    const RIDE_REQ_SHOW   = (id) => '{{ url('/api/ride-requests') }}/' + encodeURIComponent(id);
+    const OTP_SEND_URL    = '{{ route('phone.send_otp') }}';
+    const OTP_VERIFY_URL  = '{{ route('phone.verify_otp') }}';
+    const POLL_STATUS_MS  = 2000;
+    const POLL_CHAT_MS    = 2500;
+
+    // ===== CİHAZ FİNGERPRİNT (rate limit + sabotaj koruması) =====
+    // Hafif: ekran + saat dilimi + dil + UA + canvas — sabit-ish 64 char hash
+    const deviceFingerprint = (() => {
+        try {
+            const stored = localStorage.getItem('fero_fp');
+            if (stored && stored.length === 64) return stored;
+        } catch (_) {}
+        const parts = [
+            navigator.userAgent || '',
+            navigator.language || '',
+            new Date().getTimezoneOffset(),
+            screen.width + 'x' + screen.height + 'x' + (screen.colorDepth || 24),
+            navigator.hardwareConcurrency || 0,
+            navigator.platform || '',
+            Math.random().toString(36).slice(2), // tekil cihaz tanımlayıcı
+        ].join('|');
+        // Basit hash → hex (64 char için iki tur SHA-256 lazım ama subtle async)
+        // Senkron tutmak için djb2 + suffix uzatma
+        let h = 5381;
+        for (let i = 0; i < parts.length; i++) h = ((h << 5) + h + parts.charCodeAt(i)) >>> 0;
+        const fp = (h.toString(16) + parts.length.toString(16) + Date.now().toString(16) + Math.random().toString(16).slice(2)).slice(0, 64).padEnd(64, '0');
+        try { localStorage.setItem('fero_fp', fp); } catch (_) {}
+        return fp;
+    })();
+
+    // ===== Doğrulama token saklama (telefon başına 24 saat) =====
+    function normalizePhoneJs(p) {
+        let d = String(p || '').replace(/\D+/g, '');
+        if (d.startsWith('90') && d.length === 12) d = d.slice(2);
+        if (d.startsWith('0') && d.length === 11) d = d.slice(1);
+        return d;
+    }
+    function storedTokenFor(phone) {
+        try {
+            const key = 'fero_otp_token:' + normalizePhoneJs(phone);
+            const raw = localStorage.getItem(key);
+            if (!raw) return null;
+            const obj = JSON.parse(raw);
+            if (!obj || !obj.token || !obj.expires_at) return null;
+            if (Date.now() > obj.expires_at) { localStorage.removeItem(key); return null; }
+            return obj.token;
+        } catch (_) { return null; }
+    }
+    function storeToken(phone, token) {
+        try {
+            const key = 'fero_otp_token:' + normalizePhoneJs(phone);
+            // Token TTL backend'de 24 saat; biz 23 saat tutalım (clock drift için)
+            localStorage.setItem(key, JSON.stringify({
+                token,
+                expires_at: Date.now() + 23 * 3600 * 1000,
+            }));
+        } catch (_) {}
+    }
 
     const modalEl = document.getElementById('quick-modal');
     const modalForm = document.getElementById('quick-modal-form');
+    const modalOtp = document.getElementById('quick-modal-otp');
     const modalWaiting = document.getElementById('quick-modal-waiting');
     const modalAccepted = document.getElementById('quick-modal-accepted');
     const modalTerminal = document.getElementById('quick-modal-terminal');
+    const qmOtpCode = document.getElementById('qm-otp-code');
+    const qmOtpError = document.getElementById('qm-otp-error');
+    const qmOtpVerify = document.getElementById('qm-otp-verify');
+    const qmOtpVerifyText = document.getElementById('qm-otp-verify-text');
+    const qmOtpVerifySpinner = document.getElementById('qm-otp-verify-spinner');
+    const qmOtpResend = document.getElementById('qm-otp-resend');
+    const qmOtpCountdown = document.getElementById('qm-otp-countdown');
+    const qmOtpBack = document.getElementById('qm-otp-back');
+    const qmOtpPhoneLabel = document.getElementById('qm-otp-phone-label');
+    const qmOtpDev = document.getElementById('qm-otp-dev');
+    const qmOtpDevCode = document.getElementById('qm-otp-dev-code');
+    const qmConfirmBar = document.getElementById('qm-confirm-bar');
+    const qmConfirmBtn = document.getElementById('qm-confirm-btn');
     const qmPickupInput = document.getElementById('qm-pickup-address');
     const qmPickupCoords = document.getElementById('qm-pickup-coords');
     const qmDropoffInput = document.getElementById('qm-dropoff-address');
@@ -1297,6 +1413,7 @@
 
     function showStage(name) {
         modalForm.classList.toggle('hidden', name !== 'form');
+        modalOtp.classList.toggle('hidden', name !== 'otp');
         modalWaiting.classList.toggle('hidden', name !== 'waiting');
         modalAccepted.classList.toggle('hidden', name !== 'accepted');
         modalTerminal.classList.toggle('hidden', name !== 'terminal');
@@ -1454,7 +1571,47 @@
         qmFareTotal.textContent = `₺${Math.round(calc)}`;
     }
 
-    // ===== SUBMIT — gerçek ride_request yarat, bekleme ekranına geç =====
+    // Pending submit payload — OTP doğrulama sonrası gönderilmek üzere saklanır.
+    let pendingPayload = null;
+    let otpResendHandle = null;
+
+    function buildPayloadFromForm() {
+        const fd = new FormData(modalForm);
+        const straight = distanceKm(userCenterGlobal, [selectedDropoff.lat, selectedDropoff.lng]);
+        const km = straight * 1.2;
+        const mins = Math.max(5, Math.round(km * 2.2 + 3));
+        const fallbacks = realDrivers
+            .filter(d => d.id !== selectedRealDriver.id)
+            .map(d => d.id);
+        const rates = {
+            easy:     { base: 50,  perKm: 22, min: 150 },
+            platinum: { base: 100, perKm: 35, min: 250 },
+            vip:      { base: 200, perKm: 55, min: 500 },
+        };
+        const r = rates[selectedRealDriver.vehicle_class_slug] || rates.easy;
+        const estFare = Math.max(r.min, r.base + km * r.perKm);
+
+        return {
+            vehicle_class_slug:    selectedRealDriver.vehicle_class_slug,
+            pickup_address:        qmPickupInput.value.trim() || `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`,
+            pickup_lat:            userCenterGlobal[0],
+            pickup_lng:            userCenterGlobal[1],
+            dropoff_address:       selectedDropoff.display_name,
+            dropoff_lat:           selectedDropoff.lat,
+            dropoff_lng:           selectedDropoff.lng,
+            customer_name:         fd.get('customer_name'),
+            customer_phone:        fd.get('customer_phone'),
+            distance_km:           parseFloat(km.toFixed(2)),
+            duration_minutes:      mins,
+            estimated_fare:        Math.round(estFare),
+            preferred_driver_id:   selectedRealDriver.id,
+            fallback_driver_ids:   fallbacks,
+            fingerprint:           deviceFingerprint,
+            kvkk_consent:          fd.get('kvkk_consent') ? 1 : 0,
+        };
+    }
+
+    // ===== SUBMIT — OTP koruma katmanlı =====
     modalForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         qmError.classList.add('hidden');
@@ -1472,43 +1629,144 @@
             qmError.classList.remove('hidden'); return;
         }
 
-        const fd = new FormData(modalForm);
-        const straight = distanceKm(userCenterGlobal, [selectedDropoff.lat, selectedDropoff.lng]);
-        const km = straight * 1.2;
-        const mins = Math.max(5, Math.round(km * 2.2 + 3));
+        pendingPayload = buildPayloadFromForm();
 
-        // Aday kuyruğu: seçilen + diğer real driver'lar (fallback)
-        const fallbacks = realDrivers
-            .filter(d => d.id !== selectedRealDriver.id)
-            .map(d => d.id);
+        // Bu telefon için elimizde geçerli token var mı? → direkt gönder
+        const cached = storedTokenFor(pendingPayload.customer_phone);
+        if (cached) {
+            await submitRideRequest(cached);
+            return;
+        }
 
-        // Yerel fiyat tahmini (Faz 5'te sunucudan dönecek)
-        const rates = {
-            easy:     { base: 50,  perKm: 22, min: 150 },
-            platinum: { base: 100, perKm: 35, min: 250 },
-            vip:      { base: 200, perKm: 55, min: 500 },
-        };
-        const r = rates[selectedRealDriver.vehicle_class_slug] || rates.easy;
-        const estFare = Math.max(r.min, r.base + km * r.perKm);
+        // Yoksa OTP iste
+        await requestOtp(pendingPayload.customer_phone);
+    });
 
-        const payload = {
-            vehicle_class_slug:    selectedRealDriver.vehicle_class_slug,
-            pickup_address:        qmPickupInput.value.trim() || `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`,
-            pickup_lat:            userCenterGlobal[0],
-            pickup_lng:            userCenterGlobal[1],
-            dropoff_address:       selectedDropoff.display_name,
-            dropoff_lat:           selectedDropoff.lat,
-            dropoff_lng:           selectedDropoff.lng,
-            customer_name:         fd.get('customer_name'),
-            customer_phone:        fd.get('customer_phone'),
-            distance_km:           parseFloat(km.toFixed(2)),
-            duration_minutes:      mins,
-            estimated_fare:        Math.round(estFare),
-            preferred_driver_id:   selectedRealDriver.id,
-            fallback_driver_ids:   fallbacks,
-            kvkk_consent:          fd.get('kvkk_consent') ? 1 : 0,
-        };
+    async function requestOtp(phone) {
+        qmError.classList.add('hidden');
+        qmSubmit.disabled = true;
+        qmSubmitText.textContent = 'Kod gönderiliyor…';
+        qmSubmitSpinner.classList.remove('hidden');
 
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const res = await fetch(OTP_SEND_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: JSON.stringify({ phone, fingerprint: deviceFingerprint }),
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                qmError.textContent = data.message || 'Kod gönderilemedi.';
+                qmError.classList.remove('hidden');
+                return;
+            }
+            // Eğer telefon zaten doğrulanmışsa direkt token geldi
+            if (data.already_verified && data.token) {
+                storeToken(phone, data.token);
+                await submitRideRequest(data.token);
+                return;
+            }
+
+            qmOtpPhoneLabel.textContent = phone;
+            qmOtpCode.value = '';
+            qmOtpError.classList.add('hidden');
+            if (data.dev_code) {
+                qmOtpDev.classList.remove('hidden');
+                qmOtpDevCode.textContent = data.dev_code;
+            } else {
+                qmOtpDev.classList.add('hidden');
+            }
+            startOtpCountdown();
+            showStage('otp');
+            setTimeout(() => qmOtpCode.focus(), 80);
+        } catch (err) {
+            qmError.textContent = 'Bağlantı hatası. Tekrar dene.';
+            qmError.classList.remove('hidden');
+        } finally {
+            qmSubmit.disabled = false;
+            qmSubmitText.textContent = 'Talebi Gönder';
+            qmSubmitSpinner.classList.add('hidden');
+        }
+    }
+
+    function startOtpCountdown() {
+        let s = 60;
+        qmOtpResend.disabled = true;
+        qmOtpCountdown.textContent = s;
+        if (otpResendHandle) clearInterval(otpResendHandle);
+        otpResendHandle = setInterval(() => {
+            s -= 1;
+            qmOtpCountdown.textContent = s;
+            if (s <= 0) {
+                clearInterval(otpResendHandle);
+                qmOtpResend.disabled = false;
+                qmOtpResend.innerHTML = 'Tekrar gönder';
+            }
+        }, 1000);
+    }
+
+    qmOtpResend.addEventListener('click', () => {
+        if (!pendingPayload) return;
+        requestOtp(pendingPayload.customer_phone);
+    });
+    qmOtpBack.addEventListener('click', () => {
+        if (otpResendHandle) clearInterval(otpResendHandle);
+        showStage('form');
+    });
+
+    qmOtpVerify.addEventListener('click', async () => {
+        const code = (qmOtpCode.value || '').trim();
+        qmOtpError.classList.add('hidden');
+        if (!/^\d{6}$/.test(code)) {
+            qmOtpError.textContent = '6 haneli kodu eksiksiz gir.';
+            qmOtpError.classList.remove('hidden'); return;
+        }
+        if (!pendingPayload) {
+            qmOtpError.textContent = 'Oturum süresi doldu. Baştan başla.';
+            qmOtpError.classList.remove('hidden'); return;
+        }
+
+        qmOtpVerify.disabled = true;
+        qmOtpVerifyText.textContent = 'Doğrulanıyor…';
+        qmOtpVerifySpinner.classList.remove('hidden');
+
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const res = await fetch(OTP_VERIFY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    phone: pendingPayload.customer_phone,
+                    code,
+                    fingerprint: deviceFingerprint,
+                }),
+            });
+            const data = await res.json();
+            if (!data.ok || !data.token) {
+                qmOtpError.textContent = data.message || 'Kod hatalı.';
+                qmOtpError.classList.remove('hidden');
+                return;
+            }
+            storeToken(pendingPayload.customer_phone, data.token);
+            await submitRideRequest(data.token);
+        } catch (err) {
+            qmOtpError.textContent = 'Bağlantı hatası. Tekrar dene.';
+            qmOtpError.classList.remove('hidden');
+        } finally {
+            qmOtpVerify.disabled = false;
+            qmOtpVerifyText.textContent = 'Doğrula ve Devam Et';
+            qmOtpVerifySpinner.classList.add('hidden');
+        }
+    });
+
+    async function submitRideRequest(verificationToken) {
+        if (!pendingPayload) return;
+        const payload = Object.assign({}, pendingPayload, { verification_token: verificationToken });
+
+        qmOtpVerify.disabled = true;
+        qmOtpVerifyText.textContent = 'Talep gönderiliyor…';
+        qmOtpVerifySpinner.classList.remove('hidden');
         qmSubmit.disabled = true;
         qmSubmitText.textContent = 'Gönderiliyor…';
         qmSubmitSpinner.classList.remove('hidden');
@@ -1525,27 +1783,40 @@
             catch (_) { throw new Error('Sunucu beklenmedik bir cevap döndü.'); }
 
             if (!res.ok || !data.success) {
+                // Token geçersizse cache'i sil → yeni OTP iste
+                if (data.phone_reverify_required) {
+                    try { localStorage.removeItem('fero_otp_token:' + normalizePhoneJs(payload.customer_phone)); } catch (_) {}
+                    await requestOtp(payload.customer_phone);
+                    return;
+                }
                 let msg;
                 if (data.errors) msg = Object.values(data.errors)[0][0];
                 else if (data.message) msg = data.message;
                 else msg = 'Talep gönderilemedi. Tekrar dene.';
-                throw new Error(msg);
+
+                const target = modalOtp.classList.contains('hidden') ? qmError : qmOtpError;
+                target.textContent = msg;
+                target.classList.remove('hidden');
+                return;
             }
 
-            // Geçiş: waiting
             activeRequestId = data.public_id;
             applyStatus(data.status);
             showStage('waiting');
             startStatusPolling();
         } catch (err) {
-            qmError.textContent = err.message;
-            qmError.classList.remove('hidden');
+            const target = modalOtp.classList.contains('hidden') ? qmError : qmOtpError;
+            target.textContent = err.message;
+            target.classList.remove('hidden');
         } finally {
+            qmOtpVerify.disabled = false;
+            qmOtpVerifyText.textContent = 'Doğrula ve Devam Et';
+            qmOtpVerifySpinner.classList.add('hidden');
             qmSubmit.disabled = false;
             qmSubmitText.textContent = 'Talebi Gönder';
             qmSubmitSpinner.classList.add('hidden');
         }
-    });
+    }
 
     // ===== WAITING — vazgeç butonu =====
     document.getElementById('qm-waiting-cancel').addEventListener('click', async () => {
@@ -1597,6 +1868,12 @@
         } else if (s.status === 'accepted') {
             if (waitingCountdownHandle) { clearInterval(waitingCountdownHandle); waitingCountdownHandle = null; }
             renderAccepted(s);
+            // Sürücü vardı + müşteri onayı henüz yok → onay barını göster (60sn bot kontrolü)
+            if (s.arrived_at && !s.customer_confirmed_at) {
+                qmConfirmBar.classList.remove('hidden');
+            } else {
+                qmConfirmBar.classList.add('hidden');
+            }
             startChatPolling();
             showStage('accepted');
         } else if (s.status === 'exhausted') {
@@ -1605,11 +1882,30 @@
             document.getElementById('qm-terminal-msg').textContent =
                 'Aday sürücülerin tümü cevap vermedi. Birkaç dakika sonra tekrar dene veya rezervasyon formuna geç.';
             showStage('terminal');
+        } else if (s.status === 'no_show') {
+            stopAllPolling();
+            document.getElementById('qm-terminal-title').textContent = 'Yolculuk iptal edildi';
+            document.getElementById('qm-terminal-msg').textContent =
+                'Sürücü varış noktasına geldi ama seni bulamadı. Tekrar çağrı yapmadan önce profilini gözden geçir.';
+            showStage('terminal');
         } else if (s.status === 'cancelled') {
             stopAllPolling();
             closeQuickModal();
         }
     }
+
+    // ===== CONFIRM — müşteri "sürücüyü gördüm" basar (bot/sabotaj koruması) =====
+    qmConfirmBtn.addEventListener('click', async () => {
+        if (!activeRequestId) return;
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            await fetch(`{{ url('/api/ride-requests') }}/${encodeURIComponent(activeRequestId)}/confirm`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+            });
+            qmConfirmBar.classList.add('hidden');
+        } catch (_) {}
+    });
     function stopAllPolling() {
         if (statusPollHandle) { clearInterval(statusPollHandle); statusPollHandle = null; }
         if (chatPollHandle)   { clearInterval(chatPollHandle); chatPollHandle = null; }

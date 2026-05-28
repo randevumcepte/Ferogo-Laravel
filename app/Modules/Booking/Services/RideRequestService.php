@@ -15,6 +15,7 @@ class RideRequestService
 
     public function __construct(
         private ReservationService $reservationService,
+        private CustomerTrustService $trustService,
     ) {}
 
     /**
@@ -50,6 +51,11 @@ class RideRequestService
             $req = RideRequest::create([
                 'customer_name'           => $data['customer_name'],
                 'customer_phone'          => $data['customer_phone'],
+                'phone_verified_at'       => $data['phone_verified_at'] ?? null,
+                'verification_token'      => $data['verification_token'] ?? null,
+                'client_ip'               => $data['client_ip'] ?? null,
+                'client_fingerprint'      => $data['client_fingerprint'] ?? null,
+                'user_agent'              => $data['user_agent'] ?? null,
                 'vehicle_class_id'        => $data['vehicle_class_id'],
                 'pickup_address'          => $data['pickup_address'],
                 'pickup_lat'              => $data['pickup_lat'],
@@ -188,6 +194,14 @@ class RideRequestService
                 'offered_driver_id' => null,
                 'offer_expires_at' => null,
             ]);
+            // Trust skoruna işle — kimse kabul etmeden iptal: küçük penaltı
+            $this->trustService->recordCustomerCancellation($req->customer_phone, late: false);
+        } elseif ($req->status === 'accepted') {
+            // Sürücü zaten geldi yoldaydı — büyük penaltı
+            $req->update([
+                'status' => 'cancelled',
+            ]);
+            $this->trustService->recordCustomerCancellation($req->customer_phone, late: true);
         }
         return $req->fresh();
     }

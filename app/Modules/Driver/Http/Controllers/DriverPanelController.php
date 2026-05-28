@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Booking\Models\RideMessage;
 use App\Modules\Booking\Models\RideRequest;
+use App\Modules\Booking\Services\CustomerTrustService;
+use App\Modules\Booking\Services\NoShowService;
 use App\Modules\Booking\Services\RideRequestService;
 use App\Modules\Driver\Models\Driver;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +19,11 @@ use Illuminate\View\View;
 
 class DriverPanelController extends Controller
 {
-    public function __construct(private RideRequestService $service) {}
+    public function __construct(
+        private RideRequestService $service,
+        private NoShowService $noShowService,
+        private CustomerTrustService $trustService,
+    ) {}
 
     // ────────────────────────────────────────────────────────────
     // AUTH
@@ -256,6 +262,9 @@ class DriverPanelController extends Controller
         $driver->update(['availability_status' => 'online']);
         $driver->increment('total_rides');
 
+        // Trust skoruna pozitif yansı
+        $this->trustService->recordRideCompleted($req->customer_phone);
+
         RideMessage::create([
             'ride_request_id' => $req->id,
             'sender'          => 'system',
@@ -263,6 +272,60 @@ class DriverPanelController extends Controller
         ]);
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * POST /surucu-paneli/api/active/arrived
+     * Sürücü "alış noktasına vardım" işaretler. 5 dk sonra no-show butonu açılır.
+     */
+    public function markArrived(): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['ok' => false], 401);
+
+        $req = RideRequest::query()
+            ->where('accepted_driver_id', $driver->id)
+            ->where('status', 'accepted')
+            ->latest('accepted_at')
+            ->firstOrFail();
+
+        $result = $this->noShowService->markDriverArrived($req, $driver);
+        $status = $result['ok'] ? 200 : 422;
+        return response()->json($result, $status);
+    }
+
+    /**
+     * POST /surucu-paneli/api/active/no-show
+     * Sürücü "müşteri gelmedi" basar. Body: { lat?, lng?, note? }
+     */
+    public function reportNoShow(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['ok' => false], 401);
+
+        $validated = $request->validate([
+            'lat'  => ['nullable', 'numeric', 'between:-90,90'],
+            'lng'  => ['nullable', 'numeric', 'between:-180,180'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $req = RideRequest::query()
+            ->with('ride')
+            ->where('accepted_driver_id', $driver->id)
+            ->where('status', 'accepted')
+            ->latest('accepted_at')
+            ->firstOrFail();
+
+        $result = $this->noShowService->reportNoShow(
+            $req,
+            $driver,
+            isset($validated['lat']) ? (float) $validated['lat'] : null,
+            isset($validated['lng']) ? (float) $validated['lng'] : null,
+            $validated['note'] ?? null,
+        );
+
+        $status = $result['ok'] ? 200 : 422;
+        return response()->json($result, $status);
     }
 
     // ────────────────────────────────────────────────────────────
@@ -293,19 +356,34 @@ class DriverPanelController extends Controller
 
     private function activeRequestPayload(RideRequest $req): array
     {
+        $trust = $this->trustService->getOrCreate($req->customer_phone);
+
+        $arrivedAt = $req->driver_arrived_at;
+        $waitSec   = $arrivedAt ? abs((int) $arrivedAt->diffInSeconds(now())) : 0;
+        $noShowReady = $arrivedAt && $waitSec >= NoShowService::MIN_WAIT_SECONDS;
+        $noShowCountdown = $arrivedAt ? max(0, NoShowService::MIN_WAIT_SECONDS - $waitSec) : null;
+
         return [
-            'public_id'         => $req->public_id,
-            'customer_name'     => $req->customer_name,
-            'customer_phone'    => $req->customer_phone, // sürücü görür (faz 5'te maskelenir)
-            'pickup_address'    => $req->pickup_address,
-            'pickup_lat'        => (float) $req->pickup_lat,
-            'pickup_lng'        => (float) $req->pickup_lng,
-            'dropoff_address'   => $req->dropoff_address,
-            'distance_km'       => (float) $req->distance_km,
-            'duration_minutes'  => (int) $req->duration_minutes,
-            'estimated_fare'    => $req->estimated_fare ? (float) $req->estimated_fare : null,
-            'accepted_at'       => $req->accepted_at?->toIso8601String(),
-            'ride_status'       => $req->ride?->status,
+            'public_id'             => $req->public_id,
+            'customer_name'         => $req->customer_name,
+            'customer_phone'        => $req->customer_phone,
+            'customer_trust_label'  => $trust->trustLabel(),
+            'customer_is_new'       => $trust->isNewCustomer(),
+            'customer_completed_rides' => (int) $trust->total_completed,
+            'customer_no_shows'     => (int) $trust->total_no_shows,
+            'pickup_address'        => $req->pickup_address,
+            'pickup_lat'            => (float) $req->pickup_lat,
+            'pickup_lng'            => (float) $req->pickup_lng,
+            'dropoff_address'       => $req->dropoff_address,
+            'distance_km'           => (float) $req->distance_km,
+            'duration_minutes'      => (int) $req->duration_minutes,
+            'estimated_fare'        => $req->estimated_fare ? (float) $req->estimated_fare : null,
+            'accepted_at'           => $req->accepted_at?->toIso8601String(),
+            'arrived_at'            => $arrivedAt?->toIso8601String(),
+            'customer_confirmed_at' => $req->customer_confirmed_at?->toIso8601String(),
+            'no_show_button_ready'  => $noShowReady,
+            'no_show_countdown_sec' => $noShowCountdown,
+            'ride_status'           => $req->ride?->status,
         ];
     }
 }

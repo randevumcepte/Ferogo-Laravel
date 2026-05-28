@@ -135,24 +135,38 @@
         {{-- ===== Active ride card ===== --}}
         <section id="active-card" class="hidden">
             <div class="rounded-3xl border border-emerald-500/30 bg-emerald-500/[0.05] overflow-hidden">
-                <div class="p-5 border-b border-white/5 flex items-center justify-between">
+                <div class="p-5 border-b border-white/5 flex items-center justify-between gap-3 flex-wrap">
                     <div class="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-emerald-400 font-bold">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-ring"></span>
                         Aktif Yolculuk
                     </div>
-                    <button id="active-complete"
-                            class="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-300 transition">
-                        Tamamlandı
-                    </button>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button id="active-arrived"
+                                class="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs font-semibold text-amber-300 transition">
+                            Lokasyona vardım
+                        </button>
+                        <button id="active-no-show" disabled
+                                class="px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-xs font-semibold text-red-300 transition disabled:bg-white/[0.03] disabled:text-zinc-500 disabled:border-white/10 disabled:cursor-not-allowed">
+                            <span id="active-no-show-label">Müşteri gelmedi</span>
+                        </button>
+                        <button id="active-complete"
+                                class="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-300 transition">
+                            Tamamlandı
+                        </button>
+                    </div>
                 </div>
 
                 <div class="p-5 space-y-4">
                     <div>
-                        <div class="text-[10px] uppercase tracking-wider text-zinc-500">Müşteri</div>
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500">Müşteri</div>
+                            <span id="active-trust-badge" class="hidden text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"></span>
+                        </div>
                         <div class="flex items-center justify-between">
                             <div class="text-base font-semibold" id="active-customer">—</div>
                             <a id="active-phone" href="#" class="text-xs text-brand hover:text-brand-600 underline underline-offset-2">—</a>
                         </div>
+                        <div id="active-customer-meta" class="text-[11px] text-zinc-500 mt-0.5"></div>
                     </div>
 
                     <div class="bg-black/30 rounded-2xl p-4 space-y-3 border border-white/5">
@@ -210,9 +224,11 @@
         const AVAIL_URL = '{{ route('driver.api.availability') }}';
         const ACCEPT_URL = (id) => '{{ url('/surucu-paneli/api/offers') }}/' + encodeURIComponent(id) + '/accept';
         const REJECT_URL = (id) => '{{ url('/surucu-paneli/api/offers') }}/' + encodeURIComponent(id) + '/reject';
-        const MSG_URL    = '{{ route('driver.api.message') }}';
-        const DONE_URL   = '{{ route('driver.api.complete') }}';
-        const POLL_MS    = 2500;
+        const MSG_URL     = '{{ route('driver.api.message') }}';
+        const DONE_URL    = '{{ route('driver.api.complete') }}';
+        const ARRIVED_URL = '{{ route('driver.api.arrived') }}';
+        const NOSHOW_URL  = '{{ route('driver.api.no_show') }}';
+        const POLL_MS     = 2500;
 
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const $ = (id) => document.getElementById(id);
@@ -342,12 +358,91 @@
             showSection('offer');
         }
 
+        let currentActiveId = null;       // şu an aktif olan request public_id
+        let activePickupCoords = null;    // { lat, lng } — no-show GPS doğrulaması için
+        let noShowTickHandle = null;
+
+        function renderTrustBadge(a) {
+            const badge = $('active-trust-badge');
+            const meta  = $('active-customer-meta');
+            const label = a.customer_trust_label;
+            const styles = {
+                guvenilir:  { txt: 'Güvenilir',  cls: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' },
+                normal:     { txt: 'Normal',     cls: 'bg-zinc-500/15 text-zinc-300 border border-zinc-500/30' },
+                riskli:     { txt: 'Riskli',     cls: 'bg-amber-500/15 text-amber-300 border border-amber-500/30' },
+                cok_riskli: { txt: 'Çok Riskli', cls: 'bg-red-500/15 text-red-300 border border-red-500/30' },
+            };
+            const s = styles[label] || styles.normal;
+            badge.textContent = a.customer_is_new ? 'Yeni Müşteri' : s.txt;
+            badge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ' + s.cls;
+            badge.classList.remove('hidden');
+
+            const parts = [];
+            if (a.customer_completed_rides > 0) parts.push(a.customer_completed_rides + ' tamamlanmış yolculuk');
+            if (a.customer_no_shows > 0)        parts.push(a.customer_no_shows + ' geçmiş no-show');
+            meta.textContent = parts.join(' · ');
+        }
+
+        function renderNoShowState(a) {
+            const arrivedBtn = $('active-arrived');
+            const noShowBtn  = $('active-no-show');
+            const label      = $('active-no-show-label');
+
+            if (!a.arrived_at) {
+                arrivedBtn.disabled = false;
+                arrivedBtn.classList.remove('opacity-50');
+                arrivedBtn.textContent = 'Lokasyona vardım';
+                noShowBtn.disabled = true;
+                label.textContent = 'Müşteri gelmedi';
+                if (noShowTickHandle) { clearInterval(noShowTickHandle); noShowTickHandle = null; }
+                return;
+            }
+
+            // Vardı — buton işareti
+            arrivedBtn.disabled = true;
+            arrivedBtn.classList.add('opacity-50');
+            arrivedBtn.textContent = '✓ Varış kaydedildi';
+
+            if (a.no_show_button_ready) {
+                noShowBtn.disabled = false;
+                label.textContent = 'Müşteri gelmedi';
+                if (noShowTickHandle) { clearInterval(noShowTickHandle); noShowTickHandle = null; }
+            } else {
+                noShowBtn.disabled = true;
+                let remaining = Math.max(0, a.no_show_countdown_sec || 0);
+                label.textContent = 'Müşteri gelmedi (' + remaining + ' sn)';
+                if (noShowTickHandle) clearInterval(noShowTickHandle);
+                noShowTickHandle = setInterval(() => {
+                    remaining = Math.max(0, remaining - 1);
+                    label.textContent = remaining > 0
+                        ? 'Müşteri gelmedi (' + remaining + ' sn)'
+                        : 'Müşteri gelmedi';
+                    if (remaining <= 0) {
+                        noShowBtn.disabled = false;
+                        clearInterval(noShowTickHandle);
+                        noShowTickHandle = null;
+                    }
+                }, 1000);
+            }
+        }
+
         function renderActive(a, messages) {
+            // Yolculuk değiştiyse chat ve sayaçları sıfırla
+            if (currentActiveId !== a.public_id) {
+                currentActiveId = a.public_id;
+                lastMessageId = 0;
+                $('chat-list').innerHTML = '';
+            }
+            activePickupCoords = { lat: a.pickup_lat, lng: a.pickup_lng };
+
             $('active-customer').textContent = a.customer_name;
             $('active-phone').textContent = a.customer_phone;
             $('active-phone').href = 'tel:' + a.customer_phone.replace(/\s+/g, '');
             $('active-pickup').textContent = a.pickup_address;
             $('active-dropoff').textContent = a.dropoff_address;
+
+            renderTrustBadge(a);
+            renderNoShowState(a);
 
             // Mesaj append
             const chat = $('chat-list');
@@ -364,6 +459,63 @@
 
             showSection('active');
         }
+
+        // === ARRIVED button ===
+        $('active-arrived').addEventListener('click', async () => {
+            $('active-arrived').disabled = true;
+            try {
+                const res = await fetch(ARRIVED_URL, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                });
+                const data = await res.json();
+                if (!data.ok) alert(data.message || 'Varış işaretlenemedi.');
+            } catch (_) { alert('Bağlantı hatası.'); }
+            finally { pollNow(); }
+        });
+
+        // === NO-SHOW button ===
+        $('active-no-show').addEventListener('click', async () => {
+            if ($('active-no-show').disabled) return;
+            if (!confirm('Müşterinin gelmediğini onaylıyor musun? Bu kayıt müşterinin hesabına işlenir ve sana tazminat ödenir.')) return;
+
+            $('active-no-show').disabled = true;
+
+            // GPS koordinatlarını al — yakınlık doğrulaması için kritik
+            const sendNoShow = async (lat, lng) => {
+                try {
+                    const body = { lat, lng };
+                    const res = await fetch(NOSHOW_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                        body: JSON.stringify(body),
+                    });
+                    const data = await res.json();
+                    if (!data.ok) {
+                        alert(data.message || 'No-show kaydedilemedi.');
+                        $('active-no-show').disabled = false;
+                        return;
+                    }
+                    alert(data.message || 'Olay kayda alındı. Tazminat hesabına işlendi.');
+                    lastMessageId = 0;
+                    $('chat-list').innerHTML = '';
+                    pollNow();
+                } catch (_) {
+                    alert('Bağlantı hatası.');
+                    $('active-no-show').disabled = false;
+                }
+            };
+
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => sendNoShow(pos.coords.latitude, pos.coords.longitude),
+                    () => sendNoShow(null, null),
+                    { timeout: 6000, maximumAge: 30000, enableHighAccuracy: true }
+                );
+            } else {
+                await sendNoShow(null, null);
+            }
+        });
 
         function escapeHtml(s) {
             return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Booking\Http\Controllers\PhoneVerificationController;
 use App\Modules\Booking\Http\Controllers\ReservationController;
 use App\Modules\Booking\Http\Controllers\RideRequestController;
 use App\Modules\Driver\Http\Controllers\DriverApplicationController;
@@ -43,9 +44,16 @@ Route::prefix('api/ride-requests')->name('ride_requests.')->group(function () {
     Route::post('/',                     [RideRequestController::class, 'store'])->name('store');
     Route::get('/{publicId}',            [RideRequestController::class, 'show'])->name('show');
     Route::post('/{publicId}/cancel',    [RideRequestController::class, 'cancel'])->name('cancel');
+    Route::post('/{publicId}/confirm',   [RideRequestController::class, 'confirm'])->name('confirm');
     Route::get('/{publicId}/messages',   [RideRequestController::class, 'messages'])->name('messages');
     Route::post('/{publicId}/messages',  [RideRequestController::class, 'sendMessage'])->name('messages.send');
 });
+
+// ─────────────────────────────────────────────────────────
+// KORUMA KALKANI — Telefon OTP doğrulama (fake çağrı / sabotaj koruma)
+// ─────────────────────────────────────────────────────────
+Route::post('/api/phone/send-otp',   [PhoneVerificationController::class, 'sendOtp'])->name('phone.send_otp');
+Route::post('/api/phone/verify-otp', [PhoneVerificationController::class, 'verifyOtp'])->name('phone.verify_otp');
 
 // ─────────────────────────────────────────────────────────
 // FAZ 3 — Sürücü Paneli (login + dashboard + actions)
@@ -64,3 +72,5 @@ Route::post('/surucu-paneli/api/offers/{publicId}/accept',   [DriverPanelControl
 Route::post('/surucu-paneli/api/offers/{publicId}/reject',   [DriverPanelController::class, 'rejectOffer'])->name('driver.api.reject');
 Route::post('/surucu-paneli/api/active/message',             [DriverPanelController::class, 'sendMessage'])->name('driver.api.message');
 Route::post('/surucu-paneli/api/active/complete',            [DriverPanelController::class, 'completeRide'])->name('driver.api.complete');
+Route::post('/surucu-paneli/api/active/arrived',             [DriverPanelController::class, 'markArrived'])->name('driver.api.arrived');
+Route::post('/surucu-paneli/api/active/no-show',             [DriverPanelController::class, 'reportNoShow'])->name('driver.api.no_show');

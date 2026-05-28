@@ -5,16 +5,25 @@ namespace App\Modules\Booking\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Booking\Models\RideMessage;
 use App\Modules\Booking\Models\RideRequest;
+use App\Modules\Booking\Services\CustomerTrustService;
+use App\Modules\Booking\Services\NoShowService;
+use App\Modules\Booking\Services\PhoneVerificationService;
 use App\Modules\Booking\Services\RideRequestService;
 use App\Modules\Driver\Models\Driver;
 use App\Modules\Vehicle\Models\VehicleClass;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 
 class RideRequestController extends Controller
 {
-    public function __construct(private RideRequestService $service) {}
+    public function __construct(
+        private RideRequestService $service,
+        private CustomerTrustService $trustService,
+        private PhoneVerificationService $verificationService,
+        private NoShowService $noShowService,
+    ) {}
 
     /**
      * GET /api/ride-requests/nearby — kullanıcıya en yakın N müsait sürücü.
@@ -92,6 +101,8 @@ class RideRequestController extends Controller
             'dropoff_lng'           => ['nullable', 'numeric'],
             'customer_name'         => ['required', 'string', 'max:120'],
             'customer_phone'        => ['required', 'string', 'max:20'],
+            'verification_token'    => ['required', 'string', 'size:48'],
+            'fingerprint'           => ['nullable', 'string', 'max:64'],
             'distance_km'           => ['required', 'numeric', 'min:0', 'max:500'],
             'duration_minutes'      => ['required', 'integer', 'min:1', 'max:600'],
             'estimated_fare'        => ['nullable', 'numeric', 'min:0'],
@@ -100,8 +111,74 @@ class RideRequestController extends Controller
             'fallback_driver_ids.*' => ['integer', 'exists:drivers,id'],
             'kvkk_consent'          => ['required', 'accepted'],
         ], [
-            'kvkk_consent.accepted' => 'KVKK onayını işaretlemen gerekiyor.',
+            'kvkk_consent.accepted'       => 'KVKK onayını işaretlemen gerekiyor.',
+            'verification_token.required' => 'Telefonunu doğrulaman gerekiyor. SMS kodunu gir.',
         ]);
+
+        $ip          = $request->ip();
+        $fingerprint = $validated['fingerprint'] ?? null;
+
+        // ─── KORUMA KATMANI ─────────────────────────────────────
+        // 1) Trust + ban kontrolü
+        $trustCheck = $this->trustService->canRequestRide(
+            $validated['customer_phone'], $ip, $fingerprint,
+        );
+        if (! $trustCheck['ok']) {
+            return response()->json([
+                'success' => false,
+                'message' => $trustCheck['reason'],
+                'retry_after' => $trustCheck['retry_after'] ?? null,
+            ], 429);
+        }
+
+        // 2) OTP token doğrulama
+        $tokenCheck = $this->verificationService->validateToken(
+            $validated['customer_phone'], $validated['verification_token'],
+        );
+        if (! $tokenCheck['ok']) {
+            return response()->json([
+                'success'              => false,
+                'message'              => $tokenCheck['message'],
+                'phone_reverify_required' => true,
+            ], 422);
+        }
+
+        // 3) Per-phone rate limit: 10 dakikada max 2 aktif/yeni talep
+        $phoneNorm = $this->trustService->normalizePhone($validated['customer_phone']);
+        $phoneKey  = 'rr_create_phone:' . $phoneNorm;
+        if (RateLimiter::tooManyAttempts($phoneKey, 2)) {
+            return response()->json([
+                'success'     => false,
+                'message'     => 'Çok hızlı talep gönderiyorsun. Bir önceki çağrını tamamla veya birkaç dakika bekle.',
+                'retry_after' => RateLimiter::availableIn($phoneKey),
+            ], 429);
+        }
+
+        // 4) Per-IP rate limit: 10 dakikada max 5 yeni talep (farklı telefonlar olsa bile)
+        $ipKey = 'rr_create_ip:' . $ip;
+        if (RateLimiter::tooManyAttempts($ipKey, 5)) {
+            return response()->json([
+                'success'     => false,
+                'message'     => 'Bu cihazdan çok fazla talep. Daha sonra dene.',
+                'retry_after' => RateLimiter::availableIn($ipKey),
+            ], 429);
+        }
+
+        // 5) Fingerprint: aynı tarayıcıdan saatte max 8 talep
+        if ($fingerprint) {
+            $fpKey = 'rr_create_fp:' . $fingerprint;
+            if (RateLimiter::tooManyAttempts($fpKey, 8)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bu cihaz limiti aştı. 1 saat sonra dene.',
+                ], 429);
+            }
+            RateLimiter::hit($fpKey, 3600);
+        }
+
+        RateLimiter::hit($phoneKey, 600);
+        RateLimiter::hit($ipKey, 600);
+        // ─── /KORUMA KATMANI ────────────────────────────────────
 
         $vehicleClass = VehicleClass::where('slug', $validated['vehicle_class_slug'])->firstOrFail();
 
@@ -145,7 +222,17 @@ class RideRequestController extends Controller
             'duration_minutes'     => (int) $validated['duration_minutes'],
             'estimated_fare'       => isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null,
             'candidate_driver_ids' => $orderedCandidates,
+            'phone_verified_at'    => now(),
+            'verification_token'   => $validated['verification_token'],
+            'client_ip'            => $ip,
+            'client_fingerprint'   => $fingerprint,
+            'user_agent'           => substr((string) $request->userAgent(), 0, 500),
         ]);
+
+        // Trust kaydı
+        $this->trustService->recordRequestCreated(
+            $validated['customer_phone'], $ip, $fingerprint,
+        );
 
         return response()->json([
             'success'   => true,
@@ -181,6 +268,18 @@ class RideRequestController extends Controller
             'success' => true,
             'status'  => $this->statusPayload($req),
         ]);
+    }
+
+    /**
+     * POST /api/ride-requests/{publicId}/confirm — müşteri sürücüyü gördüğünü onaylar.
+     * Sürücüye "müşteri gerçekten orada" sinyali — bot/rakip kontrolü.
+     */
+    public function confirm(string $publicId): JsonResponse
+    {
+        $req = RideRequest::where('public_id', $publicId)->firstOrFail();
+        $result = $this->noShowService->customerConfirm($req);
+        $status = $result['ok'] ? 200 : 422;
+        return response()->json($result, $status);
     }
 
     /**
@@ -248,16 +347,19 @@ class RideRequestController extends Controller
     private function statusPayload(RideRequest $req): array
     {
         $payload = [
-            'status'             => $req->status,
-            'rejection_count'    => (int) $req->rejection_count,
-            'current_index'      => (int) $req->current_candidate_index,
-            'total_candidates'   => count($req->candidate_driver_ids ?? []),
-            'seconds_remaining'  => $req->status === 'pending'
+            'status'                => $req->status,
+            'rejection_count'       => (int) $req->rejection_count,
+            'current_index'         => (int) $req->current_candidate_index,
+            'total_candidates'      => count($req->candidate_driver_ids ?? []),
+            'seconds_remaining'     => $req->status === 'pending'
                 ? max(0, (int) round(now()->diffInSeconds($req->offer_expires_at, false)))
                 : 0,
-            'offered_driver'     => null,
-            'accepted_driver'    => null,
-            'ride_public_id'     => $req->ride?->public_id,
+            'offered_driver'        => null,
+            'accepted_driver'       => null,
+            'ride_public_id'        => $req->ride?->public_id,
+            'arrived_at'            => $req->driver_arrived_at?->toIso8601String(),
+            'customer_confirmed_at' => $req->customer_confirmed_at?->toIso8601String(),
+            'no_show_at'            => $req->no_show_at?->toIso8601String(),
         ];
 
         if ($req->offered_driver_id) {
