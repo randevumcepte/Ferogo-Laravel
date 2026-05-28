@@ -1229,7 +1229,7 @@
         });
 
         const availableCount = drivers.filter(d => d.state !== 'busy').length;
-        const nearestAvailable = sorted.find(({ d }) => d.state !== 'busy');
+        const nearestAvailable = sortedMock.find(m => !m.isBusy);
         availableCountEl.textContent = availableCount;
         if (nearestAvailable) {
             const mins = Math.max(1, Math.round(nearestAvailable.km * 2.4 + 0.8));
