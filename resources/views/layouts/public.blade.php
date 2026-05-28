@@ -55,7 +55,7 @@
             </a>
             <div class="hidden md:flex items-center gap-8 text-sm text-zinc-300">
                 <a href="{{ route('home') }}#hizmetler" class="hover:text-white transition">Hizmetler</a>
-                <a href="{{ route('home') }}#rezervasyon" class="hover:text-white transition">Rezervasyon</a>
+                <a href="{{ route('ride.show') }}" class="hover:text-white transition {{ request()->routeIs('ride.*') ? 'text-white' : '' }}">Yolculuk Yapın</a>
                 <a href="{{ route('driver.apply') }}" class="hover:text-white transition {{ request()->routeIs('driver.*') ? 'text-white' : '' }}">Sürücü Olun</a>
                 <a href="tel:+908508401377" class="text-white font-medium">0850 840 13 77</a>
             </div>

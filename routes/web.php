@@ -21,3 +21,6 @@ Route::get('/surucu-olun', [DriverApplicationController::class, 'show'])
     ->name('driver.apply');
 Route::post('/surucu-olun', [DriverApplicationController::class, 'store'])
     ->name('driver.apply.store');
+
+// Yolculuk Yapın - yolcu landing
+Route::view('/yolculuk-yapin', 'ride.show')->name('ride.show');
