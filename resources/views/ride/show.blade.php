@@ -413,7 +413,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
                 @foreach([
-                    ['Ferda Y.', 'İzmir', 'Sabah 6'da havalimanına gittim, şoför 5'te kapıdaydı. Araç temiz, su, şarj — her şey hazır. Bir daha taksi düşünmem.'],
+                    ['Ferda Y.', 'İzmir', 'Sabah 6\'da havalimanına gittim, şoför 5\'te kapıdaydı. Araç temiz, su, şarj — her şey hazır. Bir daha taksi düşünmem.'],
                     ['Selim T.', 'Alsancak', 'Kurumsal misafirlerimizi karşıladık. Fiyat baştan belliydi, makbuz düzgün geldi. Muhasebe ile sorun çıkmadı.'],
                     ['Aylin K.', 'Karşıyaka', 'Düğün için tutmuştum. Şoför bey çok kibardı, fotoğraf çekme molasında bile bekledi. Çiçek çelenkli karşılama harikaydı.'],
                 ] as $t)
