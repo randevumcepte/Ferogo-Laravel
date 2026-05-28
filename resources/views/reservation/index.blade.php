@@ -112,28 +112,8 @@
         </svg>
     </section>
 
-    {{-- Services --}}
-    <section id="hizmetler" class="px-6 py-16">
-        <div class="max-w-6xl mx-auto">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                @foreach([
-                    ['✈️', 'Havalimanı Transferi', 'Uçuş takibi dahil zamanında transfer'],
-                    ['💼', 'Kurumsal Seyahat', 'İş toplantıları için önceden rezervasyon'],
-                    ['⭐', 'VIP Transfer', 'Lüks araç filosu, özel anlarınız için'],
-                    ['🏙️', 'Şehir İçi Ulaşım', 'Anlık şoförlü araç hizmeti'],
-                ] as $service)
-                    <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 hover:border-brand/30 transition">
-                        <div class="text-3xl mb-3">{{ $service[0] }}</div>
-                        <div class="text-white font-semibold mb-2">{{ $service[1] }}</div>
-                        <div class="text-sm text-zinc-400 leading-relaxed">{{ $service[2] }}</div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
     {{-- Reservation Form --}}
-    <section id="rezervasyon" class="px-6 py-16">
+    <section id="rezervasyon" class="px-6 pt-12 pb-16 -mt-8 relative z-10">
         <div class="max-w-3xl mx-auto">
             <div class="text-center mb-10">
                 <h2 class="text-3xl md:text-4xl font-bold mb-3">Rezervasyon Oluştur</h2>
@@ -364,6 +344,30 @@
                     Rezervasyon sonrası tahmini ücret SMS ile gönderilir. Nihai ücret yolculuk sonunda netleşir.
                 </p>
             </form>
+        </div>
+    </section>
+
+    {{-- Services --}}
+    <section id="hizmetler" class="px-6 py-16">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-10">
+                <h2 class="text-2xl md:text-3xl font-bold mb-2">Her Yolculuk için Çözüm</h2>
+                <p class="text-zinc-400 text-sm">Havalimanından şehir içine, kurumsaldan VIP'e — premium ulaşım.</p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                @foreach([
+                    ['✈️', 'Havalimanı Transferi', 'Uçuş takibi dahil zamanında transfer'],
+                    ['💼', 'Kurumsal Seyahat', 'İş toplantıları için önceden rezervasyon'],
+                    ['⭐', 'VIP Transfer', 'Lüks araç filosu, özel anlarınız için'],
+                    ['🏙️', 'Şehir İçi Ulaşım', 'Anlık şoförlü araç hizmeti'],
+                ] as $service)
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 hover:border-brand/30 transition">
+                        <div class="text-3xl mb-3">{{ $service[0] }}</div>
+                        <div class="text-white font-semibold mb-2">{{ $service[1] }}</div>
+                        <div class="text-sm text-zinc-400 leading-relaxed">{{ $service[2] }}</div>
+                    </div>
+                @endforeach
+            </div>
         </div>
     </section>
 
