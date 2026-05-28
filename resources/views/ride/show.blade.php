@@ -4,6 +4,7 @@
 @section('description', 'Şehir içi, havalimanı veya uzun mesafe — profesyonel şoför, lüks araç, şeffaf fiyat. 60 saniyede rezervasyon yap, kapına gelsin.')
 
 @push('head')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <style>
     .ride-mesh {
         background:
@@ -70,6 +71,109 @@
         100% { transform: translateX(-50%); }
     }
     .scroll-x { animation: scroll-x 32s linear infinite; }
+
+    /* ====== RADAR / LIVE MAP ====== */
+    #ferogo-radar-map {
+        background: #0a0a0a;
+    }
+    /* Leaflet dark filter — neutralize attribution glow */
+    .leaflet-container { background: #0a0a0a; outline: none; }
+    .leaflet-control-attribution {
+        background: rgba(0,0,0,0.5) !important;
+        color: #71717a !important;
+        font-size: 10px !important;
+        backdrop-filter: blur(8px);
+    }
+    .leaflet-control-attribution a { color: #a1a1aa !important; }
+    .leaflet-control-zoom { display: none !important; }
+    .leaflet-bar { border: none !important; }
+
+    /* Pulse rings emanating from user pin */
+    @keyframes radar-pulse {
+        0%   { transform: scale(0.4); opacity: 0.85; }
+        100% { transform: scale(2.4); opacity: 0;    }
+    }
+    .radar-ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 9999px;
+        border: 2px solid rgba(240,192,64,0.55);
+        animation: radar-pulse 2.6s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+    }
+    .radar-ring.delay-1 { animation-delay: 0.9s; }
+    .radar-ring.delay-2 { animation-delay: 1.8s; }
+
+    /* User pin */
+    .radar-user-pin {
+        position: relative;
+        width: 18px;
+        height: 18px;
+        border-radius: 9999px;
+        background: #F0C040;
+        box-shadow: 0 0 0 4px rgba(240,192,64,0.25), 0 0 24px rgba(240,192,64,0.7);
+    }
+    .radar-user-pin::after {
+        content: '';
+        position: absolute; inset: 5px;
+        border-radius: 9999px;
+        background: #0a0a0a;
+    }
+
+    /* Driver car marker — gold rounded square with car silhouette */
+    .driver-marker {
+        width: 30px; height: 30px;
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #F0C040 0%, #D9A621 100%);
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgba(240,192,64,0.45), 0 0 0 2px rgba(10,10,10,0.95);
+        color: #0a0a0a;
+        transition: transform 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+    .driver-marker svg { width: 18px; height: 18px; }
+    .driver-marker.busy {
+        background: linear-gradient(135deg, #52525b 0%, #27272a 100%);
+        color: #a1a1aa;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 0 2px rgba(10,10,10,0.95);
+    }
+    .driver-marker.premium {
+        background: linear-gradient(135deg, #ffffff 0%, #d4d4d8 100%);
+        color: #0a0a0a;
+    }
+
+    /* Driver list rail */
+    .driver-rail-card {
+        background: rgba(20,20,20,0.85);
+        backdrop-filter: blur(20px);
+        transition: background 0.2s, border-color 0.2s;
+    }
+    .driver-rail-card:hover {
+        background: rgba(30,30,30,0.95);
+        border-color: rgba(240,192,64,0.35);
+    }
+
+    /* HUD chip pulse */
+    @keyframes hud-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.45); }
+        50%      { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+    }
+    .hud-live-dot { animation: hud-pulse 2s ease-out infinite; }
+
+    /* Sweep line — extra radar flavor */
+    @keyframes radar-sweep {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+    }
+    .radar-sweep {
+        position: absolute;
+        width: 220px; height: 220px;
+        left: 50%; top: 50%;
+        margin-left: -110px; margin-top: -110px;
+        background: conic-gradient(from 0deg, rgba(240,192,64,0) 0deg, rgba(240,192,64,0.18) 35deg, rgba(240,192,64,0) 70deg);
+        border-radius: 9999px;
+        animation: radar-sweep 6s linear infinite;
+        pointer-events: none;
+        mix-blend-mode: screen;
+    }
 </style>
 @endpush
 
@@ -200,6 +304,127 @@
                                 <div class="text-base font-bold text-white">Sigortalı</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ============ LIVE RADAR ============ --}}
+    <section id="canli-radar" class="relative px-6 pt-4 pb-20 md:pb-28">
+        <div class="max-w-7xl mx-auto">
+
+            {{-- Section heading --}}
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
+                <div class="max-w-2xl">
+                    <div class="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-brand mb-4">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                        Canlı Radar
+                    </div>
+                    <h2 class="display-font text-4xl md:text-5xl text-white mb-4">
+                        Bölgendeki şoförler<br>
+                        <span class="text-zinc-500">şu an</span> hareket halinde.
+                    </h2>
+                    <p class="text-zinc-400 leading-relaxed">
+                        Konumunu paylaş, çevrendeki Ferogo araçlarını gerçek zamanlı izle. Bu önizleme salt okunur — çağırmak için rezervasyon formuna geç.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 backdrop-blur-sm shrink-0">
+                    <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    Salt okunur · Önizleme
+                </div>
+            </div>
+
+            {{-- Map + Rail grid --}}
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+                {{-- Map card --}}
+                <div class="lg:col-span-8 relative rounded-3xl border border-white/10 overflow-hidden bg-black/40 shadow-2xl shadow-black/40">
+                    <div id="ferogo-radar-map" class="relative w-full h-[520px] md:h-[600px]">
+                        {{-- Loading state --}}
+                        <div id="radar-loading" class="absolute inset-0 z-[401] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+                            <div class="relative w-16 h-16 mb-5">
+                                <div class="radar-ring"></div>
+                                <div class="radar-ring delay-1"></div>
+                                <div class="radar-ring delay-2"></div>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="radar-user-pin"></div>
+                                </div>
+                            </div>
+                            <div id="radar-loading-text" class="text-sm text-zinc-300 text-center max-w-xs">
+                                Konumun hazırlanıyor…<br>
+                                <span class="text-xs text-zinc-500">Tarayıcı izin isterse "İzin ver"e dokun.</span>
+                            </div>
+                            <button id="radar-fallback-btn" class="mt-5 hidden text-xs text-brand hover:text-brand-600 underline underline-offset-4">
+                                İzin vermeden İzmir merkezinden devam et
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Floating HUD chips --}}
+                    <div class="absolute top-4 left-4 z-[400] flex flex-col gap-2 pointer-events-none">
+                        <div class="inline-flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md text-xs">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 hud-live-dot"></span>
+                            <span class="text-white font-semibold">CANLI</span>
+                            <span class="text-zinc-500">·</span>
+                            <span class="text-zinc-400" id="radar-update-time">şimdi</span>
+                        </div>
+                        <div class="inline-flex items-center gap-3 px-3 py-2 rounded-xl bg-black/70 border border-white/10 backdrop-blur-md text-xs">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500">Müsait</div>
+                                <div class="text-base font-bold text-brand" id="radar-available-count">—</div>
+                            </div>
+                            <div class="w-px h-7 bg-white/10"></div>
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500">En yakın</div>
+                                <div class="text-base font-bold text-white" id="radar-nearest-eta">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Bottom CTA --}}
+                    <div class="absolute bottom-4 left-4 right-4 z-[400] flex items-center justify-between gap-3 pointer-events-none">
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md text-xs text-zinc-300 pointer-events-auto">
+                            <span class="text-brand">●</span> Senin konumun
+                            <span class="text-zinc-600 mx-1">|</span>
+                            <span class="inline-block w-2.5 h-2.5 rounded bg-brand"></span> Müsait şoför
+                            <span class="text-zinc-600 mx-1">|</span>
+                            <span class="inline-block w-2.5 h-2.5 rounded bg-zinc-600"></span> Yolculukta
+                        </div>
+                        <a href="{{ route('home') }}#rezervasyon" class="pointer-events-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition shadow-lg shadow-brand/30">
+                            Birini çağır
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        </a>
+                    </div>
+                </div>
+
+                {{-- Driver rail --}}
+                <div class="lg:col-span-4 flex flex-col gap-3">
+                    <div class="flex items-center justify-between px-1">
+                        <div class="text-xs uppercase tracking-[0.25em] text-zinc-500">Yakındaki Şoförler</div>
+                        <div class="text-[10px] text-zinc-600" id="radar-rail-meta">— bulundu</div>
+                    </div>
+                    <div id="radar-driver-rail" class="space-y-2.5">
+                        {{-- Skeletons --}}
+                        @for($i = 0; $i < 4; $i++)
+                            <div class="driver-rail-card border border-white/5 rounded-2xl p-4 animate-pulse">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-white/5"></div>
+                                    <div class="flex-1 space-y-2">
+                                        <div class="h-3 bg-white/5 rounded w-2/3"></div>
+                                        <div class="h-2 bg-white/5 rounded w-1/2"></div>
+                                    </div>
+                                    <div class="h-3 bg-white/5 rounded w-12"></div>
+                                </div>
+                            </div>
+                        @endfor
+                    </div>
+
+                    <div class="mt-2 p-4 rounded-2xl bg-gradient-to-br from-brand/15 to-transparent border border-brand/20">
+                        <div class="text-xs text-brand uppercase tracking-wider mb-1">Hatırlatma</div>
+                        <p class="text-xs text-zinc-300 leading-relaxed">
+                            Liste 3 saniyede bir güncellenir. Sürücüler yolculuk aldıkça <span class="text-zinc-500">gri</span>, müsait olduklarında <span class="text-brand">altın</span> görünür.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -493,3 +718,278 @@
 
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function () {
+    'use strict';
+
+    const DEFAULT_CENTER = [38.4192, 27.1287]; // İzmir Konak
+    const DRIVER_COUNT = 9;
+    const TICK_MS = 1800;
+    const PASSENGER_NAMES = ['Mehmet K.', 'Burak A.', 'Tolga Ş.', 'Emre D.', 'Serkan O.', 'Hakan Y.', 'Cem B.', 'Murat İ.', 'Onur G.', 'Kerem Ç.'];
+    const VEHICLE_CLASSES = [
+        { label: 'Comfort',  type: 'available', icon: '💼' },
+        { label: 'Business', type: 'premium',   icon: '👔' },
+        { label: 'VIP',      type: 'premium',   icon: '♛'  },
+        { label: 'Comfort',  type: 'available', icon: '💼' },
+    ];
+    const PLATES = ['35 AB 1234', '35 KZ 4471', '35 EM 8820', '35 BC 5532', '35 TR 9908', '35 FG 3217'];
+
+    const mapEl = document.getElementById('ferogo-radar-map');
+    const loadingEl = document.getElementById('radar-loading');
+    const loadingText = document.getElementById('radar-loading-text');
+    const fallbackBtn = document.getElementById('radar-fallback-btn');
+    const railEl = document.getElementById('radar-driver-rail');
+    const railMetaEl = document.getElementById('radar-rail-meta');
+    const availableCountEl = document.getElementById('radar-available-count');
+    const nearestEtaEl = document.getElementById('radar-nearest-eta');
+    const updateTimeEl = document.getElementById('radar-update-time');
+
+    if (!mapEl || typeof L === 'undefined') return;
+
+    let map = null;
+    let userMarker = null;
+    let drivers = [];
+    let tickHandle = null;
+
+    function userPinHtml() {
+        return `
+            <div class="relative w-[60px] h-[60px] flex items-center justify-center">
+                <div class="radar-ring"></div>
+                <div class="radar-ring delay-1"></div>
+                <div class="radar-ring delay-2"></div>
+                <div class="radar-sweep"></div>
+                <div class="radar-user-pin"></div>
+            </div>`;
+    }
+
+    function carSvg() {
+        return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h.5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H19v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1h-.5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1H5zm2.4 0h9.2L15.5 7.5h-7L7.4 11zM7 14.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm10 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>`;
+    }
+
+    function driverIcon(state, heading) {
+        const cls = state === 'busy' ? 'busy' : (state === 'premium' ? 'premium' : '');
+        return L.divIcon({
+            html: `<div class="driver-marker ${cls}" style="transform: rotate(${heading}deg);"><div style="transform: rotate(${-heading}deg);">${carSvg()}</div></div>`,
+            className: 'driver-marker-wrapper',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+        });
+    }
+
+    function userIcon() {
+        return L.divIcon({
+            html: userPinHtml(),
+            className: 'user-marker-wrapper',
+            iconSize: [60, 60],
+            iconAnchor: [30, 30],
+        });
+    }
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function makeDriver(center, idx) {
+        // Spread within ~2.5km
+        const lat = center[0] + rand(-0.022, 0.022);
+        const lng = center[1] + rand(-0.028, 0.028);
+        const vc = VEHICLE_CLASSES[idx % VEHICLE_CLASSES.length];
+        const busy = Math.random() < 0.25;
+        return {
+            id: idx,
+            name: PASSENGER_NAMES[idx % PASSENGER_NAMES.length],
+            plate: PLATES[idx % PLATES.length],
+            vclass: vc.label,
+            vIcon: vc.icon,
+            state: busy ? 'busy' : vc.type,
+            rating: (4.6 + Math.random() * 0.39).toFixed(2),
+            trips: Math.floor(rand(180, 2400)),
+            lat, lng,
+            heading: rand(0, 360),
+            speed: rand(0.00008, 0.00022), // ~0.5-1.5 km in degrees per tick
+            marker: null,
+        };
+    }
+
+    function distanceKm(a, b) {
+        const R = 6371;
+        const dLat = (b[0] - a[0]) * Math.PI / 180;
+        const dLng = (b[1] - a[1]) * Math.PI / 180;
+        const x = Math.sin(dLat/2)**2 + Math.cos(a[0]*Math.PI/180) * Math.cos(b[0]*Math.PI/180) * Math.sin(dLng/2)**2;
+        return 2 * R * Math.asin(Math.sqrt(x));
+    }
+
+    function moveDriver(d, userCenter) {
+        // Random walk with slight bias toward staying within range of user
+        const dist = distanceKm(userCenter, [d.lat, d.lng]);
+        if (dist > 3.5) {
+            // Steer back toward user
+            const dx = userCenter[1] - d.lng;
+            const dy = userCenter[0] - d.lat;
+            d.heading = Math.atan2(dy, dx) * 180 / Math.PI;
+        } else {
+            d.heading += rand(-25, 25);
+        }
+        const rad = d.heading * Math.PI / 180;
+        d.lat += Math.sin(rad) * d.speed;
+        d.lng += Math.cos(rad) * d.speed;
+
+        // Occasional state flip
+        if (Math.random() < 0.04) {
+            d.state = d.state === 'busy' ? (Math.random() < 0.3 ? 'premium' : 'available') : (Math.random() < 0.5 ? 'busy' : d.state);
+        }
+    }
+
+    function renderRail(userCenter) {
+        const sorted = [...drivers]
+            .map(d => ({ d, km: distanceKm(userCenter, [d.lat, d.lng]) }))
+            .sort((a, b) => a.km - b.km);
+
+        const top = sorted.slice(0, 5);
+        railEl.innerHTML = top.map(({ d, km }) => {
+            const mins = Math.max(1, Math.round(km * 2.4 + 0.8));
+            const isBusy = d.state === 'busy';
+            const dotColor = isBusy ? 'bg-zinc-500' : 'bg-brand';
+            const statusText = isBusy ? 'Yolculukta' : 'Müsait';
+            const statusClass = isBusy ? 'text-zinc-400' : 'text-brand';
+            return `
+                <div class="driver-rail-card border border-white/5 rounded-2xl p-3.5 flex items-center gap-3">
+                    <div class="relative w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/10 flex items-center justify-center text-lg">
+                        ${d.vIcon}
+                        <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full ${dotColor} border-2 border-black"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <div class="text-sm font-semibold text-white truncate">${d.name}</div>
+                            <span class="text-[10px] text-brand">★ ${d.rating}</span>
+                        </div>
+                        <div class="text-[11px] text-zinc-500 truncate">${d.vclass} · ${d.plate}</div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <div class="text-sm font-bold text-white">${km.toFixed(1)} km</div>
+                        <div class="text-[10px] ${statusClass} uppercase tracking-wider">${statusText} · ${mins} dk</div>
+                    </div>
+                </div>`;
+        }).join('');
+
+        const availableCount = drivers.filter(d => d.state !== 'busy').length;
+        const nearestAvailable = sorted.find(({ d }) => d.state !== 'busy');
+        availableCountEl.textContent = availableCount;
+        if (nearestAvailable) {
+            const mins = Math.max(1, Math.round(nearestAvailable.km * 2.4 + 0.8));
+            nearestEtaEl.textContent = `${mins} dk`;
+        } else {
+            nearestEtaEl.textContent = '—';
+        }
+        railMetaEl.textContent = `${drivers.length} araç`;
+        updateTimeEl.textContent = 'şimdi';
+    }
+
+    function tick(userCenter) {
+        drivers.forEach(d => {
+            moveDriver(d, userCenter);
+            if (d.marker) {
+                d.marker.setLatLng([d.lat, d.lng]);
+                d.marker.setIcon(driverIcon(d.state, d.heading));
+            }
+        });
+        renderRail(userCenter);
+    }
+
+    function startSimulation(center) {
+        loadingEl.style.display = 'none';
+
+        map = L.map('ferogo-radar-map', {
+            zoomControl: false,
+            attributionControl: true,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            dragging: true,
+            tap: true,
+        }).setView(center, 14);
+
+        // Dark map tiles — CartoDB Dark Matter
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19,
+        }).addTo(map);
+        // Labels on top — subtle
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+            subdomains: 'abcd',
+            maxZoom: 19,
+            opacity: 0.7,
+        }).addTo(map);
+
+        userMarker = L.marker(center, { icon: userIcon(), interactive: false, zIndexOffset: 1000 }).addTo(map);
+
+        drivers = Array.from({ length: DRIVER_COUNT }, (_, i) => makeDriver(center, i));
+        drivers.forEach(d => {
+            d.marker = L.marker([d.lat, d.lng], { icon: driverIcon(d.state, d.heading), interactive: false }).addTo(map);
+        });
+
+        renderRail(center);
+        tickHandle = setInterval(() => tick(center), TICK_MS);
+
+        // Pause when off-screen
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting && !tickHandle) {
+                    tickHandle = setInterval(() => tick(center), TICK_MS);
+                } else if (!e.isIntersecting && tickHandle) {
+                    clearInterval(tickHandle);
+                    tickHandle = null;
+                }
+            });
+        }, { threshold: 0.1 });
+        io.observe(mapEl);
+    }
+
+    function fallbackToIzmir() {
+        startSimulation(DEFAULT_CENTER);
+    }
+
+    function init() {
+        if (!('geolocation' in navigator)) {
+            fallbackToIzmir();
+            return;
+        }
+        // Show fallback button after 4s in case user ignores prompt
+        const fallbackTimer = setTimeout(() => {
+            if (fallbackBtn) fallbackBtn.classList.remove('hidden');
+            if (loadingText) loadingText.innerHTML = 'Konum izni bekleniyor…<br><span class="text-xs text-zinc-500">Tarayıcının üst kısmındaki istemi onayla.</span>';
+        }, 4000);
+
+        if (fallbackBtn) {
+            fallbackBtn.addEventListener('click', () => {
+                clearTimeout(fallbackTimer);
+                fallbackToIzmir();
+            });
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                clearTimeout(fallbackTimer);
+                startSimulation([pos.coords.latitude, pos.coords.longitude]);
+            },
+            () => {
+                clearTimeout(fallbackTimer);
+                fallbackToIzmir();
+            },
+            { timeout: 8000, maximumAge: 60000, enableHighAccuracy: false }
+        );
+    }
+
+    // Lazy init — wait until user scrolls near
+    const initObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+            init();
+            initObserver.disconnect();
+        }
+    }, { rootMargin: '200px' });
+    initObserver.observe(mapEl);
+})();
+</script>
+@endpush
