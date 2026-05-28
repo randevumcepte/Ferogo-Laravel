@@ -20,6 +20,14 @@ Route::post('/api/calculate-fare', [ReservationController::class, 'calculateFare
 Route::post('/api/quick-request', [ReservationController::class, 'quickRequest'])
     ->name('reservation.quick-request');
 
+// AJAX: Canlı radar - kullanıcıya en yakın müsait sürücüler (max 3)
+Route::get('/api/nearby-drivers', [ReservationController::class, 'nearbyDrivers'])
+    ->name('reservation.nearby-drivers');
+
+// AJAX: Adres autocomplete (Nominatim proxy + cache + İzmir viewbox)
+Route::get('/api/search-places', [ReservationController::class, 'searchPlaces'])
+    ->name('reservation.search-places');
+
 // Sürücü başvuru sayfası
 Route::get('/surucu-olun', [DriverApplicationController::class, 'show'])
     ->name('driver.apply');

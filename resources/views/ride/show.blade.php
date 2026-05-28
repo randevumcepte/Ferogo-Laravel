@@ -260,7 +260,7 @@
                                 <div class="flex-1 space-y-3">
                                     <div>
                                         <div class="text-xs text-zinc-500 uppercase tracking-wide">Alış</div>
-                                        <div class="text-sm text-white font-medium">Alsancak, Cumhuriyet Bulvarı</div>
+                                        <div class="text-sm text-white font-medium" id="hero-pickup-address">Alsancak, Cumhuriyet Bulvarı</div>
                                     </div>
                                     <div>
                                         <div class="text-xs text-zinc-500 uppercase tracking-wide">Bırakış</div>
@@ -406,7 +406,7 @@
                     </div>
                     <div id="radar-driver-rail" class="space-y-2.5">
                         {{-- Skeletons --}}
-                        @for($i = 0; $i < 4; $i++)
+                        @for($i = 0; $i < 3; $i++)
                             <div class="driver-rail-card border border-white/5 rounded-2xl p-4 animate-pulse">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-xl bg-white/5"></div>
@@ -421,9 +421,9 @@
                     </div>
 
                     <div class="mt-2 p-4 rounded-2xl bg-gradient-to-br from-brand/15 to-transparent border border-brand/20">
-                        <div class="text-xs text-brand uppercase tracking-wider mb-1">Hatırlatma</div>
+                        <div class="text-xs text-brand uppercase tracking-wider mb-1">Nasıl çalışır</div>
                         <p class="text-xs text-zinc-300 leading-relaxed">
-                            Liste 3 saniyede bir güncellenir. Sürücüler yolculuk aldıkça <span class="text-zinc-500">gri</span>, müsait olduklarında <span class="text-brand">altın</span> görünür.
+                            Konumuna en yakın <span class="text-brand font-semibold">3 müsait sürücü</span> birkaç saniyede bir güncellenir. Birini seç, hızlı talep formunu doldur — şoföre direkt bildirim gider.
                         </p>
                     </div>
                 </div>
@@ -855,16 +855,10 @@
     'use strict';
 
     const DEFAULT_CENTER = [38.4192, 27.1287]; // İzmir Konak
-    const DRIVER_COUNT = 9;
-    const TICK_MS = 1800;
-    const PASSENGER_NAMES = ['Mehmet K.', 'Burak A.', 'Tolga Ş.', 'Emre D.', 'Serkan O.', 'Hakan Y.', 'Cem B.', 'Murat İ.', 'Onur G.', 'Kerem Ç.'];
-    const VEHICLE_CLASSES = [
-        { label: 'Easy',     slug: 'easy',     type: 'available', icon: '🚗' },
-        { label: 'Platinum', slug: 'platinum', type: 'premium',   icon: '👔' },
-        { label: 'VIP',      slug: 'vip',      type: 'premium',   icon: '♛'  },
-        { label: 'Easy',     slug: 'easy',     type: 'available', icon: '🚗' },
-    ];
-    const PLATES = ['35 AB 1234', '35 KZ 4471', '35 EM 8820', '35 BC 5532', '35 TR 9908', '35 FG 3217'];
+    const RAIL_LIMIT = 3;          // Max kart sayısı
+    const REFRESH_MS = 8000;       // 8 sn'de bir API'den yenile
+    const NEARBY_URL = '{{ route('reservation.nearby-drivers') }}';
+    const VCLASS_ICONS = { easy: '🚗', platinum: '👔', vip: '♛' };
 
     const mapEl = document.getElementById('ferogo-radar-map');
     const loadingEl = document.getElementById('radar-loading');
@@ -880,8 +874,9 @@
 
     let map = null;
     let userMarker = null;
-    let drivers = [];
-    let tickHandle = null;
+    let drivers = [];               // API'den dönen sürücü listesi (en yakın N tane)
+    let driverMarkers = new Map();  // id -> L.marker
+    let refreshHandle = null;
     let userCenterGlobal = null;
     let userAddressGlobal = null;
 
@@ -920,32 +915,6 @@
         });
     }
 
-    function rand(min, max) { return Math.random() * (max - min) + min; }
-    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
-    function makeDriver(center, idx) {
-        // Spread within ~2.5km
-        const lat = center[0] + rand(-0.022, 0.022);
-        const lng = center[1] + rand(-0.028, 0.028);
-        const vc = VEHICLE_CLASSES[idx % VEHICLE_CLASSES.length];
-        const busy = Math.random() < 0.25;
-        return {
-            id: idx,
-            name: PASSENGER_NAMES[idx % PASSENGER_NAMES.length],
-            plate: PLATES[idx % PLATES.length],
-            vclass: vc.label,
-            vSlug: vc.slug,
-            vIcon: vc.icon,
-            state: busy ? 'busy' : vc.type,
-            rating: (4.6 + Math.random() * 0.39).toFixed(2),
-            trips: Math.floor(rand(180, 2400)),
-            lat, lng,
-            heading: rand(0, 360),
-            speed: rand(0.00008, 0.00022), // ~0.5-1.5 km in degrees per tick
-            marker: null,
-        };
-    }
-
     function distanceKm(a, b) {
         const R = 6371;
         const dLat = (b[0] - a[0]) * Math.PI / 180;
@@ -954,61 +923,51 @@
         return 2 * R * Math.asin(Math.sqrt(x));
     }
 
-    function moveDriver(d, userCenter) {
-        // Random walk with slight bias toward staying within range of user
-        const dist = distanceKm(userCenter, [d.lat, d.lng]);
-        if (dist > 3.5) {
-            // Steer back toward user
-            const dx = userCenter[1] - d.lng;
-            const dy = userCenter[0] - d.lat;
-            d.heading = Math.atan2(dy, dx) * 180 / Math.PI;
-        } else {
-            d.heading += rand(-25, 25);
-        }
-        const rad = d.heading * Math.PI / 180;
-        d.lat += Math.sin(rad) * d.speed;
-        d.lng += Math.cos(rad) * d.speed;
-
-        // Occasional state flip
-        if (Math.random() < 0.04) {
-            d.state = d.state === 'busy' ? (Math.random() < 0.3 ? 'premium' : 'available') : (Math.random() < 0.5 ? 'busy' : d.state);
-        }
+    function renderEmptyRail(reason) {
+        railEl.innerHTML = `
+            <div class="driver-rail-card border border-white/5 rounded-2xl p-5 text-center">
+                <div class="text-3xl mb-2">🛣</div>
+                <div class="text-sm font-semibold text-white mb-1">Şu an yakında müsait sürücü yok</div>
+                <div class="text-[11px] text-zinc-500 leading-relaxed">${reason || 'Birkaç saniye sonra tekrar dene veya rezervasyon formunu kullan.'}</div>
+            </div>`;
+        availableCountEl.textContent = '0';
+        nearestEtaEl.textContent = '—';
+        railMetaEl.textContent = '0 araç';
     }
 
-    function renderRail(userCenter) {
-        const sorted = [...drivers]
-            .map(d => ({ d, km: distanceKm(userCenter, [d.lat, d.lng]) }))
-            .sort((a, b) => a.km - b.km);
+    function renderRail() {
+        if (!drivers.length) {
+            renderEmptyRail();
+            return;
+        }
 
-        const top = sorted.slice(0, 5);
-        railEl.innerHTML = top.map(({ d, km }) => {
-            const mins = Math.max(1, Math.round(km * 2.4 + 0.8));
-            const isBusy = d.state === 'busy';
-            const dotColor = isBusy ? 'bg-zinc-500' : 'bg-brand';
-            const statusText = isBusy ? 'Yolculukta' : 'Müsait';
-            const statusClass = isBusy ? 'text-zinc-400' : 'text-brand';
-            const selectBtn = isBusy
-                ? `<div class="text-[10px] text-zinc-600 uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-white/5">Dolu</div>`
-                : `<button type="button" class="quick-select-btn group/btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-600 text-black text-[11px] font-bold uppercase tracking-wider transition shadow-md shadow-brand/30" data-driver-id="${d.id}">
-                        Seç
-                        <svg class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                    </button>`;
+        const top = drivers.slice(0, RAIL_LIMIT);
+        railEl.innerHTML = top.map((d) => {
+            const icon = VCLASS_ICONS[d.vehicle_class_slug] || '🚗';
+            const dotColor = 'bg-brand';
+            const statusText = 'Müsait';
+            const statusClass = 'text-brand';
+            const vehicleLine = [d.vehicle_class, d.vehicle_label, d.plate].filter(Boolean).join(' · ');
+            const selectBtn = `<button type="button" class="quick-select-btn group/btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-600 text-black text-[11px] font-bold uppercase tracking-wider transition shadow-md shadow-brand/30" data-driver-id="${d.id}">
+                    Seç
+                    <svg class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                </button>`;
             return `
                 <div class="driver-rail-card border border-white/5 rounded-2xl p-3.5 flex items-center gap-3" data-driver-id="${d.id}">
                     <div class="relative w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/10 flex items-center justify-center text-lg shrink-0">
-                        ${d.vIcon}
+                        ${icon}
                         <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full ${dotColor} border-2 border-black"></span>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
                             <div class="text-sm font-semibold text-white truncate">${d.name}</div>
-                            <span class="text-[10px] text-brand shrink-0">★ ${d.rating}</span>
+                            <span class="text-[10px] text-brand shrink-0">★ ${Number(d.rating).toFixed(2)}</span>
                         </div>
-                        <div class="text-[11px] text-zinc-500 truncate">${d.vclass} · ${d.plate}</div>
+                        <div class="text-[11px] text-zinc-500 truncate">${vehicleLine || '—'}</div>
                         <div class="flex items-center gap-2 mt-1">
-                            <span class="text-[11px] font-bold text-white">${km.toFixed(1)} km</span>
+                            <span class="text-[11px] font-bold text-white">${d.distance_km.toFixed(1)} km</span>
                             <span class="text-zinc-700">·</span>
-                            <span class="text-[10px] ${statusClass} uppercase tracking-wider">${statusText} · ${mins} dk</span>
+                            <span class="text-[10px] ${statusClass} uppercase tracking-wider">${statusText} · ${d.eta_minutes} dk</span>
                         </div>
                     </div>
                     <div class="shrink-0">${selectBtn}</div>
@@ -1023,29 +982,56 @@
                 if (driver) openQuickModal(driver);
             });
         });
-
-        const availableCount = drivers.filter(d => d.state !== 'busy').length;
-        const nearestAvailable = sorted.find(({ d }) => d.state !== 'busy');
-        availableCountEl.textContent = availableCount;
-        if (nearestAvailable) {
-            const mins = Math.max(1, Math.round(nearestAvailable.km * 2.4 + 0.8));
-            nearestEtaEl.textContent = `${mins} dk`;
-        } else {
-            nearestEtaEl.textContent = '—';
-        }
-        railMetaEl.textContent = `${drivers.length} araç`;
-        updateTimeEl.textContent = 'şimdi';
     }
 
-    function tick(userCenter) {
+    function syncMarkers() {
+        if (!map) return;
+        const seen = new Set();
+
         drivers.forEach(d => {
-            moveDriver(d, userCenter);
-            if (d.marker) {
-                d.marker.setLatLng([d.lat, d.lng]);
-                d.marker.setIcon(driverIcon(d.state));
+            seen.add(d.id);
+            const existing = driverMarkers.get(d.id);
+            if (existing) {
+                existing.setLatLng([d.lat, d.lng]);
+            } else {
+                const m = L.marker([d.lat, d.lng], {
+                    icon: driverIcon(d.vehicle_class_slug === 'vip' || d.vehicle_class_slug === 'platinum' ? 'premium' : 'available'),
+                    interactive: false,
+                }).addTo(map);
+                driverMarkers.set(d.id, m);
             }
         });
-        renderRail(userCenter);
+
+        // Çevreden çıkanları temizle
+        driverMarkers.forEach((m, id) => {
+            if (!seen.has(id)) {
+                map.removeLayer(m);
+                driverMarkers.delete(id);
+            }
+        });
+    }
+
+    async function fetchNearby(userCenter) {
+        const url = `${NEARBY_URL}?lat=${userCenter[0]}&lng=${userCenter[1]}&limit=${RAIL_LIMIT}`;
+        try {
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) throw new Error('API hatası');
+            const data = await res.json();
+            drivers = Array.isArray(data.drivers) ? data.drivers : [];
+
+            renderRail();
+            syncMarkers();
+
+            availableCountEl.textContent = data.available_count ?? drivers.length;
+            railMetaEl.textContent = drivers.length
+                ? `${drivers.length} / ${data.available_count ?? drivers.length} gösteriliyor`
+                : '0 araç';
+            nearestEtaEl.textContent = drivers.length ? `${drivers[0].eta_minutes} dk` : '—';
+            updateTimeEl.textContent = 'şimdi';
+        } catch (err) {
+            console.warn('[Ferogo radar] nearby-drivers fetch failed', err);
+            if (!drivers.length) renderEmptyRail('Bağlantı sorunu — bir kaç saniye sonra tekrar deneniyor.');
+        }
     }
 
     async function reverseGeocode(lat, lng) {
@@ -1061,26 +1047,39 @@
         }
     }
 
-    async function searchPlaces(query) {
-        if (query.length < 3) return [];
+    // Sunucu tarafı proxy (cache + İzmir viewbox), AbortController ile stale istek iptali
+    let searchAbortController = null;
+    async function searchPlaces(query, biasLat, biasLng) {
+        if (query.length < 2) return [];
+        if (searchAbortController) searchAbortController.abort();
+        searchAbortController = new AbortController();
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=tr&limit=5&accept-language=tr`, {
-                headers: { 'Accept': 'application/json' }
+            const params = new URLSearchParams({ q: query });
+            if (biasLat != null && biasLng != null) {
+                params.set('lat', biasLat);
+                params.set('lng', biasLng);
+            }
+            const res = await fetch(`{{ route('reservation.search-places') }}?${params.toString()}`, {
+                headers: { 'Accept': 'application/json' },
+                signal: searchAbortController.signal,
             });
             if (!res.ok) return [];
-            return await res.json();
-        } catch (_) {
+            const data = await res.json();
+            return data.results || [];
+        } catch (e) {
+            if (e.name === 'AbortError') return null; // sessizce yut — yeni bir istek geldi
             return [];
         }
     }
 
-    function startSimulation(center) {
+    function startRadar(center) {
         loadingEl.style.display = 'none';
         userCenterGlobal = center;
 
-        // Async reverse geocode for pickup address
+        // Async reverse geocode for pickup address — hem hero kartını hem modal'ı besler
         reverseGeocode(center[0], center[1]).then(addr => {
             userAddressGlobal = addr;
+            updateHeroPickup(addr);
         });
 
         map = L.map('ferogo-radar-map', {
@@ -1107,22 +1106,19 @@
 
         userMarker = L.marker(center, { icon: userIcon(), interactive: false, zIndexOffset: 1000 }).addTo(map);
 
-        drivers = Array.from({ length: DRIVER_COUNT }, (_, i) => makeDriver(center, i));
-        drivers.forEach(d => {
-            d.marker = L.marker([d.lat, d.lng], { icon: driverIcon(d.state), interactive: false }).addTo(map);
-        });
+        // İlk yükleme + periyodik tazeleme
+        fetchNearby(center);
+        refreshHandle = setInterval(() => fetchNearby(center), REFRESH_MS);
 
-        renderRail(center);
-        tickHandle = setInterval(() => tick(center), TICK_MS);
-
-        // Pause when off-screen
+        // Pause when off-screen (ağ trafiğini ekonomize et)
         const io = new IntersectionObserver((entries) => {
             entries.forEach(e => {
-                if (e.isIntersecting && !tickHandle) {
-                    tickHandle = setInterval(() => tick(center), TICK_MS);
-                } else if (!e.isIntersecting && tickHandle) {
-                    clearInterval(tickHandle);
-                    tickHandle = null;
+                if (e.isIntersecting && !refreshHandle) {
+                    fetchNearby(center);
+                    refreshHandle = setInterval(() => fetchNearby(center), REFRESH_MS);
+                } else if (!e.isIntersecting && refreshHandle) {
+                    clearInterval(refreshHandle);
+                    refreshHandle = null;
                 }
             });
         }, { threshold: 0.1 });
@@ -1130,7 +1126,16 @@
     }
 
     function fallbackToIzmir() {
-        startSimulation(DEFAULT_CENTER);
+        startRadar(DEFAULT_CENTER);
+    }
+
+    // Hero (sağdaki "Canlı yolculuk" kartı) — pickup satırını gerçek adresle değiştirir
+    function updateHeroPickup(address) {
+        const el = document.getElementById('hero-pickup-address');
+        if (!el || !address) return;
+        // Çok uzun OSM display_name'ini ilk 2 segmente sıkıştır
+        const short = address.split(',').slice(0, 2).join(',').trim();
+        el.textContent = short || address;
     }
 
     // ===== QUICK SELECT MODAL =====
@@ -1158,10 +1163,12 @@
         selectedDropoff = null;
 
         // Driver header
-        document.getElementById('qm-driver-icon').textContent = driver.vIcon;
+        const icon = VCLASS_ICONS[driver.vehicle_class_slug] || '🚗';
+        const metaParts = [driver.vehicle_class, driver.vehicle_label, driver.plate].filter(Boolean);
+        document.getElementById('qm-driver-icon').textContent = icon;
         document.getElementById('qm-driver-name').textContent = driver.name;
-        document.getElementById('qm-driver-rating').textContent = `★ ${driver.rating}`;
-        document.getElementById('qm-driver-meta').textContent = `${driver.vclass} · ${driver.plate}`;
+        document.getElementById('qm-driver-rating').textContent = `★ ${Number(driver.rating).toFixed(2)}`;
+        document.getElementById('qm-driver-meta').textContent = metaParts.join(' · ') || '—';
 
         // Reset form
         modalForm.reset();
@@ -1204,38 +1211,71 @@
         if (e.key === 'Escape' && !modalEl.classList.contains('hidden')) closeQuickModal();
     });
 
-    // Dropoff autocomplete
+    // Dropoff autocomplete — server proxy + cache, AbortController, anında loading state
+    function showSuggestionState(html) {
+        qmDropoffSuggestions.innerHTML = html;
+        qmDropoffSuggestions.classList.remove('hidden');
+    }
+    function loadingSuggestionHtml() {
+        return `
+            <div class="px-3 py-3 flex items-center gap-2 text-xs text-zinc-400">
+                <svg class="w-3.5 h-3.5 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                Aranıyor…
+            </div>`;
+    }
+
     qmDropoffInput.addEventListener('input', () => {
         const q = qmDropoffInput.value.trim();
         selectedDropoff = null;
+        updateFarePreview();
         clearTimeout(dropoffSearchTimer);
-        if (q.length < 3) {
+        if (q.length < 2) {
             qmDropoffSuggestions.classList.add('hidden');
-            updateFarePreview();
             return;
         }
+        // Anında loading göstergesi — kullanıcı boş ekrana bakmasın
+        showSuggestionState(loadingSuggestionHtml());
+
         dropoffSearchTimer = setTimeout(async () => {
-            const results = await searchPlaces(q);
+            const biasLat = userCenterGlobal ? userCenterGlobal[0] : null;
+            const biasLng = userCenterGlobal ? userCenterGlobal[1] : null;
+            const results = await searchPlaces(q, biasLat, biasLng);
+            // null → istek iptal edildi, daha yeni bir istek geliyor
+            if (results === null) return;
+            // input bu arada değişmiş olabilir → eski sonuçları bastırma
+            if (qmDropoffInput.value.trim() !== q) return;
+
             if (!results.length) {
-                qmDropoffSuggestions.classList.add('hidden');
+                showSuggestionState(`<div class="px-3 py-3 text-xs text-zinc-500">Sonuç yok. Daha açıklayıcı yaz (örn. "Adnan Menderes Havalimanı").</div>`);
                 return;
             }
             qmDropoffSuggestions.innerHTML = results.map((r, i) => `
                 <button type="button" data-idx="${i}" class="qm-suggestion w-full text-left px-3 py-2.5 hover:bg-white/5 transition">
-                    <div class="text-xs text-white truncate">${r.display_name.split(',').slice(0, 2).join(',')}</div>
-                    <div class="text-[10px] text-zinc-500 truncate">${r.display_name.split(',').slice(2).join(',').trim()}</div>
+                    <div class="text-xs text-white truncate">${r.primary || r.display}</div>
+                    <div class="text-[10px] text-zinc-500 truncate">${r.secondary || ''}</div>
                 </button>`).join('');
             qmDropoffSuggestions.classList.remove('hidden');
             qmDropoffSuggestions.querySelectorAll('.qm-suggestion').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const r = results[parseInt(btn.dataset.idx, 10)];
-                    selectedDropoff = { lat: parseFloat(r.lat), lng: parseFloat(r.lon), display_name: r.display_name };
-                    qmDropoffInput.value = r.display_name.split(',').slice(0, 2).join(',');
+                    selectedDropoff = { lat: r.lat, lng: r.lng, display_name: r.display };
+                    qmDropoffInput.value = r.primary || r.display;
                     qmDropoffSuggestions.classList.add('hidden');
                     updateFarePreview();
                 });
             });
-        }, 350);
+        }, 250); // debounce kısa — server cache + proxy hızlı dönüyor
+    });
+
+    // Outside click → öneri panelini kapat
+    document.addEventListener('click', (e) => {
+        if (modalEl.classList.contains('hidden')) return;
+        if (!qmDropoffSuggestions.contains(e.target) && e.target !== qmDropoffInput) {
+            qmDropoffSuggestions.classList.add('hidden');
+        }
     });
 
     function updateFarePreview() {
@@ -1256,7 +1296,7 @@
             platinum: { base: 100, perKm: 35, min: 250 },
             vip:      { base: 200, perKm: 55, min: 500 },
         };
-        const r = rates[selectedDriver.vSlug] || rates.easy;
+        const r = rates[selectedDriver.vehicle_class_slug] || rates.easy;
         const calc = Math.max(r.min, r.base + km * r.perKm);
 
         qmFareDistance.textContent = `${km.toFixed(1)} km`;
@@ -1287,7 +1327,7 @@
         const mins = Math.max(5, Math.round(km * 2.2 + 3));
 
         const payload = {
-            vehicle_class_slug: selectedDriver.vSlug,
+            vehicle_class_slug: selectedDriver.vehicle_class_slug,
             pickup_address: qmPickupInput.value.trim() || `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`,
             pickup_lat: userCenterGlobal[0],
             pickup_lng: userCenterGlobal[1],
@@ -1297,7 +1337,7 @@
             customer_name: fd.get('customer_name'),
             customer_phone: fd.get('customer_phone'),
             preferred_driver_name: selectedDriver.name,
-            preferred_driver_plate: selectedDriver.plate,
+            preferred_driver_plate: selectedDriver.plate || '',
             distance_km: parseFloat(km.toFixed(2)),
             duration_minutes: mins,
             kvkk_consent: fd.get('kvkk_consent') ? 1 : 0,
@@ -1363,7 +1403,7 @@
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 clearTimeout(fallbackTimer);
-                startSimulation([pos.coords.latitude, pos.coords.longitude]);
+                startRadar([pos.coords.latitude, pos.coords.longitude]);
             },
             () => {
                 clearTimeout(fallbackTimer);
