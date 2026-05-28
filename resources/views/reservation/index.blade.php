@@ -482,15 +482,29 @@
                 (pos) => {
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
-                    geocoder.geocode({ location: { lat, lng }, language: 'tr', region: 'TR' }, (results, status) => {
+
+                    // Koordinatları her durumda kaydet — geocoder başarısız olsa bile form çalışsın
+                    document.getElementById('pickup-lat').value = lat;
+                    document.getElementById('pickup-lng').value = lng;
+
+                    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
                         setLocLoading(false);
                         if (status === 'OK' && results && results[0]) {
+                            // En spesifik (genelde ilk) sonucu kullan
                             pickupInput.value = results[0].formatted_address;
-                            document.getElementById('pickup-lat').value = lat;
-                            document.getElementById('pickup-lng').value = lng;
                             FeroGoForm.calculateDistance();
                         } else {
-                            showLocError('Konum adrese çevrilemedi. Lütfen manuel girin.');
+                            // Fallback: koordinatları input'a yaz, form yine de gönderilebilir
+                            pickupInput.value = `Konumum (${lat.toFixed(6)}, ${lng.toFixed(6)})`;
+                            FeroGoForm.calculateDistance();
+                            console.warn('Geocoder status:', status);
+                            if (status === 'REQUEST_DENIED') {
+                                showLocError('Geocoding API etkin değil. Koordinatlarla devam ediliyor.');
+                            } else if (status === 'ZERO_RESULTS') {
+                                showLocError('Bu konum için adres bulunamadı. Koordinatlarla devam ediliyor.');
+                            } else {
+                                showLocError('Adres çevrilemedi (' + status + '). Koordinatlarla devam ediliyor.');
+                            }
                         }
                     });
                 },
