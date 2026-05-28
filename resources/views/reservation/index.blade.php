@@ -2,28 +2,112 @@
 
 @section('title', 'Ferogo · İzmir Premium Şoförlü Transfer')
 
+@push('head')
+<style>
+    @keyframes float-orb {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+        50% { transform: translate(20px, -30px) scale(1.1); opacity: 0.7; }
+    }
+    @keyframes float-orb-2 {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+        50% { transform: translate(-30px, 20px) scale(1.15); opacity: 0.6; }
+    }
+    @keyframes shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+    }
+    .orb-1 { animation: float-orb 8s ease-in-out infinite; }
+    .orb-2 { animation: float-orb-2 10s ease-in-out infinite; }
+    .hero-grid {
+        background-image:
+            linear-gradient(rgba(240,192,64,0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(240,192,64,0.06) 1px, transparent 1px);
+        background-size: 60px 60px;
+        mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+        -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    }
+    .hero-bg-base {
+        background:
+            radial-gradient(ellipse 80% 60% at 50% 0%, rgba(240,192,64,0.18) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 80% at 80% 100%, rgba(240,192,64,0.10) 0%, transparent 55%),
+            linear-gradient(180deg, #0a0a0a 0%, #000 100%);
+    }
+    .hero-bg-image {
+        background-image:
+            linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.75) 60%, rgba(0,0,0,1) 100%),
+            url('{{ asset('images/hero-bg.jpg') }}');
+        background-size: cover;
+        background-position: center;
+    }
+    .text-shimmer {
+        background: linear-gradient(90deg, #F0C040 0%, #FDF0C1 50%, #F0C040 100%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shimmer 4s linear infinite;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="gradient-radial pt-24">
 
     {{-- Hero --}}
-    <section class="px-6 py-16 md:py-24">
-        <div class="max-w-4xl mx-auto text-center">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold uppercase tracking-wider mb-6">
-                <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
-                İzmir · 7/24 Aktif Hizmet
+    <section class="relative overflow-hidden -mt-24 pt-24">
+        {{-- Background base (CSS-only premium look) + optional image layer --}}
+        <div class="absolute inset-0 hero-bg-base"></div>
+        <div class="absolute inset-0 hero-bg-image opacity-0 transition-opacity duration-700" id="hero-bg-img"></div>
+
+        {{-- Animated glow orbs --}}
+        <div class="orb-1 absolute top-10 left-1/4 w-[28rem] h-[28rem] rounded-full bg-brand/25 blur-3xl pointer-events-none"></div>
+        <div class="orb-2 absolute bottom-0 right-1/4 w-[24rem] h-[24rem] rounded-full bg-brand/15 blur-3xl pointer-events-none"></div>
+
+        {{-- Subtle grid --}}
+        <div class="absolute inset-0 hero-grid pointer-events-none"></div>
+
+        {{-- Top vignette for nav blend --}}
+        <div class="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black to-transparent pointer-events-none"></div>
+
+        {{-- Content --}}
+        <div class="relative px-6 py-24 md:py-36">
+            <div class="max-w-4xl mx-auto text-center">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold uppercase tracking-wider mb-6 backdrop-blur-sm">
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
+                    İzmir · 7/24 Aktif Hizmet
+                </div>
+                <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 tracking-tight drop-shadow-2xl">
+                    Şehirde <span class="text-shimmer">premium</span> ulaşımın<br>en kolay yolu
+                </h1>
+                <p class="text-lg md:text-xl text-zinc-200 max-w-2xl mx-auto leading-relaxed mb-10 drop-shadow-lg">
+                    Profesyonel şoförler, bakımlı lüks araçlar, şeffaf fiyat.<br>
+                    Havalimanı, iş toplantısı, şehir içi — her an yanınızda.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-3 items-center justify-center">
+                    <a href="#rezervasyon" class="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-brand hover:bg-brand-600 text-black font-bold text-lg transition shadow-lg shadow-brand/30 hover:shadow-brand/50 hover:scale-105 duration-200">
+                        Hemen Rezervasyon Yap
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </a>
+                    <a href="tel:+908508401377" class="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/15 text-white font-semibold text-base transition backdrop-blur-sm">
+                        <svg class="w-5 h-5 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02l-2.21 2.2z"/></svg>
+                        0850 840 13 77
+                    </a>
+                </div>
+
+                {{-- Trust strip --}}
+                <div class="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs text-zinc-400 uppercase tracking-wider">
+                    <div class="flex items-center gap-2"><span class="text-brand">★</span> Lisanslı Şoförler</div>
+                    <div class="flex items-center gap-2"><span class="text-brand">✓</span> Şeffaf Fiyat</div>
+                    <div class="flex items-center gap-2"><span class="text-brand">⏱</span> Uçuş Takibi</div>
+                    <div class="flex items-center gap-2"><span class="text-brand">♛</span> Lüks Filo</div>
+                </div>
             </div>
-            <h1 class="text-4xl md:text-6xl font-extrabold leading-tight mb-6 tracking-tight">
-                Şehirde <span class="text-brand">premium</span> ulaşımın<br>en kolay yolu
-            </h1>
-            <p class="text-lg md:text-xl text-zinc-300 max-w-2xl mx-auto leading-relaxed mb-10">
-                Profesyonel şoförler, bakımlı lüks araçlar, şeffaf fiyat.<br>
-                Havalimanı, iş toplantısı, şehir içi — her an yanınızda.
-            </p>
-            <a href="#rezervasyon" class="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-brand hover:bg-brand-600 text-black font-bold text-lg transition shadow-lg shadow-brand/20">
-                Hemen Rezervasyon Yap
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-            </a>
         </div>
+
+        {{-- City skyline silhouette --}}
+        <svg class="absolute bottom-0 left-0 w-full h-24 md:h-32 text-black pointer-events-none" preserveAspectRatio="none" viewBox="0 0 1440 120" fill="currentColor">
+            <path d="M0,120 L0,80 L40,80 L40,60 L80,60 L80,75 L120,75 L120,40 L160,40 L160,55 L200,55 L200,70 L240,70 L240,30 L280,30 L280,50 L320,50 L320,65 L360,65 L360,45 L400,45 L400,75 L440,75 L440,55 L480,55 L480,25 L520,25 L520,50 L560,50 L560,70 L600,70 L600,40 L640,40 L640,60 L680,60 L680,80 L720,80 L720,35 L760,35 L760,55 L800,55 L800,75 L840,75 L840,45 L880,45 L880,65 L920,65 L920,30 L960,30 L960,55 L1000,55 L1000,75 L1040,75 L1040,40 L1080,40 L1080,60 L1120,60 L1120,80 L1160,80 L1160,50 L1200,50 L1200,70 L1240,70 L1240,35 L1280,35 L1280,60 L1320,60 L1320,75 L1360,75 L1360,45 L1400,45 L1400,65 L1440,65 L1440,120 Z"/>
+        </svg>
     </section>
 
     {{-- Services --}}
@@ -509,7 +593,18 @@ const FeroGoForm = (function() {
     document.addEventListener('DOMContentLoaded', () => {
         initExtras();
         initFormChangeListeners();
+        initHeroBackground();
     });
+
+    function initHeroBackground() {
+        const layer = document.getElementById('hero-bg-img');
+        if (!layer) return;
+        const url = '{{ asset('images/hero-bg.jpg') }}';
+        const probe = new Image();
+        probe.onload = () => layer.classList.replace('opacity-0', 'opacity-100');
+        probe.onerror = () => layer.remove();
+        probe.src = url;
+    }
 
     return { calculateDistance, updateFarePreview };
 })();
