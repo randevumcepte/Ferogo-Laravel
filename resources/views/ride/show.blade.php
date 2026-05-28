@@ -1004,7 +1004,12 @@
             });
             if (!res.ok) return;
             const data = await res.json();
-            realDrivers = Array.isArray(data.drivers) ? data.drivers : [];
+            const next = Array.isArray(data.drivers) ? data.drivers : [];
+            const changed = next.length !== realDrivers.length
+                || next.some((d, i) => !realDrivers[i] || realDrivers[i].id !== d.id);
+            realDrivers = next;
+            // Değişiklik varsa rail'i hemen tazele (bir sonraki tick'i bekleme)
+            if (changed && userCenterGlobal) renderRail(userCenterGlobal);
         } catch (_) { /* sessizce yut — mock fallback */ }
     }
 
@@ -1118,26 +1123,68 @@
     }
 
     function renderRail(userCenter) {
-        const sorted = [...drivers]
-            .map(d => ({ d, km: distanceKm(userCenter, [d.lat, d.lng]) }))
-            .sort((a, b) => a.km - b.km);
+        // Real drivers (API) — her zaman Müsait + Seç
+        const realCards = realDrivers.map(r => ({
+            id: 'real-' + r.id,
+            name: r.name,
+            plate: r.plate || '—',
+            vIcon: VCLASS_ICONS[r.vehicle_class_slug] || '🚗',
+            vSlug: r.vehicle_class_slug,
+            vclass: r.vehicle_class || 'Easy',
+            rating: Number(r.rating || 0).toFixed(2),
+            km: r.distance_km,
+            isBusy: false,
+            isReal: true,
+            raw: r,
+        }));
 
-        const top = sorted.slice(0, 5);
-        railEl.innerHTML = top.map(({ d, km }) => {
-            const mins = Math.max(1, Math.round(km * 2.4 + 0.8));
-            const isBusy = d.state === 'busy';
+        // Mock drivers — animasyon devam etsin, görsel doluluk için
+        const sortedMock = [...drivers]
+            .map(d => ({ d, km: distanceKm(userCenter, [d.lat, d.lng]) }))
+            .sort((a, b) => a.km - b.km)
+            .map(({ d, km }) => ({
+                id: 'mock-' + d.id,
+                name: d.name,
+                plate: d.plate,
+                vIcon: d.vIcon,
+                vSlug: d.vSlug,
+                vclass: d.vclass,
+                rating: d.rating,
+                km,
+                isBusy: d.state === 'busy',
+                isReal: false,
+                raw: d,
+            }));
+
+        // Real driver'lar üstte (max 3), mock'larla 5'e tamamla. İsim çakışmalarını ele
+        const cards = [...realCards];
+        const usedNames = new Set(realCards.map(c => c.name.toLowerCase()));
+        for (const m of sortedMock) {
+            if (cards.length >= 5) break;
+            const key = m.name.toLowerCase();
+            if (usedNames.has(key)) continue;
+            cards.push(m);
+            usedNames.add(key);
+        }
+
+        railEl.innerHTML = cards.map(d => {
+            const mins = Math.max(1, Math.round(d.km * 2.4 + 0.8));
+            const isBusy = d.isBusy;
             const dotColor = isBusy ? 'bg-zinc-500' : 'bg-brand';
             const statusText = isBusy ? 'Yolculukta' : 'Müsait';
             const statusClass = isBusy ? 'text-zinc-400' : 'text-brand';
             const badge = classBadge(d.vSlug, d.vclass);
+            const liveDot = d.isReal
+                ? `<span class="ml-1 text-[8px] text-emerald-400 font-bold tracking-wider">● CANLI</span>`
+                : '';
             const selectBtn = isBusy
                 ? `<div class="text-[10px] text-zinc-600 uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-white/5">Dolu</div>`
-                : `<button type="button" class="quick-select-btn group/btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-600 text-black text-[11px] font-bold uppercase tracking-wider transition shadow-md shadow-brand/30" data-driver-id="${d.id}">
+                : `<button type="button" class="quick-select-btn group/btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-600 text-black text-[11px] font-bold uppercase tracking-wider transition shadow-md shadow-brand/30" data-card-id="${d.id}">
                         Seç
                         <svg class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </button>`;
             return `
-                <div class="driver-rail-card border border-white/5 rounded-2xl p-3.5 flex items-center gap-3" data-driver-id="${d.id}">
+                <div class="driver-rail-card border ${d.isReal ? 'border-brand/30' : 'border-white/5'} rounded-2xl p-3.5 flex items-center gap-3">
                     <div class="relative w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/10 flex items-center justify-center text-lg shrink-0">
                         ${d.vIcon}
                         <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full ${dotColor} border-2 border-black"></span>
@@ -1147,10 +1194,11 @@
                             <div class="text-sm font-semibold text-white truncate max-w-[140px]">${d.name}</div>
                             ${badge}
                             <span class="text-[10px] text-brand shrink-0">★ ${d.rating}</span>
+                            ${liveDot}
                         </div>
                         <div class="text-[11px] text-zinc-500 truncate">${d.plate}</div>
                         <div class="flex items-center gap-2 mt-1">
-                            <span class="text-[11px] font-bold text-white">${km.toFixed(1)} km</span>
+                            <span class="text-[11px] font-bold text-white">${d.km.toFixed(1)} km</span>
                             <span class="text-zinc-700">·</span>
                             <span class="text-[10px] ${statusClass} uppercase tracking-wider">${statusText} · ${mins} dk</span>
                         </div>
@@ -1159,12 +1207,12 @@
                 </div>`;
         }).join('');
 
-        // Bind select buttons
+        // Bind: real → openQuickModal(real); mock → openQuickModal(mock) (modal kendi remap eder)
         railEl.querySelectorAll('.quick-select-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const id = parseInt(btn.dataset.driverId, 10);
-                const driver = drivers.find(x => x.id === id);
-                if (driver) openQuickModal(driver);
+                const cardId = btn.dataset.cardId;
+                const card = cards.find(c => c.id === cardId);
+                if (card) openQuickModal(card.raw);
             });
         });
 
