@@ -1016,9 +1016,14 @@
     /** Mock kart tıklandığında gerçek sürücüyü seç (varsa). */
     function pickRealDriverFor(mock) {
         if (!realDrivers.length) return null;
-        // Önce aynı vehicle_class'tan ara
-        return realDrivers.find(r => r.vehicle_class_slug === mock.vSlug)
-            || realDrivers[0];
+        // 1) İsim tam eşleşmesi — mock "Mehmet K." → real "Mehmet K." (en doğal eşleme)
+        const byName = realDrivers.find(r => r.name === mock.name);
+        if (byName) return byName;
+        // 2) Aynı vehicle class
+        const byClass = realDrivers.find(r => r.vehicle_class_slug === mock.vSlug);
+        if (byClass) return byClass;
+        // 3) Fallback: ilk müsait
+        return realDrivers[0];
     }
 
     function userPinHtml() {
