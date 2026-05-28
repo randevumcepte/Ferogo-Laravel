@@ -330,10 +330,43 @@
                 {{-- Fare Preview --}}
                 <div id="fare-preview" class="bg-gradient-to-br from-brand/10 to-brand/5 border-2 border-brand/30 rounded-2xl p-6 hidden">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="text-brand font-semibold">💰 Tahmini Ücret</div>
+                        <div id="fare-tier-badge" class="hidden px-3 py-1 rounded-full bg-brand text-black text-xs font-bold uppercase tracking-wider"></div>
                         <div id="fare-loading" class="hidden text-xs text-zinc-400">Hesaplanıyor...</div>
                     </div>
-                    <div id="fare-breakdown" class="space-y-1 text-sm"></div>
+
+                    {{-- Üç özet kart: Mesafe / Süre / Tahmini Ücret --}}
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3">
+                            <div class="flex items-center gap-1.5 text-xs text-zinc-400 uppercase tracking-wider mb-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                Mesafe
+                            </div>
+                            <div id="card-distance" class="text-lg md:text-xl font-bold text-white">—</div>
+                        </div>
+                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3">
+                            <div class="flex items-center gap-1.5 text-xs text-zinc-400 uppercase tracking-wider mb-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Süre
+                            </div>
+                            <div id="card-duration" class="text-lg md:text-xl font-bold text-white">—</div>
+                        </div>
+                        <div class="bg-brand/10 border-2 border-brand/40 rounded-xl p-3">
+                            <div class="flex items-center gap-1.5 text-xs text-brand uppercase tracking-wider mb-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Tahmini Ücret
+                            </div>
+                            <div id="card-fare" class="text-lg md:text-xl font-bold text-brand">—</div>
+                        </div>
+                    </div>
+
+                    {{-- Detaylı kırılım (açılabilir) --}}
+                    <details class="group">
+                        <summary class="cursor-pointer list-none text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1 select-none">
+                            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            Fiyat detayı
+                        </summary>
+                        <div id="fare-breakdown" class="space-y-1 text-sm mt-3 pt-3 border-t border-white/5"></div>
+                    </details>
                 </div>
 
                 <button type="submit" class="w-full py-4 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-lg transition shadow-lg shadow-brand/20">
@@ -646,6 +679,24 @@ const FeroGoForm = (function() {
 
     function renderFare(fare) {
         const fmt = (n) => '₺' + Number(n).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmtInt = (n) => '₺' + Math.round(Number(n)).toLocaleString('tr-TR');
+
+        // Üst kartlar: Mesafe / Süre / Tahmini Ücret
+        const km = parseFloat(document.getElementById('distance-km').value) || 0;
+        const min = parseInt(document.getElementById('duration-minutes').value) || 0;
+        document.getElementById('card-distance').textContent = km.toFixed(1) + ' km';
+        document.getElementById('card-duration').textContent = min + ' dk';
+        document.getElementById('card-fare').textContent = fmtInt(fare.total_fare);
+
+        // Araç sınıfı rozet
+        const tierBadge = document.getElementById('fare-tier-badge');
+        const selectedRadio = document.querySelector('.vehicle-class-radio:checked');
+        if (selectedRadio) {
+            const tierName = selectedRadio.closest('label').querySelector('.font-bold').textContent.trim();
+            tierBadge.textContent = tierName;
+            tierBadge.classList.remove('hidden');
+        }
+
         let html = `
             <div class="flex justify-between text-zinc-300"><span>Açılış</span><span>${fmt(fare.base_fare)}</span></div>
             <div class="flex justify-between text-zinc-300"><span>Mesafe</span><span>${fmt(fare.distance_fare)}</span></div>
