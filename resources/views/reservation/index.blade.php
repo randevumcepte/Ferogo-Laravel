@@ -47,6 +47,8 @@
         -webkit-text-fill-color: transparent;
         animation: shimmer 4s linear infinite;
     }
+    .extras-accordion > summary { list-style: none; }
+    .extras-accordion > summary::-webkit-details-marker { display: none; }
 </style>
 @endpush
 
@@ -259,13 +261,19 @@
 
                 {{-- Step 3: Ekstralar --}}
                 @if($extras->isNotEmpty())
-                <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 space-y-5">
-                    <div class="flex items-center gap-2 text-brand font-semibold">
-                        <span class="w-6 h-6 rounded-full bg-brand text-black flex items-center justify-center text-xs font-bold">3</span>
-                        Ekstralar <span class="text-xs text-zinc-400 font-normal">(opsiyonel)</span>
-                    </div>
+                <details class="extras-accordion group bg-zinc-900/50 border border-white/5 rounded-2xl">
+                    <summary class="flex items-center justify-between gap-2 p-6 cursor-pointer list-none select-none">
+                        <div class="flex items-center gap-2 text-brand font-semibold">
+                            <span class="w-6 h-6 rounded-full bg-brand text-black flex items-center justify-center text-xs font-bold">3</span>
+                            Ekstralar <span class="text-xs text-zinc-400 font-normal">(opsiyonel)</span>
+                            <span id="extras-count-badge" class="hidden ml-1 text-xs px-2 py-0.5 rounded-full bg-brand/20 text-brand font-medium">0 seçili</span>
+                        </div>
+                        <svg class="w-5 h-5 text-zinc-400 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
 
-                    <div class="space-y-2">
+                    <div class="px-6 pb-6 space-y-2">
                         @foreach($extras as $i => $extra)
                             <label class="flex items-center justify-between gap-3 p-3 bg-zinc-800/50 rounded-xl cursor-pointer hover:bg-zinc-800 transition">
                                 <div class="flex items-center gap-3">
@@ -298,7 +306,7 @@
                             </label>
                         @endforeach
                     </div>
-                </div>
+                </details>
                 @endif
 
                 {{-- Step 4: Müşteri Bilgileri --}}
@@ -637,9 +645,22 @@ const FeroGoForm = (function() {
         document.getElementById('fare-loading').classList.toggle('hidden', !show);
     }
 
+    function updateExtrasBadge() {
+        const badge = document.getElementById('extras-count-badge');
+        if (!badge) return;
+        const count = document.querySelectorAll('.extra-toggle:checked').length;
+        if (count > 0) {
+            badge.textContent = count + ' seçili';
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
     function initExtras() {
         document.querySelectorAll('.extra-toggle').forEach(cb => {
-            cb.addEventListener('change', () => {
+            cb.addEventListener('change', (e) => {
+                e.stopPropagation();
                 const id = cb.dataset.extraId;
                 const inputs = document.querySelectorAll(`[data-extra-input-for="${id}"]`);
                 inputs.forEach(input => {
@@ -648,12 +669,14 @@ const FeroGoForm = (function() {
                         input.classList.toggle('hidden', !cb.checked);
                     }
                 });
+                updateExtrasBadge();
                 updateFarePreview();
             });
         });
 
         document.querySelectorAll('.extra-quantity').forEach(qInput => {
             qInput.addEventListener('change', updateFarePreview);
+            qInput.addEventListener('click', (e) => e.stopPropagation());
         });
     }
 
