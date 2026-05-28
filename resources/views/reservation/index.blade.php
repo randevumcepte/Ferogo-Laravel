@@ -482,33 +482,43 @@
                 return;
             }
             setLocLoading(true);
+
+            // OpenStreetMap Nominatim ile reverse geocoding (anahtar gerektirmez)
+            const nominatimReverse = async (lat, lng) => {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=tr&zoom=18&addressdetails=1`;
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) throw new Error('Nominatim HTTP ' + res.status);
+                const data = await res.json();
+                return data && data.display_name ? data.display_name : null;
+            };
+
+            const finalize = (lat, lng, address) => {
+                pickupInput.value = address || `Konumum (${lat.toFixed(6)}, ${lng.toFixed(6)})`;
+                document.getElementById('pickup-lat').value = lat;
+                document.getElementById('pickup-lng').value = lng;
+                setLocLoading(false);
+                FeroGoForm.calculateDistance();
+            };
+
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
 
-                    // Koordinatları her durumda kaydet — geocoder başarısız olsa bile form çalışsın
-                    document.getElementById('pickup-lat').value = lat;
-                    document.getElementById('pickup-lng').value = lng;
-
-                    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-                        setLocLoading(false);
+                    geocoder.geocode({ location: { lat, lng } }, async (results, status) => {
                         if (status === 'OK' && results && results[0]) {
-                            // En spesifik (genelde ilk) sonucu kullan
-                            pickupInput.value = results[0].formatted_address;
-                            FeroGoForm.calculateDistance();
-                        } else {
-                            // Fallback: koordinatları input'a yaz, form yine de gönderilebilir
-                            pickupInput.value = `Konumum (${lat.toFixed(6)}, ${lng.toFixed(6)})`;
-                            FeroGoForm.calculateDistance();
-                            console.warn('Geocoder status:', status);
-                            if (status === 'REQUEST_DENIED') {
-                                showLocError('Geocoding API etkin değil. Koordinatlarla devam ediliyor.');
-                            } else if (status === 'ZERO_RESULTS') {
-                                showLocError('Bu konum için adres bulunamadı. Koordinatlarla devam ediliyor.');
-                            } else {
-                                showLocError('Adres çevrilemedi (' + status + '). Koordinatlarla devam ediliyor.');
-                            }
+                            finalize(lat, lng, results[0].formatted_address);
+                            return;
+                        }
+                        // Google başarısız (büyük ihtimalle Geocoding API kapalı) → Nominatim'e düş
+                        console.warn('Google geocoder status:', status, '— Nominatim deneniyor');
+                        try {
+                            const addr = await nominatimReverse(lat, lng);
+                            finalize(lat, lng, addr);
+                        } catch (e) {
+                            console.warn('Nominatim hatası:', e);
+                            finalize(lat, lng, null);
+                            showLocError('Adres çevrilemedi, koordinatlarla devam ediliyor.');
                         }
                     });
                 },
