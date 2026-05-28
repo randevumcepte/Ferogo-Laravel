@@ -445,8 +445,9 @@
                 <div class="flex items-center gap-3">
                     <div class="relative w-12 h-12 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-brand/40 flex items-center justify-center text-xl" id="qm-driver-icon">🚗</div>
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <div class="text-lg font-bold text-white truncate" id="qm-driver-name">—</div>
+                            <span id="qm-driver-badge"></span>
                             <span class="text-xs text-brand shrink-0" id="qm-driver-rating">★ —</span>
                         </div>
                         <div class="text-xs text-zinc-500 truncate" id="qm-driver-meta">—</div>
@@ -954,6 +955,17 @@
         return 2 * R * Math.asin(Math.sqrt(x));
     }
 
+    // Sınıf badge'i — renk kodlu, net okunur etiket
+    function classBadge(slug, label) {
+        const styles = {
+            easy:     'bg-zinc-700/60 border border-zinc-500/30 text-zinc-200',
+            platinum: 'bg-gradient-to-br from-zinc-200 to-zinc-400 text-zinc-900 shadow-sm shadow-white/10',
+            vip:      'bg-gradient-to-br from-brand to-brand-600 text-black shadow-sm shadow-brand/40',
+        };
+        const cls = styles[slug] || styles.easy;
+        return `<span class="${cls} px-1.5 py-0.5 rounded-md text-[9px] font-extrabold tracking-[0.1em] uppercase shrink-0">${label}</span>`;
+    }
+
     function moveDriver(d, userCenter) {
         // Random walk with slight bias toward staying within range of user
         const dist = distanceKm(userCenter, [d.lat, d.lng]);
@@ -987,6 +999,7 @@
             const dotColor = isBusy ? 'bg-zinc-500' : 'bg-brand';
             const statusText = isBusy ? 'Yolculukta' : 'Müsait';
             const statusClass = isBusy ? 'text-zinc-400' : 'text-brand';
+            const badge = classBadge(d.vSlug, d.vclass);
             const selectBtn = isBusy
                 ? `<div class="text-[10px] text-zinc-600 uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-white/5">Dolu</div>`
                 : `<button type="button" class="quick-select-btn group/btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-600 text-black text-[11px] font-bold uppercase tracking-wider transition shadow-md shadow-brand/30" data-driver-id="${d.id}">
@@ -1000,11 +1013,12 @@
                         <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full ${dotColor} border-2 border-black"></span>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
-                            <div class="text-sm font-semibold text-white truncate">${d.name}</div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <div class="text-sm font-semibold text-white truncate max-w-[140px]">${d.name}</div>
+                            ${badge}
                             <span class="text-[10px] text-brand shrink-0">★ ${d.rating}</span>
                         </div>
-                        <div class="text-[11px] text-zinc-500 truncate">${d.vclass} · ${d.plate}</div>
+                        <div class="text-[11px] text-zinc-500 truncate">${d.plate}</div>
                         <div class="flex items-center gap-2 mt-1">
                             <span class="text-[11px] font-bold text-white">${km.toFixed(1)} km</span>
                             <span class="text-zinc-700">·</span>
@@ -1185,7 +1199,8 @@
         document.getElementById('qm-driver-icon').textContent = driver.vIcon;
         document.getElementById('qm-driver-name').textContent = driver.name;
         document.getElementById('qm-driver-rating').textContent = `★ ${driver.rating}`;
-        document.getElementById('qm-driver-meta').textContent = `${driver.vclass} · ${driver.plate}`;
+        document.getElementById('qm-driver-badge').innerHTML = classBadge(driver.vSlug, driver.vclass);
+        document.getElementById('qm-driver-meta').textContent = driver.plate;
 
         // Reset form
         modalForm.reset();
