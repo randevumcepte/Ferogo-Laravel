@@ -245,6 +245,7 @@ class ReservationController extends Controller
             'distance_km' => ['required', 'numeric', 'min:0', 'max:1000'],
             'duration_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
             'scheduled_at' => ['nullable', 'date'],
+            'customer_phone' => ['nullable', 'string', 'max:32'],
             'extras' => ['nullable', 'array'],
             'extras.*.extra_id' => ['integer', 'exists:extras,id'],
             'extras.*.quantity' => ['integer', 'min:1', 'max:10'],
@@ -254,6 +255,14 @@ class ReservationController extends Controller
             ? Carbon::parse($validated['scheduled_at'])
             : null;
 
+        $normalizedPhone = ! empty($validated['customer_phone'])
+            ? preg_replace('/\D/', '', $validated['customer_phone'])
+            : null;
+        if ($normalizedPhone && strlen($normalizedPhone) === 10) {
+            $normalizedPhone = '90' . $normalizedPhone;
+        }
+        $tier = $this->calculator->resolveTierForPhone($normalizedPhone);
+
         $fare = $this->calculator->calculate(
             cityId: (int) $validated['city_id'],
             vehicleClassId: (int) $validated['vehicle_class_id'],
@@ -261,6 +270,7 @@ class ReservationController extends Controller
             durationMinutes: (int) $validated['duration_minutes'],
             extras: $validated['extras'] ?? [],
             scheduledAt: $scheduledAt,
+            customerTrustTier: $tier,
         );
 
         return response()->json([

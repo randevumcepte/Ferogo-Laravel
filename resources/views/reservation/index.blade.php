@@ -647,6 +647,12 @@ const FeroGoForm = (function() {
         formData.append('duration_minutes', min);
         formData.append('scheduled_at', document.getElementById('scheduled-at').value);
 
+        // Müşteri telefonu (varsa) — sadık müşteri indirimli indi-bindi için
+        const phoneInput = document.querySelector('input[name="customer_phone"]');
+        if (phoneInput && phoneInput.value.trim().length >= 10) {
+            formData.append('customer_phone', phoneInput.value.trim());
+        }
+
         // Aktif ekstralar
         let extraIdx = 0;
         document.querySelectorAll('.extra-toggle:checked').forEach(cb => {
@@ -699,8 +705,15 @@ const FeroGoForm = (function() {
 
         let html = `
             <div class="flex justify-between text-zinc-300"><span>Açılış</span><span>${fmt(fare.base_fare)}</span></div>
-            <div class="flex justify-between text-zinc-300"><span>Mesafe</span><span>${fmt(fare.distance_fare)}</span></div>
         `;
+        if (parseFloat(fare.boarding_fee) > 0) {
+            const tierLabels = { trusted: 'sadık müşteri', standard: 'müşteri', new: 'yeni müşteri', suspicious: 'riskli' };
+            const tierColors = { trusted: 'text-emerald-400', standard: 'text-zinc-300', new: 'text-zinc-400', suspicious: 'text-rose-400' };
+            const label = tierLabels[fare.customer_trust_tier] || 'standart';
+            const color = tierColors[fare.customer_trust_tier] || 'text-zinc-300';
+            html += `<div class="flex justify-between ${color}"><span>İndi-bindi <span class="text-xs opacity-70">(${label})</span></span><span>${fmt(fare.boarding_fee)}</span></div>`;
+        }
+        html += `<div class="flex justify-between text-zinc-300"><span>Mesafe</span><span>${fmt(fare.distance_fare)}</span></div>`;
         if (parseFloat(fare.time_fare) > 0) {
             html += `<div class="flex justify-between text-zinc-300"><span>Süre</span><span>${fmt(fare.time_fare)}</span></div>`;
         }
@@ -765,6 +778,8 @@ const FeroGoForm = (function() {
             r.addEventListener('change', updateFarePreview);
         });
         document.getElementById('scheduled-at')?.addEventListener('change', updateFarePreview);
+        // Telefon değişince katmana göre indi-bindi yeniden hesaplanır
+        document.querySelector('input[name="customer_phone"]')?.addEventListener('input', updateFarePreview);
     }
 
     document.addEventListener('DOMContentLoaded', () => {

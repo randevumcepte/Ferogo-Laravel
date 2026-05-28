@@ -78,6 +78,17 @@
                             <span>Açılış ücreti</span>
                             <span>₺{{ number_format($ride->base_fare, 2, ',', '.') }}</span>
                         </div>
+                        @if($ride->boarding_fee > 0)
+                            @php
+                                $tierLabels = ['trusted' => 'sadık müşteri', 'standard' => 'müşteri', 'new' => 'yeni müşteri', 'suspicious' => 'riskli'];
+                                $tierColors = ['trusted' => 'text-emerald-400', 'standard' => 'text-zinc-400', 'new' => 'text-zinc-400', 'suspicious' => 'text-rose-400'];
+                                $tier = $ride->customer_trust_tier ?? 'new';
+                            @endphp
+                            <div class="flex justify-between {{ $tierColors[$tier] ?? 'text-zinc-400' }}">
+                                <span>İndi-bindi <span class="text-xs opacity-70">({{ $tierLabels[$tier] ?? 'standart' }})</span></span>
+                                <span>₺{{ number_format($ride->boarding_fee, 2, ',', '.') }}</span>
+                            </div>
+                        @endif
                         <div class="flex justify-between text-zinc-400">
                             <span>Mesafe ücreti</span>
                             <span>₺{{ number_format($ride->distance_fare, 2, ',', '.') }}</span>
