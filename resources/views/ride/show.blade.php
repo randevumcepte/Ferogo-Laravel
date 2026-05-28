@@ -766,13 +766,14 @@
     }
 
     function carSvg() {
-        return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h.5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H19v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1h-.5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1H5zm2.4 0h9.2L15.5 7.5h-7L7.4 11zM7 14.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm10 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>`;
+        // Material Design "directions_car" — temiz, evrensel okunabilir yan görünüm
+        return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM5 17v-5h14v5H5zm2-2.5c0 .83-.67 1.5-1.5 1.5S4 15.33 4 14.5 4.67 13 5.5 13s1.5.67 1.5 1.5zm13 0c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5.67-1.5 1.5-1.5 1.5.67 1.5 1.5z"/></svg>`;
     }
 
-    function driverIcon(state, heading) {
+    function driverIcon(state) {
         const cls = state === 'busy' ? 'busy' : (state === 'premium' ? 'premium' : '');
         return L.divIcon({
-            html: `<div class="driver-marker ${cls}" style="transform: rotate(${heading}deg);"><div style="transform: rotate(${-heading}deg);">${carSvg()}</div></div>`,
+            html: `<div class="driver-marker ${cls}">${carSvg()}</div>`,
             className: 'driver-marker-wrapper',
             iconSize: [30, 30],
             iconAnchor: [15, 15],
@@ -892,7 +893,7 @@
             moveDriver(d, userCenter);
             if (d.marker) {
                 d.marker.setLatLng([d.lat, d.lng]);
-                d.marker.setIcon(driverIcon(d.state, d.heading));
+                d.marker.setIcon(driverIcon(d.state));
             }
         });
         renderRail(userCenter);
@@ -927,7 +928,7 @@
 
         drivers = Array.from({ length: DRIVER_COUNT }, (_, i) => makeDriver(center, i));
         drivers.forEach(d => {
-            d.marker = L.marker([d.lat, d.lng], { icon: driverIcon(d.state, d.heading), interactive: false }).addTo(map);
+            d.marker = L.marker([d.lat, d.lng], { icon: driverIcon(d.state), interactive: false }).addTo(map);
         });
 
         renderRail(center);
