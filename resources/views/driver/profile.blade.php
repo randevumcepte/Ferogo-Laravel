@@ -20,7 +20,7 @@
 
     {{-- Top bar --}}
     <header class="sticky top-0 z-30 bg-black/85 backdrop-blur-md border-b border-white/10">
-        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
             <a href="{{ route('driver.panel') }}" class="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 Panele dön
@@ -33,7 +33,7 @@
         </div>
     </header>
 
-    <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
         @if (session('success'))
             <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-300 flex items-center gap-2">
@@ -151,7 +151,7 @@
                         </div>
 
                         @if (count($existingPhotos) > 0)
-                            <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
+                            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-4">
                                 @foreach ($existingPhotos as $photoPath)
                                     @php
                                         $photoUrl = str_starts_with($photoPath, 'http') ? $photoPath : asset('storage/' . $photoPath);
@@ -168,7 +168,7 @@
                             </div>
                         @endif
 
-                        <div id="new-photos-preview" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3"></div>
+                        <div id="new-photos-preview" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-3"></div>
 
                         <label for="vehicle-photos-input" class="block w-full px-4 py-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-dashed border-white/20 text-center cursor-pointer transition">
                             <div class="text-2xl mb-1">📷</div>

@@ -492,7 +492,7 @@
     <div id="quick-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center px-4 py-6">
         <div id="quick-modal-backdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
 
-        <div class="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl shadow-black/60 overflow-hidden max-h-[92vh] overflow-y-auto">
+        <div class="relative w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl shadow-black/60 overflow-hidden max-h-[92vh] overflow-y-auto">
             {{-- Header --}}
             <div class="relative px-6 pt-6 pb-5 bg-gradient-to-br from-brand/15 via-brand/5 to-transparent border-b border-white/5">
                 <button type="button" id="quick-modal-close" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition">
@@ -593,6 +593,98 @@
                 <button type="button" id="qm-auth-cancel" class="text-xs text-zinc-500 hover:text-zinc-300 underline underline-offset-2">
                     Vazgeç
                 </button>
+            </div>
+
+            {{-- Driver profile step: avatar, bio, credentials, vehicle photos --}}
+            <div id="quick-modal-driver-profile" class="hidden">
+                {{-- Loader --}}
+                <div id="qm-dp-loading" class="px-6 py-16 text-center">
+                    <div class="inline-block w-10 h-10 border-2 border-brand/30 border-t-brand rounded-full animate-spin"></div>
+                    <div class="text-xs text-zinc-500 mt-4">Sürücü profili yükleniyor…</div>
+                </div>
+
+                {{-- Content (populated by JS) --}}
+                <div id="qm-dp-content" class="hidden">
+                    {{-- Hero: avatar + name + rating --}}
+                    <div class="px-6 py-6 border-b border-white/5 bg-gradient-to-br from-brand/10 via-brand/5 to-transparent">
+                        <div class="flex items-center gap-4">
+                            <div id="qm-dp-avatar"
+                                 class="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-2xl shrink-0 border-2 border-brand/40 shadow-xl shadow-brand/20 bg-cover bg-center">
+                                <span id="qm-dp-avatar-fallback">F</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 id="qm-dp-name" class="text-xl font-bold text-white truncate">—</h3>
+                                    <span id="qm-dp-exp-badge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand/15 text-brand border border-brand/30"></span>
+                                </div>
+                                <div class="flex items-center gap-3 mt-1 text-xs text-zinc-400">
+                                    <span class="text-brand font-bold"><span id="qm-dp-rating">—</span></span>
+                                    <span>·</span>
+                                    <span id="qm-dp-trips">— yolculuk</span>
+                                    <span class="hidden sm:inline">·</span>
+                                    <span class="hidden sm:inline">Üye: <span id="qm-dp-member-since">—</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <p id="qm-dp-bio" class="text-sm text-zinc-300 mt-4 leading-relaxed">—</p>
+                    </div>
+
+                    {{-- Credentials --}}
+                    <div class="px-6 py-5 border-b border-white/5">
+                        <div class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-3">Belgeler ve Onaylar</div>
+                        <div id="qm-dp-credentials" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+                    </div>
+
+                    {{-- Vehicle photos --}}
+                    <div id="qm-dp-photos-wrap" class="hidden px-6 py-5 border-b border-white/5">
+                        <div class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-3">Araç Fotoğrafları</div>
+                        <div id="qm-dp-photos" class="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory" style="scrollbar-width: thin;"></div>
+                    </div>
+
+                    {{-- Vehicle info --}}
+                    <div id="qm-dp-vehicle-wrap" class="hidden px-6 py-5 border-b border-white/5">
+                        <div class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-3">Araç</div>
+                        <div class="bg-black/30 border border-white/5 rounded-2xl p-4 space-y-3">
+                            <div class="flex items-start justify-between gap-3 flex-wrap">
+                                <div class="min-w-0">
+                                    <div id="qm-dp-vehicle-name" class="text-base font-bold text-white">—</div>
+                                    <div id="qm-dp-vehicle-meta" class="text-xs text-zinc-400">—</div>
+                                </div>
+                                <div class="px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/30 text-brand font-bold text-sm tabular-nums">
+                                    <span id="qm-dp-vehicle-plate">—</span>
+                                </div>
+                            </div>
+                            <div id="qm-dp-vehicle-features" class="flex flex-wrap gap-1.5"></div>
+                            <div class="flex flex-wrap gap-3 pt-2 border-t border-white/5 text-[11px]">
+                                <span id="qm-dp-vehicle-insurance" class="inline-flex items-center gap-1 text-zinc-400"></span>
+                                <span id="qm-dp-vehicle-inspection" class="inline-flex items-center gap-1 text-zinc-400"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Actions --}}
+                    <div class="px-6 py-5 flex items-center gap-3">
+                        <button type="button" id="qm-dp-back"
+                                class="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-sm font-medium transition">
+                            ← Geri
+                        </button>
+                        <button type="button" id="qm-dp-call"
+                                class="flex-1 px-5 py-3 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold transition shadow-xl shadow-brand/30">
+                            Bu Sürücüyü Çağır →
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Error --}}
+                <div id="qm-dp-error" class="hidden px-6 py-10 text-center">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center text-3xl">⚠</div>
+                    <h3 class="text-base font-bold text-white mb-1">Profil yüklenemedi</h3>
+                    <p id="qm-dp-error-msg" class="text-sm text-zinc-400 mb-5">—</p>
+                    <button type="button" id="qm-dp-error-close"
+                            class="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-sm font-medium transition">
+                        Kapat
+                    </button>
+                </div>
             </div>
 
             {{-- Form --}}
@@ -1608,6 +1700,7 @@
 
     const modalEl = document.getElementById('quick-modal');
     const modalAuthRequired = document.getElementById('quick-modal-auth-required');
+    const modalDriverProfile = document.getElementById('quick-modal-driver-profile');
     const modalForm = document.getElementById('quick-modal-form');
     const modalOtp = document.getElementById('quick-modal-otp');
     const modalWaiting = document.getElementById('quick-modal-waiting');

@@ -42,6 +42,11 @@ Route::view('/yolculuk-yapin', 'ride.show')->name('ride.show');
 // ─────────────────────────────────────────────────────────
 // FAZ 3 — Ride Request / Accept akışı (müşteri tarafı)
 // ─────────────────────────────────────────────────────────
+// Sürücü detay profili (müşteri "Seç"e basmadan önce inceler)
+Route::get('/api/drivers/{driverId}/profile', [RideRequestController::class, 'driverProfile'])
+    ->whereNumber('driverId')
+    ->name('drivers.profile');
+
 Route::prefix('api/ride-requests')->name('ride_requests.')->group(function () {
     Route::get('/nearby',                [RideRequestController::class, 'nearby'])->name('nearby');
     Route::post('/',                     [RideRequestController::class, 'store'])->name('store');

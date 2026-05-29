@@ -77,10 +77,23 @@
     'use strict';
 
     // ───── Config ────────────────────────────────────────────
-    const STUN_SERVERS = [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-    ];
+    // ICE sunucuları config/services.php'den (.env üzerinden) gelir.
+    // TURN tanımlı değilse simetrik NAT arkasında (Türk mobil operatörleri)
+    // P2P kurulamaz → ses gelmez. Production için TURN ŞART.
+    const STUN_SERVERS = (function () {
+        const stunUrls = @json(config('services.webrtc.stun_urls', []));
+        const turnUrls = @json(config('services.webrtc.turn_urls', []));
+        const turnUser = @json(config('services.webrtc.turn_username'));
+        const turnCred = @json(config('services.webrtc.turn_credential'));
+        const list = [];
+        for (const u of stunUrls) if (u) list.push({ urls: u });
+        if (turnUrls && turnUrls.length && turnUser && turnCred) {
+            for (const u of turnUrls) if (u) list.push({ urls: u, username: turnUser, credential: turnCred });
+        }
+        if (!list.length) list.push({ urls: 'stun:stun.l.google.com:19302' });
+        console.log('[call] ICE servers:', list.length, list.some(s => /^turns?:/.test(s.urls)) ? '(TURN var)' : '(SADECE STUN — NAT arkasında ses gelmeyebilir)');
+        return list;
+    })();
     const AUDIO_CONSTRAINTS = {
         audio: {
             echoCancellation: true,
@@ -138,6 +151,7 @@
     let remoteDescSet   = false;
     let statsHandle     = null;
     let lastBytesReceived = 0;
+    let iceWatchdog     = null;
 
     // ───── URL helpers ───────────────────────────────────────
     function getPid() {
@@ -333,10 +347,16 @@
         pc.oniceconnectionstatechange = () => {
             console.log('[call] ICE state:', pc.iceConnectionState);
             if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                clearIceWatchdog();
                 if (currentStatus !== 'active') { show('active'); startTimer(); }
             }
+            if (pc.iceConnectionState === 'checking') {
+                // 20sn içinde connected olmazsa fail say
+                armIceWatchdog(20000);
+            }
             if (pc.iceConnectionState === 'failed') {
-                showError('Bağlantı kurulamadı (NAT/firewall). TURN sunucusu gerekebilir.');
+                clearIceWatchdog();
+                showError('Bağlantı kurulamadı (NAT/firewall). TURN relay reddedildi.');
                 setTimeout(() => endCall(true), 1500);
             }
         };
@@ -389,6 +409,21 @@
         if (statsHandle) { clearInterval(statsHandle); statsHandle = null; }
         audioMeter.classList.add('hidden');
         audioLevel.textContent = '—';
+    }
+    function armIceWatchdog(ms) {
+        if (iceWatchdog) return;
+        iceWatchdog = setTimeout(() => {
+            if (!pc) return;
+            const st = pc.iceConnectionState;
+            if (st !== 'connected' && st !== 'completed') {
+                console.warn('[call] ICE watchdog tripped, state=', st);
+                showError('Bağlantı zaman aşımı. Karşı tarafın ağında engel var, TURN gerekiyor.');
+                setTimeout(() => endCall(true), 1500);
+            }
+        }, ms);
+    }
+    function clearIceWatchdog() {
+        if (iceWatchdog) { clearTimeout(iceWatchdog); iceWatchdog = null; }
     }
 
     function addLocalTracks(peer, stream) {
@@ -510,12 +545,13 @@
                 return;
             }
             // Outgoing → karşı taraf kabul etti
+            // ÖNEMLİ: timer'ı burada başlatma! Sadece "connecting" göster.
+            // Gerçek timer ICE connected olunca (oniceconnectionstatechange) başlar.
             if (currentStatus === 'outgoing' && call.status === 'accepted' && currentCallId === call.id) {
                 stopRingtone();
+                show('connecting');
                 // initiator → offer yap
                 if (isInitiator) await makeOffer();
-                show('active');
-                if (!timerHandle) startTimer();
                 return;
             }
             // Karşı taraf kapattıysa
@@ -591,6 +627,7 @@
     async function endCall(notifyServer) {
         stopRingtone();
         stopStatsMonitor();
+        clearIceWatchdog();
         if (notifyServer) {
             try {
                 await fetch(callUrl('end'), {

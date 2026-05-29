@@ -76,6 +76,161 @@ class RideRequestController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/drivers/{driverId}/profile — sürücüyü "Seç"e basmadan önce inceleme.
+     * Avatar, biyografi, deneyim, sertifikalar, araç fotoğrafları ve özellikleri.
+     */
+    public function driverProfile(int $driverId): JsonResponse
+    {
+        /** @var Driver|null $driver */
+        $driver = Driver::query()
+            ->with(['user', 'currentVehicle.vehicleClass'])
+            ->where('approval_status', 'approved')
+            ->find($driverId);
+
+        if (! $driver) {
+            return response()->json(['success' => false, 'message' => 'Sürücü bulunamadı.'], 404);
+        }
+
+        $user    = $driver->user;
+        $vehicle = $driver->currentVehicle;
+        $vClass  = $vehicle?->vehicleClass;
+
+        // ─── Deneyim ───
+        $yearsDriving = null;
+        if ($driver->license_issued_at) {
+            $yearsDriving = (int) $driver->license_issued_at->diffInYears(now());
+        }
+        $expBandLabels = [
+            'under_1' => '1 yıldan az',
+            '1_to_3'  => '1-3 yıl',
+            '3_to_5'  => '3-5 yıl',
+            '5_plus'  => '5+ yıl',
+        ];
+        $experience = [
+            'band'          => $driver->experience_band,
+            'label'         => $expBandLabels[$driver->experience_band] ?? '—',
+            'years_driving' => $yearsDriving,
+        ];
+
+        // ─── Sertifikalar / Belgeler ───
+        $credentials = [
+            [
+                'key'    => 'approved',
+                'label'  => 'Onaylı Sürücü',
+                'icon'   => '✓',
+                'valid'  => $driver->approval_status === 'approved',
+                'detail' => 'Ferogo tarafından doğrulanmış.',
+            ],
+            [
+                'key'    => 'license',
+                'label'  => 'Ehliyet',
+                'icon'   => '🪪',
+                'valid'  => $driver->license_expires_at === null || $driver->license_expires_at->isFuture(),
+                'detail' => $driver->license_class ? 'Sınıf ' . $driver->license_class : null,
+            ],
+            [
+                'key'    => 'src',
+                'label'  => 'SRC Sertifikası',
+                'icon'   => '📜',
+                'valid'  => $driver->src_certificate_number && ($driver->src_expires_at === null || $driver->src_expires_at->isFuture()),
+                'detail' => $driver->src_certificate_number ? 'Geçerli' : 'Henüz alınmamış',
+            ],
+            [
+                'key'    => 'psychotechnic',
+                'label'  => 'Psikoteknik',
+                'icon'   => '🧠',
+                'valid'  => $driver->psychotechnic_test_at && $driver->psychotechnic_test_at->isAfter(now()->subYears(5)),
+                'detail' => $driver->psychotechnic_test_at ? 'Onaylı' : null,
+            ],
+            [
+                'key'    => 'criminal_record',
+                'label'  => 'Adli Sicil',
+                'icon'   => '🛡',
+                'valid'  => $driver->criminal_record_at && $driver->criminal_record_at->isAfter(now()->subYears(2)),
+                'detail' => $driver->criminal_record_at ? 'Temiz' : null,
+            ],
+        ];
+
+        // ─── Otomatik biyografi (mevcut alanlardan dinamik üretim) ───
+        $bioParts = [];
+        if ($experience['years_driving']) {
+            $bioParts[] = $experience['years_driving'] . ' yıllık profesyonel şoför';
+        } elseif ($experience['label'] !== '—') {
+            $bioParts[] = $experience['label'] . ' deneyim';
+        }
+        if ($driver->total_rides > 0) {
+            $bioParts[] = number_format((int) $driver->total_rides, 0, ',', '.') . ' tamamlanmış yolculuk';
+        }
+        $verifiedCount = count(array_filter($credentials, fn ($c) => $c['valid']));
+        if ($verifiedCount >= 4) {
+            $bioParts[] = $verifiedCount . ' resmi belgesi doğrulanmış';
+        }
+        $bio = empty($bioParts)
+            ? 'Yeni katılan profesyonel sürücü.'
+            : implode(' · ', $bioParts) . '.';
+
+        // ─── Araç ───
+        $vehiclePayload = null;
+        if ($vehicle) {
+            $features = [];
+            if ($vehicle->has_baby_seat)    $features[] = ['key' => 'baby_seat',    'label' => 'Bebek koltuğu', 'icon' => '👶'];
+            if ($vehicle->has_child_seat)   $features[] = ['key' => 'child_seat',   'label' => 'Çocuk koltuğu', 'icon' => '🧒'];
+            if ($vehicle->has_booster_seat) $features[] = ['key' => 'booster_seat', 'label' => 'Yükseltici',   'icon' => '🪑'];
+            if ($vehicle->pet_friendly)     $features[] = ['key' => 'pet_friendly', 'label' => 'Evcil hayvan dostu', 'icon' => '🐾'];
+
+            $photos = array_values(array_filter(is_array($vehicle->photos) ? $vehicle->photos : []));
+            $photoUrls = array_map(function ($p) {
+                if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://')) return $p;
+                return asset('storage/' . ltrim($p, '/'));
+            }, $photos);
+
+            $vehiclePayload = [
+                'brand'             => $vehicle->brand,
+                'model'             => $vehicle->model,
+                'year'              => $vehicle->year_of_manufacture,
+                'color'             => $vehicle->color,
+                'plate'             => $vehicle->plate,
+                'class_name'        => $vClass?->name,
+                'class_slug'        => $vClass?->slug,
+                'photos'            => $photoUrls,
+                'features'          => $features,
+                'insurance_valid'   => $vehicle->insurance_expires_at === null || $vehicle->insurance_expires_at->isFuture(),
+                'inspection_valid'  => $vehicle->inspection_expires_at === null || $vehicle->inspection_expires_at->isFuture(),
+            ];
+        }
+
+        $fullName = $user?->name ?? 'Sürücü';
+        $parts    = preg_split('/\s+/', trim($fullName));
+        $shortName = count($parts) > 1
+            ? $parts[0] . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.'
+            : $fullName;
+
+        $avatarUrl = null;
+        if ($user?->avatar) {
+            $avatarUrl = str_starts_with($user->avatar, 'http')
+                ? $user->avatar
+                : asset('storage/' . ltrim($user->avatar, '/'));
+        }
+
+        return response()->json([
+            'success' => true,
+            'driver'  => [
+                'id'           => $driver->id,
+                'name'         => $fullName,
+                'short_name'   => $shortName,
+                'avatar'       => $avatarUrl,
+                'rating'       => (float) $driver->rating,
+                'total_rides'  => (int) $driver->total_rides,
+                'member_since' => $user?->created_at?->format('Y-m'),
+                'experience'   => $experience,
+                'credentials'  => $credentials,
+                'bio'          => $bio,
+                'vehicle'      => $vehiclePayload,
+            ],
+        ]);
+    }
+
     private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
         $earthKm = 6371.0;

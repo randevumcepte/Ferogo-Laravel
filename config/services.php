@@ -38,6 +38,30 @@ return [
     'google_maps_key' => env('GOOGLE_MAPS_API_KEY'),
 
     /*
+     * WebRTC sesli görüşme için ICE sunucu listesi.
+     * STUN: NAT keşfi (default'ta Google + Cloudflare public STUN, parasız).
+     * TURN: P2P kurulamadığında relay — production için ŞART, özellikle
+     *       Türk mobil operatörleri simetrik NAT kullanır.
+     *
+     * Kendi coturn'ünü sunucuya kur (Ubuntu):
+     *   apt install coturn
+     *   /etc/turnserver.conf'a: realm=ferogo.com, listening-port=3478,
+     *     tls-listening-port=5349, user=ferogo:GIZLISIFRE, fingerprint, lt-cred-mech
+     *   ufw allow 3478, 5349, 49152:65535/udp
+     *
+     * .env örnek:
+     *   TURN_URLS="turn:turn.ferogo.com:3478,turns:turn.ferogo.com:5349"
+     *   TURN_USERNAME=ferogo
+     *   TURN_CREDENTIAL=GIZLISIFRE
+     */
+    'webrtc' => [
+        'stun_urls' => array_filter(array_map('trim', explode(',', env('STUN_URLS', 'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302,stun:stun.cloudflare.com:3478')))),
+        'turn_urls' => array_filter(array_map('trim', explode(',', env('TURN_URLS', '')))),
+        'turn_username'   => env('TURN_USERNAME'),
+        'turn_credential' => env('TURN_CREDENTIAL'),
+    ],
+
+    /*
      * Voice Telekom SMS — OTP / bilgilendirme.
      * smsvt.voicetelekom.com:9587 (HTTP) ya da :9588 (HTTPS)
      * Auth: HTTP Basic (username:password)
