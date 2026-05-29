@@ -49,7 +49,7 @@ return [
         'password'   => env('VOICETELEKOM_PASSWORD'),
         'sender'     => env('VOICETELEKOM_SENDER', 'FEROGO'),
         'enabled'    => env('VOICETELEKOM_ENABLED', false),
-        'validity'   => (int) env('VOICETELEKOM_OTP_VALIDITY', 3),  // dakika
+        'validity'   => (int) env('VOICETELEKOM_OTP_VALIDITY', 60),  // dakika — sms/create min 60
         'commercial' => (bool) env('VOICETELEKOM_COMMERCIAL', false),
     ],
 

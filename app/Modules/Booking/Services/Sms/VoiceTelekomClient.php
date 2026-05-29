@@ -62,7 +62,7 @@ class VoiceTelekomClient
             'sender'       => $cfg['sender'],
             'periodicSettings' => null,
             'sendingDate'  => null,
-            'validity'     => (int) ($cfg['validity'] ?? 3),
+            'validity'     => max(60, (int) ($cfg['validity'] ?? 60)),
             'commercial'   => (bool) ($cfg['commercial'] ?? false),
             'skipAhsQuery' => true, // OTP/bilgilendirme — AHS sorgusu atlanır
             'customID'     => 'ferogo_' . date('Ymd_His') . '_' . substr(md5(uniqid()), 0, 8),
