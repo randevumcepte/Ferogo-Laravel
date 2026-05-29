@@ -53,6 +53,33 @@ class DemoDriverSeeder extends Seeder
             ['name' => 'Murat İşcan',     'email' => 'demo.driver.8@ferogo.test', 'phone' => '05321110008', 'class' => 'platinum', 'brand' => 'BMW',        'model' => '5 Series', 'plate' => '35 PQ 6644', 'rating' => 4.90, 'trips' => 1380, 'lat_off' => 0.028,  'lng_off' => 0.014,  'avatar' => 'https://i.pravatar.cc/300?img=70'],
         ];
 
+        // Sınıfa göre temsili araç galeri fotoğrafları (Unsplash, stable IDs)
+        $vehiclePhotosByClass = [
+            'easy' => [
+                'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1542362567-b07e54358753?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1485463611174-f302f6a5c1c9?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1583267746897-2cf66319ef97?w=800&q=70&auto=format',
+            ],
+            'platinum' => [
+                'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=800&q=70&auto=format',
+            ],
+            'vip' => [
+                'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1563720223185-11003d516935?w=800&q=70&auto=format',
+                'https://images.unsplash.com/photo-1631294670132-f8d2b27ab93d?w=800&q=70&auto=format',
+            ],
+        ];
+
         foreach ($drivers as $i => $d) {
             /** @var VehicleClass $vClass */
             $vClass = $classBySlug->get($d['class']) ?? $classBySlug->first();
@@ -78,6 +105,7 @@ class DemoDriverSeeder extends Seeder
                     'year_of_manufacture' => 2023,
                     'color'               => 'Siyah',
                     'status'              => 'active',
+                    'photos'              => $vehiclePhotosByClass[$d['class']] ?? $vehiclePhotosByClass['easy'],
                 ],
             );
 

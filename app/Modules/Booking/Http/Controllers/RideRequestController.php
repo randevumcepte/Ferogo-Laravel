@@ -404,6 +404,8 @@ class RideRequestController extends Controller
         $v = $d->currentVehicle;
         $vClass = $v?->vehicleClass;
 
+        $photos = $this->vehiclePhotos($v, $vClass);
+
         return [
             'id'                  => $d->id,
             'name'                => $shortName,
@@ -416,10 +418,23 @@ class RideRequestController extends Controller
             'vehicle_label'       => $v ? trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) : null,
             'vehicle_year'        => $v?->year_of_manufacture,
             'vehicle_color'       => $v?->color,
-            'vehicle_photo_url'   => $this->vehiclePhotoUrl($v, $vClass),
+            'vehicle_photo_url'   => $photos[0] ?? $this->vehiclePhotoUrl($v, $vClass),
+            'vehicle_photos'      => $photos,
             'plate'               => $v?->plate,
             'experience_band'     => $d->experience_band,
         ];
+    }
+
+    /** Aracın gerçek fotoğraf galerisi varsa onu döner; yoksa sınıf bazlı temsili tek görsel array'i. */
+    private function vehiclePhotos($v, $vClass): array
+    {
+        if ($v && is_array($v->photos) && count($v->photos) > 0) {
+            return array_map(
+                fn ($p) => str_starts_with($p, 'http') ? $p : asset('storage/' . $p),
+                $v->photos
+            );
+        }
+        return [$this->vehiclePhotoUrl($v, $vClass)];
     }
 
     /** Gerçek avatar varsa onu döner, yoksa initial-based UI Avatars URL'i üretir. */
