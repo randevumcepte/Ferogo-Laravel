@@ -28,6 +28,12 @@ class VoiceTelekomClient
     /**
      * Tek bir telefona OTP içerikli SMS yollar.
      *
+     * NOT: Voice Telekom'un OTP-spesifik endpoint'i (sms/create-otp) ayrı bir
+     * sender onay listesi tutuyor; eski Randevumcepte projesindeki kullanılan ve
+     * sender'ı onaylı endpoint sms/create (sendSingleSms). Bu yüzden OTP
+     * gönderimini de aynı endpoint üstünden yapıyoruz — content içerik OTP
+     * olduğu sürece düzgün iletilir.
+     *
      * @return array{ok: bool, pkg_id?: string, message?: string}
      */
     public function sendOtp(string $phone, string $content): array
@@ -43,15 +49,23 @@ class VoiceTelekomClient
 
         $port   = (int) ($cfg['port'] ?? 9587);
         $scheme = $port === 9588 ? 'https' : 'http';
-        $url    = sprintf('%s://%s:%d/sms/create-otp', $scheme, $cfg['host'], $port);
+        $url    = sprintf('%s://%s:%d/sms/create', $scheme, $cfg['host'], $port);
 
+        // sendSingleSms (eski SDK toString) payload yapısı — sender onayı bu endpoint'e bağlı.
         $payload = [
-            'number'     => $this->formatNumber($phone),
-            'sender'     => $cfg['sender'],
-            'encoding'   => 0, // 0 = GSM7 (Türkçe karakterler düşer; OTP latin metni için yeterli)
-            'content'    => $content,
-            'validity'   => (int) ($cfg['validity'] ?? 3),
-            'commercial' => (bool) ($cfg['commercial'] ?? false),
+            'type'         => 1,
+            'sendingType'  => 0,
+            'title'        => 'Dogrulama',
+            'encoding'     => 0, // 0 = GSM7 (OTP latin metni için yeterli)
+            'content'      => $content,
+            'number'       => $this->formatNumber($phone),
+            'sender'       => $cfg['sender'],
+            'periodicSettings' => null,
+            'sendingDate'  => null,
+            'validity'     => (int) ($cfg['validity'] ?? 3),
+            'commercial'   => (bool) ($cfg['commercial'] ?? false),
+            'skipAhsQuery' => true, // OTP/bilgilendirme — AHS sorgusu atlanır
+            'customID'     => 'ferogo_' . date('Ymd_His') . '_' . substr(md5(uniqid()), 0, 8),
         ];
 
         try {
@@ -91,6 +105,57 @@ class VoiceTelekomClient
         ]);
 
         return ['ok' => true, 'pkg_id' => (string) $pkgId];
+    }
+
+    /**
+     * Bu credential'a tanımlı onaylı gönderici başlıklarını listeler.
+     * ERR_INVALID_SMS_SENDER hatası alındığında debug için.
+     *
+     * @return array{ok: bool, senders?: array<int, mixed>, message?: string, raw?: array}
+     */
+    public function listSenders(): array
+    {
+        $cfg = config('services.voicetelekom');
+
+        if (empty($cfg['username']) || empty($cfg['password'])) {
+            return ['ok' => false, 'message' => 'Credentials missing.'];
+        }
+
+        $port   = (int) ($cfg['port'] ?? 9587);
+        $scheme = $port === 9588 ? 'https' : 'http';
+        $url    = sprintf('%s://%s:%d/sms/list-sender', $scheme, $cfg['host'], $port);
+
+        try {
+            $response = Http::withBasicAuth($cfg['username'], $cfg['password'])
+                ->acceptJson()
+                ->timeout(15)
+                ->withOptions(['verify' => false])
+                ->post($url, []);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => 'HTTP exception: ' . $e->getMessage()];
+        }
+
+        $body = $response->json() ?? [];
+
+        if (isset($body['err']) && $body['err'] !== null) {
+            return [
+                'ok'      => false,
+                'message' => 'VT err: ' . ($body['err']['code'] ?? '?') . ' — ' . ($body['err']['message'] ?? '?'),
+                'raw'     => $body,
+            ];
+        }
+
+        // VT response yapısı: { data: { senders: [...] } } veya { data: [...] }
+        $senders = $body['data']['senders']
+            ?? $body['data']['list']
+            ?? $body['data']
+            ?? [];
+
+        return [
+            'ok'      => true,
+            'senders' => is_array($senders) ? $senders : [],
+            'raw'     => $body,
+        ];
     }
 
     /**
