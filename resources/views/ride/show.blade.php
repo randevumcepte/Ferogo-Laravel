@@ -601,6 +601,11 @@
                             <div class="text-base font-bold text-white truncate" id="qm-accepted-name">—</div>
                             <div class="text-[11px] text-zinc-400 truncate" id="qm-accepted-vehicle">—</div>
                         </div>
+                        <button type="button" id="qm-call-btn"
+                                class="shrink-0 w-11 h-11 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition shadow-lg shadow-emerald-500/30"
+                                title="Sürücüyü ara">
+                            📞
+                        </button>
                         <div class="text-right shrink-0">
                             <div class="text-xs text-brand font-bold" id="qm-accepted-rating">★ —</div>
                             <div class="text-[10px] text-zinc-500" id="qm-accepted-trips">—</div>
@@ -2081,6 +2086,21 @@
         }
     }, { rootMargin: '200px' });
     initObserver.observe(mapEl);
+
+    // ===== Sesli görüşme widget'ı için global hook'lar =====
+    window.callWidgetGetPublicId = () => activeRequestId;
+    window.callWidgetGetPeerName = () => {
+        const el = document.getElementById('qm-accepted-name');
+        return el ? (el.textContent || 'Sürücü') : 'Sürücü';
+    };
+    const callBtn = document.getElementById('qm-call-btn');
+    if (callBtn) {
+        callBtn.addEventListener('click', () => {
+            if (window.CallWidget) window.CallWidget.start();
+        });
+    }
 })();
 </script>
+
+@include('partials.call-widget')
 @endpush

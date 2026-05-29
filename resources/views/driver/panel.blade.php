@@ -162,9 +162,14 @@
                             <div class="text-[10px] uppercase tracking-wider text-zinc-500">Müşteri</div>
                             <span id="active-trust-badge" class="hidden text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"></span>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <div class="text-base font-semibold" id="active-customer">—</div>
-                            <a id="active-phone" href="#" class="text-xs text-brand hover:text-brand-600 underline underline-offset-2">—</a>
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="text-base font-semibold flex-1 min-w-0 truncate" id="active-customer">—</div>
+                            <button type="button" id="active-call-btn"
+                                    class="shrink-0 w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition shadow-md shadow-emerald-500/30"
+                                    title="Müşteriyi ara">
+                                📞
+                            </button>
+                            <a id="active-phone" href="#" class="text-xs text-brand hover:text-brand-600 underline underline-offset-2 shrink-0">—</a>
                         </div>
                         <div id="active-customer-meta" class="text-[11px] text-zinc-500 mt-0.5"></div>
                     </div>
@@ -607,7 +612,20 @@
 
         renderAvailability('{{ $driver->availability_status }}');
         startPolling();
+
+        // ===== Sesli görüşme widget'ı için global hook'lar =====
+        window.callWidgetGetPublicId = () => currentActiveId;
+        window.callWidgetGetPeerName = () => {
+            const el = document.getElementById('active-customer');
+            return el ? (el.textContent || 'Müşteri') : 'Müşteri';
+        };
+
+        document.getElementById('active-call-btn').addEventListener('click', () => {
+            if (window.CallWidget) window.CallWidget.start();
+        });
     })();
     </script>
+
+    @include('partials.call-widget')
 </body>
 </html>
