@@ -45,7 +45,8 @@
 </head>
 <body class="bg-black text-white antialiased">
 
-    {{-- Navigation --}}
+    {{-- Navigation — ?embed=1 modunda gizlenir (müşteri paneli içinde iframe için) --}}
+    @unless(request()->boolean('embed'))
     <nav class="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-black/50 border-b border-white/5">
         <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <a href="{{ route('home') }}" class="flex items-center gap-2">
@@ -68,10 +69,12 @@
             </div>
         </div>
     </nav>
+    @endunless
 
     @yield('content')
 
-    {{-- Footer --}}
+    {{-- Footer — embed modunda gizlenir --}}
+    @unless(request()->boolean('embed'))
     <footer class="bg-zinc-950 border-t border-white/5 mt-24">
         <div class="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-zinc-400">
             <div>
@@ -102,8 +105,10 @@
             &copy; {{ date('Y') }} Ferogo · Tüm hakları saklıdır
         </div>
     </footer>
+    @endunless
 
-    {{-- Cookie Consent Banner --}}
+    {{-- Cookie Consent Banner — embed modunda gizlenir (parent zaten gösteriyor) --}}
+    @unless(request()->boolean('embed'))
     <div id="cookie-consent" class="fixed bottom-0 inset-x-0 z-[100] translate-y-full transition-transform duration-500 ease-out" role="dialog" aria-live="polite" aria-label="Çerez bildirimi">
         <div class="mx-auto max-w-4xl m-3 md:m-6">
             <div class="bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 p-5 md:p-6">
@@ -129,6 +134,7 @@
             </div>
         </div>
     </div>
+    @endunless
 
     <script>
         (function() {

@@ -132,6 +132,27 @@
         </section>
     @endif
 
+    {{-- ===== Canlı Radar (yolculuk-yapin sayfasının embed versiyonu) ===== --}}
+    <section class="rounded-3xl border border-white/10 bg-zinc-950 overflow-hidden">
+        <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+                <div class="text-sm uppercase tracking-[0.25em] text-zinc-400 font-bold">Canlı Radar</div>
+                <div class="text-xs text-zinc-500 mt-0.5">Bölgendeki sürücüler · "Seç"e bas, modal açılır</div>
+            </div>
+            <a href="{{ route('ride.show') }}" target="_blank"
+               class="text-xs text-brand hover:text-brand-600 underline underline-offset-2 shrink-0">
+                Tam sayfa aç →
+            </a>
+        </div>
+
+        <iframe src="{{ route('ride.show') }}?embed=1"
+                class="w-full block border-0"
+                style="height: 820px; background: #0a0a0a;"
+                title="Canlı sürücü radarı"
+                allow="geolocation"
+                referrerpolicy="same-origin"></iframe>
+    </section>
+
     {{-- ===== Recent rides ===== --}}
     <section class="rounded-3xl border border-white/10 bg-zinc-950 overflow-hidden">
         <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">

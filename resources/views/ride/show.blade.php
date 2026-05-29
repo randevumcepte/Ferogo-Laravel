@@ -205,7 +205,7 @@
     <section id="canli-radar" class="relative px-6 pt-12 md:pt-20 pb-20 md:pb-28">
         <div class="max-w-7xl mx-auto">
 
-            @if ($authedCustomer)
+            @if ($authedCustomer && ! $embed)
                 @php
                     $trustScore = $authedTrust?->trust_score ?? 50;
                     $trustLabel = $authedTrust?->trustLabel() ?? 'normal';
@@ -486,8 +486,9 @@
             </div>
         </div>
     </section>
+    @endunless
 
-    {{-- ============ QUICK SELECT MODAL ============ --}}
+    {{-- ============ QUICK SELECT MODAL ============ (her zaman görünür — embed dahil) --}}
     <div id="quick-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center px-4 py-6">
         <div id="quick-modal-backdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
 
@@ -825,6 +826,7 @@
         </div>
     </div>
 
+    @unless($embed)
     {{-- ============ MARQUEE STRIP ============ --}}
     <section class="relative py-6 border-y border-white/5 bg-black/40 backdrop-blur-sm marquee overflow-hidden">
         <div class="flex scroll-x whitespace-nowrap text-sm uppercase tracking-[0.3em] text-zinc-600">
@@ -1109,6 +1111,7 @@
             </div>
         </div>
     </section>
+    @endunless
 
 </div>
 @endsection
