@@ -29,7 +29,7 @@
 @endphp
 
 <header class="sticky top-0 z-30 bg-black/85 backdrop-blur-md border-b border-white/10">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-3">
         <a href="{{ route('home') }}" class="flex items-center gap-2 min-w-0">
             <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold">F</div>
             <span class="font-bold truncate">Ferogo</span>
@@ -44,7 +44,7 @@
     </div>
 </header>
 
-<main class="max-w-5xl mx-auto px-4 py-6 space-y-5">
+<main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
 
     {{-- ===== Profile card ===== --}}
     <section class="rounded-3xl border border-white/10 bg-zinc-950 p-6">
@@ -147,7 +147,7 @@
 
         <iframe src="{{ route('ride.show') }}?embed=1"
                 class="w-full block border-0"
-                style="height: 820px; background: #0a0a0a;"
+                style="height: 900px; background: #0a0a0a;"
                 title="Canlı sürücü radarı"
                 allow="geolocation"
                 referrerpolicy="same-origin"></iframe>
