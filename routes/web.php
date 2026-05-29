@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Booking\Http\Controllers\CallController;
 use App\Modules\Booking\Http\Controllers\PhoneVerificationController;
 use App\Modules\Booking\Http\Controllers\ReservationController;
 use App\Modules\Booking\Http\Controllers\RideRequestController;
@@ -47,6 +48,14 @@ Route::prefix('api/ride-requests')->name('ride_requests.')->group(function () {
     Route::post('/{publicId}/confirm',   [RideRequestController::class, 'confirm'])->name('confirm');
     Route::get('/{publicId}/messages',   [RideRequestController::class, 'messages'])->name('messages');
     Route::post('/{publicId}/messages',  [RideRequestController::class, 'sendMessage'])->name('messages.send');
+
+    // WebRTC sesli görüşme — sinyalleşme polling, ses akışı P2P
+    Route::post('/{publicId}/call/start',   [CallController::class, 'start'])->name('call.start');
+    Route::post('/{publicId}/call/accept',  [CallController::class, 'accept'])->name('call.accept');
+    Route::post('/{publicId}/call/end',     [CallController::class, 'end'])->name('call.end');
+    Route::get('/{publicId}/call/state',    [CallController::class, 'state'])->name('call.state');
+    Route::post('/{publicId}/call/signal',  [CallController::class, 'pushSignal'])->name('call.signal.push');
+    Route::get('/{publicId}/call/signals',  [CallController::class, 'pullSignals'])->name('call.signal.pull');
 });
 
 // ─────────────────────────────────────────────────────────
