@@ -26,17 +26,16 @@ use Illuminate\Support\Facades\Log;
 class VoiceTelekomClient
 {
     /**
-     * Tek bir telefona OTP içerikli SMS yollar.
+     * Tek bir telefona normal bilgilendirme SMS'i yollar (sendSingleSms).
+     * İçerik metni serbest — doğrulama kodu, randevu hatırlatma, vs.
      *
-     * NOT: Voice Telekom'un OTP-spesifik endpoint'i (sms/create-otp) ayrı bir
-     * sender onay listesi tutuyor; eski Randevumcepte projesindeki kullanılan ve
-     * sender'ı onaylı endpoint sms/create (sendSingleSms). Bu yüzden OTP
-     * gönderimini de aynı endpoint üstünden yapıyoruz — content içerik OTP
-     * olduğu sürece düzgün iletilir.
+     * Endpoint: sms/create (VT SDK'nın sendSingleSms metodunun karşılığı).
+     * NOT: sms/create-otp ayrı bir gateway ve sender onay listesi tutuyor;
+     * normal sender'lar (RANDVMCEPTE gibi) sadece sms/create için onaylı.
      *
      * @return array{ok: bool, pkg_id?: string, message?: string}
      */
-    public function sendOtp(string $phone, string $content): array
+    public function sendSingle(string $phone, string $content): array
     {
         $cfg = config('services.voicetelekom');
 
@@ -55,7 +54,7 @@ class VoiceTelekomClient
         $payload = [
             'type'         => 1,
             'sendingType'  => 0,
-            'title'        => 'Dogrulama',
+            'title'        => 'Bilgilendirme',
             'encoding'     => 0, // 0 = GSM7 (OTP latin metni için yeterli)
             'content'      => $content,
             'number'       => $this->formatNumber($phone),

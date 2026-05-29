@@ -35,7 +35,7 @@ class SmsTestCommand extends Command
         }
 
         $this->info("Gönderiliyor: {$phone}");
-        $result = $client->sendOtp($phone, $message);
+        $result = $client->sendSingle($phone, $message);
 
         if ($result['ok']) {
             $this->info('✅ Başarılı.');

@@ -299,7 +299,9 @@ class PhoneVerificationService
         Cache::put('last_otp_dev:' . $phone, $code, now()->addMinutes(10));
 
         // Gerçek SMS — Voice Telekom (.env'de VOICETELEKOM_ENABLED=true ise gönderilir)
-        $result = $this->smsClient->sendOtp($phone, $message);
+        // Not: VT'ye giden bir "OTP protocol" SMS değil, içeriği doğrulama kodu olan
+        // normal bilgilendirme SMS'i (sms/create endpoint, sendSingleSms semantiği).
+        $result = $this->smsClient->sendSingle($phone, $message);
 
         if (! $result['ok']) {
             Log::warning('[OTP] SMS gönderilemedi (yedek log/cache aktif): ' . ($result['message'] ?? '?'));

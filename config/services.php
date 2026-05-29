@@ -49,7 +49,8 @@ return [
         'password'   => env('VOICETELEKOM_PASSWORD'),
         'sender'     => env('VOICETELEKOM_SENDER', 'FEROGO'),
         'enabled'    => env('VOICETELEKOM_ENABLED', false),
-        'validity'   => (int) env('VOICETELEKOM_OTP_VALIDITY', 60),  // dakika — sms/create min 60
+        // dakika — sms/create min 60. Eski isim VOICETELEKOM_OTP_VALIDITY de geri uyumlu çalışır.
+        'validity'   => (int) env('VOICETELEKOM_VALIDITY', env('VOICETELEKOM_OTP_VALIDITY', 60)),
         'commercial' => (bool) env('VOICETELEKOM_COMMERCIAL', false),
     ],
 
