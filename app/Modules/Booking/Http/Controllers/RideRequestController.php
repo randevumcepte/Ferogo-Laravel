@@ -407,12 +407,41 @@ class RideRequestController extends Controller
         return [
             'id'                  => $d->id,
             'name'                => $shortName,
+            'full_name'           => $fullName,
+            'photo_url'           => $this->driverPhotoUrl($d),
             'rating'              => (float) $d->rating,
             'trips'               => (int) $d->total_rides,
             'vehicle_class'       => $vClass?->name,
             'vehicle_class_slug'  => $vClass?->slug,
             'vehicle_label'       => $v ? trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) : null,
+            'vehicle_year'        => $v?->year_of_manufacture,
+            'vehicle_color'       => $v?->color,
+            'vehicle_photo_url'   => $this->vehiclePhotoUrl($v, $vClass),
             'plate'               => $v?->plate,
+            'experience_band'     => $d->experience_band,
         ];
+    }
+
+    /** Gerçek avatar varsa onu döner, yoksa initial-based UI Avatars URL'i üretir. */
+    private function driverPhotoUrl(Driver $d): string
+    {
+        if ($d->user?->avatar) {
+            return asset('storage/' . $d->user->avatar);
+        }
+        $name = urlencode($d->user?->name ?? 'Sürücü');
+        return "https://ui-avatars.com/api/?name={$name}&background=F0C040&color=000&size=256&bold=true&format=svg";
+    }
+
+    /** Araç fotoğrafı — sınıfa göre temsili görsel. */
+    private function vehiclePhotoUrl($v, $vClass): string
+    {
+        $slug = $vClass?->slug ?? 'easy';
+        // Sınıfa göre Unsplash temsili görsel
+        $map = [
+            'easy'     => 'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=600&q=70&auto=format',  // sedan
+            'platinum' => 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=70&auto=format',    // luxury sedan
+            'vip'      => 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=70&auto=format', // s-class
+        ];
+        return $map[$slug] ?? $map['easy'];
     }
 }
