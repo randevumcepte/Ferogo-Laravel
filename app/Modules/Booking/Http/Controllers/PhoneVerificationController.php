@@ -39,15 +39,9 @@ class PhoneVerificationController extends Controller
             ], 429);
         }
 
-        // Bu telefonun zaten geçerli token'ı varsa → tekrar SMS gönderme, kullanıcıya bunu söyle
-        if ($existing = $this->service->activeToken($validated['phone'])) {
-            return response()->json([
-                'ok'              => true,
-                'already_verified' => true,
-                'token'           => $existing,
-                'message'         => 'Bu telefon zaten doğrulanmış.',
-            ]);
-        }
+        // Güvenlik: activeToken kontrolü kaldırıldı.
+        // Aksi halde server'da token saklayan bir telefon için herkes (numarayı bilen)
+        // SMS gönderilmeden o token'ı alabilirdi. Her "Kod gönder" isteği gerçek SMS yollar.
 
         $result = $this->service->sendOtp(
             $validated['phone'],

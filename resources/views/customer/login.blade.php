@@ -116,7 +116,7 @@
                 body: JSON.stringify({ phone }),
             });
             const data = await res.json();
-            if (!data.ok && !data.already_verified) {
+            if (!data.ok) {
                 $('phone-error').textContent = data.message || 'Kod gönderilemedi.';
                 $('phone-error').classList.remove('hidden');
                 return;

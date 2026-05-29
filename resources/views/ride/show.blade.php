@@ -1855,12 +1855,7 @@
                 qmError.classList.remove('hidden');
                 return;
             }
-            // Eğer telefon zaten doğrulanmışsa direkt token geldi
-            if (data.already_verified && data.token) {
-                storeToken(phone, data.token);
-                await submitRideRequest(data.token);
-                return;
-            }
+
 
             qmOtpPhoneLabel.textContent = phone;
             qmOtpCode.value = '';
