@@ -199,21 +199,52 @@
     function buildPc() {
         if (pc) return pc;
         pc = new RTCPeerConnection({ iceServers: STUN_SERVERS });
+        console.log('[call] pc created');
         pc.onicecandidate = (ev) => {
             if (ev.candidate) {
                 pushSignal('ice', { candidate: ev.candidate.toJSON() });
             }
         };
+        // Sağlam ontrack: hem streams[0] hem ev.track fallback
         pc.ontrack = (ev) => {
-            audioEl.srcObject = ev.streams[0];
-            audioEl.play().catch(() => {});
+            console.log('[call] ontrack', { kind: ev.track.kind, streams: ev.streams.length });
+            let stream;
+            if (ev.streams && ev.streams[0]) {
+                stream = ev.streams[0];
+            } else {
+                stream = audioEl.srcObject;
+                if (!stream || !(stream instanceof MediaStream)) {
+                    stream = new MediaStream();
+                }
+                stream.addTrack(ev.track);
+            }
+            audioEl.srcObject = stream;
+            // Autoplay reddedilirse butona tıklatma — user gesture'ı zaten var ama Safari için emniyet
+            const tryPlay = () => audioEl.play().then(
+                () => console.log('[call] audio playing'),
+                (err) => {
+                    console.warn('[call] audio play failed, retrying after gesture', err);
+                    // Kullanıcı widget'ta herhangi bir butona basınca tekrar dene
+                    const retry = () => { audioEl.play().catch(()=>{}); document.removeEventListener('click', retry); };
+                    document.addEventListener('click', retry);
+                }
+            );
+            tryPlay();
+        };
+        pc.oniceconnectionstatechange = () => {
+            console.log('[call] ICE state:', pc.iceConnectionState);
+            if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                if (currentStatus !== 'active') { show('active'); startTimer(); }
+            }
+            if (pc.iceConnectionState === 'failed') {
+                showError('Bağlantı kurulamadı (NAT/firewall). TURN sunucusu gerekebilir.');
+                setTimeout(() => endCall(true), 1500);
+            }
         };
         pc.onconnectionstatechange = () => {
+            console.log('[call] PC state:', pc.connectionState);
             if (pc.connectionState === 'connected') {
-                if (currentStatus !== 'active') {
-                    show('active');
-                    startTimer();
-                }
+                if (currentStatus !== 'active') { show('active'); startTimer(); }
             }
             if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
                 if (currentStatus === 'active') {
@@ -364,6 +395,7 @@
     // ───── Actions ───────────────────────────────────────────
     async function startCall() {
         const pid = getPid();
+        console.log('[call] startCall pid=', pid);
         if (!pid) { showError('Aktif yolculuk yok.'); return; }
         clearError();
         try {
