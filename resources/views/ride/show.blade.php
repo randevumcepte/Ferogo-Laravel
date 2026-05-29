@@ -513,71 +513,6 @@
             </div>
 
             {{-- Driver profile step: Seç'e bastığında önce burası açılır, kullanıcı tanıtım bilgisine bakar --}}
-            <div id="quick-modal-profile" class="hidden">
-                <div class="relative h-44 bg-zinc-900 overflow-hidden">
-                    <img id="qm-profile-vehicle-photo" src="" alt="" class="absolute inset-0 w-full h-full object-cover opacity-90" />
-                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-                    <div class="absolute bottom-3 left-4 right-4 flex items-end gap-3">
-                        <img id="qm-profile-photo" src="" alt="" class="w-16 h-16 rounded-2xl border-2 border-brand object-cover bg-zinc-800 shrink-0" />
-                        <div class="flex-1 min-w-0 pb-1">
-                            <div class="text-lg font-bold text-white truncate" id="qm-profile-name">—</div>
-                            <div class="text-xs text-zinc-300 truncate" id="qm-profile-vehicle">—</div>
-                        </div>
-                        <div class="shrink-0 pb-1 text-right">
-                            <div class="text-brand text-sm font-bold" id="qm-profile-rating">★ —</div>
-                            <div class="text-[10px] text-zinc-400" id="qm-profile-trips">—</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="px-6 py-5 space-y-4">
-                    <div class="grid grid-cols-3 gap-3 text-center">
-                        <div class="p-3 rounded-xl bg-white/[0.04] border border-white/5">
-                            <div class="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Sınıf</div>
-                            <div id="qm-profile-class" class="text-xs font-bold text-white">—</div>
-                        </div>
-                        <div class="p-3 rounded-xl bg-white/[0.04] border border-white/5">
-                            <div class="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Mesafe</div>
-                            <div id="qm-profile-distance" class="text-xs font-bold text-white">—</div>
-                        </div>
-                        <div class="p-3 rounded-xl bg-white/[0.04] border border-white/5">
-                            <div class="text-[9px] uppercase tracking-wider text-zinc-500 mb-1">Geliş</div>
-                            <div id="qm-profile-eta" class="text-xs font-bold text-brand">—</div>
-                        </div>
-                    </div>
-
-                    <div class="p-4 rounded-2xl bg-black/30 border border-white/5 space-y-2.5">
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-zinc-500">Plaka</span>
-                            <span id="qm-profile-plate" class="text-white font-semibold">—</span>
-                        </div>
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-zinc-500">Model yılı</span>
-                            <span id="qm-profile-year" class="text-white font-semibold">—</span>
-                        </div>
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-zinc-500">Renk</span>
-                            <span id="qm-profile-color" class="text-white font-semibold">—</span>
-                        </div>
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="text-zinc-500">Tecrübe</span>
-                            <span id="qm-profile-experience" class="text-white font-semibold">—</span>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="qm-profile-back"
-                                class="px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white font-medium text-sm transition">
-                            Vazgeç
-                        </button>
-                        <button type="button" id="qm-profile-continue"
-                                class="px-5 py-3 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition shadow-xl shadow-brand/30">
-                            Talep Et →
-                        </button>
-                    </div>
-                </div>
-            </div>
-
             {{-- Auth required step: login değilse "Seç" tıklayınca buraya düşer --}}
             <div id="quick-modal-auth-required" class="hidden px-6 py-10 text-center">
                 <div class="w-20 h-20 mx-auto mb-5 rounded-2xl bg-brand/15 border border-brand/30 flex items-center justify-center text-4xl">🔒</div>
@@ -1743,29 +1678,136 @@
     let waitingCountdownHandle = null;
     let chatLastMessageId = 0;
 
-    const modalProfile = document.getElementById('quick-modal-profile');
     function showStage(name) {
         modalAuthRequired.classList.toggle('hidden', name !== 'auth-required');
-        modalProfile.classList.toggle('hidden', name !== 'profile');
+        modalDriverProfile.classList.toggle('hidden', name !== 'driver-profile');
         modalForm.classList.toggle('hidden', name !== 'form');
         modalOtp.classList.toggle('hidden', name !== 'otp');
         modalWaiting.classList.toggle('hidden', name !== 'waiting');
         modalAccepted.classList.toggle('hidden', name !== 'accepted');
         modalTerminal.classList.toggle('hidden', name !== 'terminal');
-        // Profile stage'inde header'ı (Hızlı Seç başlığı) gizle — kendi banner'ı var
+        // Driver-profile stage'inde header'ı gizle — kendi hero'su var
         const modalHeader = document.querySelector('#quick-modal .relative.px-6.pt-6.pb-5');
-        if (modalHeader) modalHeader.classList.toggle('hidden', name === 'profile');
+        if (modalHeader) modalHeader.classList.toggle('hidden', name === 'driver-profile');
     }
 
     // Auth-required stage: "Vazgeç" / "Giriş Yap" butonları
     document.getElementById('qm-auth-cancel').addEventListener('click', () => closeQuickModal());
 
-    // Profile stage: "Vazgeç" → kapat, "Talep Et" → form'a geç
-    document.getElementById('qm-profile-back').addEventListener('click', () => closeQuickModal());
-    document.getElementById('qm-profile-continue').addEventListener('click', () => {
+    // Driver profile stage: "Geri" → kapat, "Bu Sürücüyü Çağır" → form'a geç
+    document.getElementById('qm-dp-back').addEventListener('click', () => closeQuickModal());
+    document.getElementById('qm-dp-call').addEventListener('click', () => {
         showStage('form');
         setTimeout(() => qmDropoffInput.focus(), 100);
     });
+    document.getElementById('qm-dp-error-close').addEventListener('click', () => closeQuickModal());
+
+    // API'den zengin profil çek + render
+    async function fetchAndRenderDriverProfile(driverId) {
+        const loading = document.getElementById('qm-dp-loading');
+        const content = document.getElementById('qm-dp-content');
+        const error   = document.getElementById('qm-dp-error');
+        loading.classList.remove('hidden');
+        content.classList.add('hidden');
+        error.classList.add('hidden');
+
+        try {
+            const res = await fetch(`/api/drivers/${driverId}/profile`, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Profil yüklenemedi.');
+            renderDriverProfile(data.driver);
+            loading.classList.add('hidden');
+            content.classList.remove('hidden');
+        } catch (e) {
+            loading.classList.add('hidden');
+            document.getElementById('qm-dp-error-msg').textContent = e.message || 'Beklenmedik hata.';
+            error.classList.remove('hidden');
+        }
+    }
+
+    function renderDriverProfile(d) {
+        const avatarEl = document.getElementById('qm-dp-avatar');
+        const avatarFb = document.getElementById('qm-dp-avatar-fallback');
+        if (d.avatar) {
+            avatarEl.style.backgroundImage = `url('${d.avatar}')`;
+            avatarFb.textContent = '';
+        } else {
+            avatarEl.style.backgroundImage = '';
+            avatarFb.textContent = (d.name || 'F').trim().charAt(0).toUpperCase();
+        }
+
+        document.getElementById('qm-dp-name').textContent = d.short_name || d.name;
+        const expLabel = d.experience?.label && d.experience.label !== '—' ? d.experience.label : null;
+        const expBadge = document.getElementById('qm-dp-exp-badge');
+        if (expLabel) { expBadge.textContent = expLabel; expBadge.classList.remove('hidden'); }
+        else { expBadge.classList.add('hidden'); }
+
+        document.getElementById('qm-dp-rating').textContent = `★ ${Number(d.rating || 0).toFixed(2)}`;
+        document.getElementById('qm-dp-trips').textContent = `${(d.total_rides || 0).toLocaleString('tr-TR')} yolculuk`;
+        document.getElementById('qm-dp-member-since').textContent = d.member_since || '—';
+        document.getElementById('qm-dp-bio').textContent = d.bio || '—';
+
+        // Credentials
+        const credsEl = document.getElementById('qm-dp-credentials');
+        credsEl.innerHTML = (d.credentials || []).map(c => {
+            const ring = c.valid
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                : 'bg-zinc-500/10 border-white/10 text-zinc-500';
+            const check = c.valid
+                ? '<span class="text-emerald-400">✓</span>'
+                : '<span class="text-zinc-600">·</span>';
+            return `
+                <div class="p-3 rounded-xl border ${ring}">
+                    <div class="flex items-center gap-1.5 text-[11px] font-semibold">
+                        <span>${c.icon || ''}</span>
+                        <span class="truncate">${escapeChat(c.label)}</span>
+                        ${check}
+                    </div>
+                    ${c.detail ? `<div class="text-[10px] text-zinc-400 mt-0.5 truncate">${escapeChat(c.detail)}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        // Vehicle
+        const vehicleWrap = document.getElementById('qm-dp-vehicle-wrap');
+        const photosWrap  = document.getElementById('qm-dp-photos-wrap');
+        if (d.vehicle) {
+            vehicleWrap.classList.remove('hidden');
+            const vname = [d.vehicle.brand, d.vehicle.model].filter(Boolean).join(' ') || (d.vehicle.class_name || 'Araç');
+            const vmeta = [d.vehicle.class_name, d.vehicle.year, d.vehicle.color].filter(Boolean).join(' · ');
+            document.getElementById('qm-dp-vehicle-name').textContent = vname;
+            document.getElementById('qm-dp-vehicle-meta').textContent = vmeta || '—';
+            document.getElementById('qm-dp-vehicle-plate').textContent = d.vehicle.plate || '—';
+
+            const feats = d.vehicle.features || [];
+            document.getElementById('qm-dp-vehicle-features').innerHTML = feats.map(f =>
+                `<span class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300">
+                    <span>${f.icon}</span><span>${escapeChat(f.label)}</span>
+                </span>`
+            ).join('');
+
+            const insEl = document.getElementById('qm-dp-vehicle-insurance');
+            const inspEl = document.getElementById('qm-dp-vehicle-inspection');
+            insEl.innerHTML  = d.vehicle.insurance_valid  ? '<span class="text-emerald-400">●</span> Sigorta geçerli' : '<span class="text-amber-400">●</span> Sigorta süresi geçmiş';
+            inspEl.innerHTML = d.vehicle.inspection_valid ? '<span class="text-emerald-400">●</span> Muayene geçerli' : '<span class="text-amber-400">●</span> Muayene süresi geçmiş';
+
+            // Photos carousel
+            const photos = d.vehicle.photos || [];
+            if (photos.length > 0) {
+                photosWrap.classList.remove('hidden');
+                document.getElementById('qm-dp-photos').innerHTML = photos.map(url =>
+                    `<a href="${url}" target="_blank" class="block shrink-0 snap-start rounded-xl overflow-hidden border border-white/10 hover:border-brand/40 transition">
+                        <img src="${url}" alt="" class="w-48 h-32 object-cover bg-zinc-900" loading="lazy">
+                    </a>`
+                ).join('');
+            } else {
+                photosWrap.classList.add('hidden');
+            }
+        } else {
+            vehicleWrap.classList.add('hidden');
+            photosWrap.classList.add('hidden');
+        }
+    }
 
     function openQuickModal(driver) {
         // Anonim ziyaretçiler için: önce kayıt/giriş zorunlu (sabotaj koruması).
@@ -1803,28 +1845,18 @@
         document.getElementById('qm-driver-badge').innerHTML = classBadge(slug, cls);
         document.getElementById('qm-driver-meta').textContent = plate;
 
-        // Profile fields — detaylı sürücü tanıtım ekranı
-        const photoUrl = display.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(display.name || 'Sürücü')}&background=F0C040&color=000&size=256&bold=true`;
-        const vehiclePhoto = display.vehicle_photo_url || 'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=600&q=70&auto=format';
-        document.getElementById('qm-profile-photo').src = photoUrl;
-        document.getElementById('qm-profile-vehicle-photo').src = vehiclePhoto;
-        document.getElementById('qm-profile-name').textContent = display.full_name || display.name;
-        document.getElementById('qm-profile-vehicle').textContent = display.vehicle_label || display.vehicle_label || `${cls}`;
-        document.getElementById('qm-profile-rating').textContent = `★ ${rating}`;
-        document.getElementById('qm-profile-trips').textContent = display.trips ? `${display.trips} yolculuk` : '—';
-        document.getElementById('qm-profile-class').innerHTML = classBadge(slug, cls);
-        document.getElementById('qm-profile-distance').textContent = display.distance_km ? `${display.distance_km.toFixed(1)} km` : (driver.km ? `${driver.km.toFixed(1)} km` : '—');
-        document.getElementById('qm-profile-eta').textContent = display.eta_minutes ? `${display.eta_minutes} dk` : (driver.km ? `${Math.max(1, Math.round(driver.km * 2.4 + 0.8))} dk` : '—');
-        document.getElementById('qm-profile-plate').textContent = plate;
-        document.getElementById('qm-profile-year').textContent = display.vehicle_year || '—';
-        document.getElementById('qm-profile-color').textContent = display.vehicle_color || '—';
-        const expMap = { 'less_than_1': '< 1 yıl', '1_to_3': '1-3 yıl', '3_to_5': '3-5 yıl', '5_plus': '5+ yıl' };
-        document.getElementById('qm-profile-experience').textContent = expMap[display.experience_band] || '—';
-
         // Reset form
         modalForm.reset();
-        // ÖNCE profil tanıtımı, kullanıcı "Talep Et"e basınca form'a geçer
-        showStage('profile');
+        // ÖNCE detaylı sürücü/araç profili — API'den zengin veri (bio + sertifikalar + fotoğraflar)
+        showStage('driver-profile');
+        if (real && real.id) {
+            fetchAndRenderDriverProfile(real.id);
+        } else {
+            // Mock sürücü — API çağrısı yok, doğrudan kapat (gerçek sürücüsüz işlem yok)
+            document.getElementById('qm-dp-loading').classList.add('hidden');
+            document.getElementById('qm-dp-error-msg').textContent = 'Şu an çevrimiçi gerçek sürücü yok. Lütfen sayfayı yenile.';
+            document.getElementById('qm-dp-error').classList.remove('hidden');
+        }
         qmError.classList.add('hidden');
         qmDropoffSuggestions.classList.add('hidden');
         qmFareDistance.textContent = '—';
