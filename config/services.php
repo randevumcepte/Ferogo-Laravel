@@ -37,4 +37,20 @@ return [
 
     'google_maps_key' => env('GOOGLE_MAPS_API_KEY'),
 
+    /*
+     * Voice Telekom SMS — OTP / bilgilendirme.
+     * smsvt.voicetelekom.com:9587 (HTTP) ya da :9588 (HTTPS)
+     * Auth: HTTP Basic (username:password)
+     */
+    'voicetelekom' => [
+        'host'       => env('VOICETELEKOM_HOST', 'smsvt.voicetelekom.com'),
+        'port'       => env('VOICETELEKOM_PORT', 9587),
+        'username'   => env('VOICETELEKOM_USERNAME'),
+        'password'   => env('VOICETELEKOM_PASSWORD'),
+        'sender'     => env('VOICETELEKOM_SENDER', 'FEROGO'),
+        'enabled'    => env('VOICETELEKOM_ENABLED', false),
+        'validity'   => (int) env('VOICETELEKOM_OTP_VALIDITY', 3),  // dakika
+        'commercial' => (bool) env('VOICETELEKOM_COMMERCIAL', false),
+    ],
+
 ];

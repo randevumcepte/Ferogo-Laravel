@@ -4,6 +4,7 @@ namespace App\Modules\Booking\Services;
 
 use App\Models\User;
 use App\Modules\Booking\Models\PhoneVerification;
+use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,7 @@ class PhoneVerificationService
 
     public function __construct(
         private CustomerTrustService $trustService,
+        private VoiceTelekomClient $smsClient,
     ) {}
 
     /**
@@ -284,17 +286,23 @@ class PhoneVerificationService
     }
 
     /**
-     * SMS gönderme stub'ı. Production'da gerçek provider'a bağlanır.
+     * SMS gönderme — Voice Telekom provider'a bağlı.
+     * Log + cache yedek olarak kalıyor: provider çökerse otp:last komutu + admin debug
+     * endpoint'i sayesinde hâlâ test edilebilir.
      */
     protected function sendSms(string $phone, string $code): void
     {
-        $message = "Ferogo doğrulama kodun: {$code}. Kimseyle paylaşma.";
+        $message = "Ferogo dogrulama kodun: {$code}. Kimseyle paylasma. Kod 5 dakika gecerli.";
 
-        Log::info('[OTP] Telefon: ' . $phone . ' Kod: ' . $code . ' — ' . $message);
-
+        // Yedek: log + cache (10 dk)
+        Log::info('[OTP] Telefon: ' . $phone . ' Kod: ' . $code);
         Cache::put('last_otp_dev:' . $phone, $code, now()->addMinutes(10));
 
-        // TODO production: Netgsm / İletimerkezi / Twilio entegrasyonu
-        // app(SmsProvider::class)->send($phone, $message);
+        // Gerçek SMS — Voice Telekom (.env'de VOICETELEKOM_ENABLED=true ise gönderilir)
+        $result = $this->smsClient->sendOtp($phone, $message);
+
+        if (! $result['ok']) {
+            Log::warning('[OTP] SMS gönderilemedi (yedek log/cache aktif): ' . ($result['message'] ?? '?'));
+        }
     }
 }
