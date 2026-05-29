@@ -13,6 +13,7 @@ use App\Modules\Driver\Models\Driver;
 use App\Modules\Vehicle\Models\VehicleClass;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 
@@ -94,6 +95,11 @@ class RideRequestController extends Controller
     {
         $vehicleClassSlugs = VehicleClass::where('is_active', true)->pluck('slug')->toArray();
 
+        // Session'da login bir müşteri varsa OTP token ZORUNLU değil.
+        // (Auth session = telefon zaten bu cihazda doğrulanmış.)
+        $authed = Auth::user();
+        $isAuthedCustomer = $authed && $authed->type === 'customer' && $authed->phone_verified_at;
+
         $validated = $request->validate([
             'vehicle_class_slug'    => ['required', Rule::in($vehicleClassSlugs)],
             'pickup_address'        => ['required', 'string', 'max:255'],
@@ -102,9 +108,9 @@ class RideRequestController extends Controller
             'dropoff_address'       => ['required', 'string', 'max:255'],
             'dropoff_lat'           => ['nullable', 'numeric'],
             'dropoff_lng'           => ['nullable', 'numeric'],
-            'customer_name'         => ['required', 'string', 'max:120'],
-            'customer_phone'        => ['required', 'string', 'max:20'],
-            'verification_token'    => ['required', 'string', 'size:48'],
+            'customer_name'         => [$isAuthedCustomer ? 'nullable' : 'required', 'string', 'max:120'],
+            'customer_phone'        => [$isAuthedCustomer ? 'nullable' : 'required', 'string', 'max:20'],
+            'verification_token'    => [$isAuthedCustomer ? 'nullable' : 'required', 'string', 'size:48'],
             'fingerprint'           => ['nullable', 'string', 'max:64'],
             'distance_km'           => ['required', 'numeric', 'min:0', 'max:500'],
             'duration_minutes'      => ['required', 'integer', 'min:1', 'max:600'],
@@ -118,11 +124,17 @@ class RideRequestController extends Controller
             'verification_token.required' => 'Telefonunu doğrulaman gerekiyor. SMS kodunu gir.',
         ]);
 
+        // Login müşteri: name/phone session'dan
+        if ($isAuthedCustomer) {
+            $validated['customer_phone'] = $authed->phone;
+            $validated['customer_name']  = $validated['customer_name'] ?? $authed->name;
+        }
+
         $ip          = $request->ip();
         $fingerprint = $validated['fingerprint'] ?? null;
 
         // ─── KORUMA KATMANI ─────────────────────────────────────
-        // 1) Trust + ban kontrolü
+        // 1) Trust + ban kontrolü (login olsa da olmasa da)
         $trustCheck = $this->trustService->canRequestRide(
             $validated['customer_phone'], $ip, $fingerprint,
         );
@@ -134,16 +146,18 @@ class RideRequestController extends Controller
             ], 429);
         }
 
-        // 2) OTP token doğrulama
-        $tokenCheck = $this->verificationService->validateToken(
-            $validated['customer_phone'], $validated['verification_token'],
-        );
-        if (! $tokenCheck['ok']) {
-            return response()->json([
-                'success'              => false,
-                'message'              => $tokenCheck['message'],
-                'phone_reverify_required' => true,
-            ], 422);
+        // 2) OTP token doğrulama — yalnızca login değilse
+        if (! $isAuthedCustomer) {
+            $tokenCheck = $this->verificationService->validateToken(
+                $validated['customer_phone'], $validated['verification_token'],
+            );
+            if (! $tokenCheck['ok']) {
+                return response()->json([
+                    'success'                 => false,
+                    'message'                 => $tokenCheck['message'],
+                    'phone_reverify_required' => true,
+                ], 422);
+            }
         }
 
         // 3) Per-phone rate limit: 10 dakikada max 2 aktif/yeni talep

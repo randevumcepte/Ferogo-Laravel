@@ -3,6 +3,17 @@
 @section('title', 'Yolculuk Yapın · Ferogo · Premium Şoförlü Transfer')
 @section('description', 'Şehir içi, havalimanı veya uzun mesafe — profesyonel şoför, lüks araç, şeffaf fiyat. 60 saniyede rezervasyon yap, kapına gelsin.')
 
+@php
+    /** @var \App\Models\User|null $authedCustomer */
+    $authedCustomer = auth()->user();
+    $authedCustomer = ($authedCustomer && $authedCustomer->type === 'customer') ? $authedCustomer : null;
+
+    $authedTrust = null;
+    if ($authedCustomer) {
+        $authedTrust = \App\Modules\Booking\Models\CustomerTrust::where('phone', $authedCustomer->phone)->first();
+    }
+@endphp
+
 @push('head')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <style>
@@ -190,6 +201,47 @@
     {{-- ============ LIVE RADAR (en üstte — birincil deneyim) ============ --}}
     <section id="canli-radar" class="relative px-6 pt-12 md:pt-20 pb-20 md:pb-28">
         <div class="max-w-7xl mx-auto">
+
+            @if ($authedCustomer)
+                @php
+                    $trustScore = $authedTrust?->trust_score ?? 50;
+                    $trustLabel = $authedTrust?->trustLabel() ?? 'normal';
+                    $tStyles = [
+                        'guvenilir'  => ['Güvenilir Müşteri', 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'],
+                        'normal'     => ['Standart',           'bg-zinc-500/15 text-zinc-300 border-zinc-500/30'],
+                        'riskli'     => ['Riskli',             'bg-amber-500/15 text-amber-300 border-amber-500/30'],
+                        'cok_riskli' => ['Çok Riskli',         'bg-red-500/15 text-red-300 border-red-500/30'],
+                    ];
+                    $tStyle = $tStyles[$trustLabel] ?? $tStyles['normal'];
+                @endphp
+
+                <div class="mb-6 flex items-center justify-between gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold shrink-0">
+                            {{ mb_strtoupper(mb_substr($authedCustomer->name, 0, 1)) }}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <div class="text-sm font-semibold text-white truncate">Merhaba, {{ $authedCustomer->name }}</div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border {{ $tStyle[1] }}">
+                                    {{ $tStyle[0] }}
+                                </span>
+                            </div>
+                            <div class="text-[11px] text-zinc-500 truncate">
+                                Güven skoru <span class="text-brand font-semibold">{{ $trustScore }}/100</span>
+                                @if ($authedTrust)
+                                    · {{ $authedTrust->total_completed }} tamamlanmış yolculuk
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ route('customer.panel') }}"
+                       class="shrink-0 px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition">
+                        Hesabım →
+                    </a>
+                </div>
+            @endif
+
 
             {{-- Section heading --}}
             <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
@@ -455,6 +507,23 @@
                 </div>
             </div>
 
+            {{-- Auth required step: login değilse "Seç" tıklayınca buraya düşer --}}
+            <div id="quick-modal-auth-required" class="hidden px-6 py-10 text-center">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-2xl bg-brand/15 border border-brand/30 flex items-center justify-center text-4xl">🔒</div>
+                <h3 class="text-xl font-bold text-white mb-2">Yolculuk için önce hesabını aç</h3>
+                <p class="text-sm text-zinc-400 leading-relaxed mb-6">
+                    Güvenliğin ve sürücülerin korunması için her çağrı doğrulanmış bir hesaptan yapılmalı.
+                    <br><span class="text-zinc-500">Hesabın yoksa SMS doğrulamasıyla 30 saniyede açılır.</span>
+                </p>
+                <a id="qm-auth-login-btn" href="{{ route('customer.login') }}?return=/yolculuk-yapin"
+                   class="block w-full px-5 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold transition shadow-xl shadow-brand/30 mb-3">
+                    Giriş Yap / Kayıt Ol
+                </a>
+                <button type="button" id="qm-auth-cancel" class="text-xs text-zinc-500 hover:text-zinc-300 underline underline-offset-2">
+                    Vazgeç
+                </button>
+            </div>
+
             {{-- Form --}}
             <form id="quick-modal-form" class="px-6 py-6 space-y-5">
                 @csrf
@@ -497,17 +566,32 @@
                     </div>
                 </div>
 
-                {{-- Customer --}}
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Ad Soyad</label>
-                        <input type="text" name="customer_name" class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition" placeholder="Adın" required>
+                {{-- Customer — login değilse görünür, login ise hesap rozetiyle değiştirilir --}}
+                @if ($authedCustomer)
+                    <div class="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-sm shrink-0">
+                            {{ mb_strtoupper(mb_substr($authedCustomer->name, 0, 1)) }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-white truncate">{{ $authedCustomer->name }}</div>
+                            <div class="text-[11px] text-zinc-400 truncate">+90 {{ $authedCustomer->phone }} · doğrulanmış</div>
+                        </div>
+                        <a href="{{ route('customer.panel') }}" class="text-[11px] text-brand hover:text-brand-600 underline underline-offset-2 shrink-0">Hesabım</a>
                     </div>
-                    <div>
-                        <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Telefon</label>
-                        <input type="tel" name="customer_phone" class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition" placeholder="0532 000 00 00" required>
+                    <input type="hidden" name="customer_name"  value="{{ $authedCustomer->name }}">
+                    <input type="hidden" name="customer_phone" value="{{ $authedCustomer->phone }}">
+                @else
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Ad Soyad</label>
+                            <input type="text" name="customer_name" class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition" placeholder="Adın" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Telefon</label>
+                            <input type="tel" name="customer_phone" class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition" placeholder="0532 000 00 00" required>
+                        </div>
                     </div>
-                </div>
+                @endif
 
                 {{-- KVKK --}}
                 <label class="flex items-start gap-2.5 cursor-pointer">
@@ -1376,8 +1460,18 @@
     const RIDE_REQ_SHOW   = (id) => '{{ url('/api/ride-requests') }}/' + encodeURIComponent(id);
     const OTP_SEND_URL    = '{{ route('phone.send_otp') }}';
     const OTP_VERIFY_URL  = '{{ route('phone.verify_otp') }}';
+    const LOGIN_URL       = '{{ route('customer.login') }}?return=/yolculuk-yapin';
     const POLL_STATUS_MS  = 2000;
     const POLL_CHAT_MS    = 2500;
+
+    // Sunucudan gelen login durumu — auth-required gate + OTP atlama için.
+    const FEROGO_AUTH = @json($authedCustomer ? [
+        'id'    => $authedCustomer->id,
+        'name'  => $authedCustomer->name,
+        'phone' => $authedCustomer->phone,
+        'trust_label' => $authedTrust?->trustLabel() ?? 'normal',
+        'trust_score' => (int) ($authedTrust?->trust_score ?? 50),
+    ] : null);
 
     // ===== CİHAZ FİNGERPRİNT (rate limit + sabotaj koruması) =====
     // Hafif: ekran + saat dilimi + dil + UA + canvas — sabit-ish 64 char hash
@@ -1434,6 +1528,7 @@
     }
 
     const modalEl = document.getElementById('quick-modal');
+    const modalAuthRequired = document.getElementById('quick-modal-auth-required');
     const modalForm = document.getElementById('quick-modal-form');
     const modalOtp = document.getElementById('quick-modal-otp');
     const modalWaiting = document.getElementById('quick-modal-waiting');
@@ -1477,6 +1572,7 @@
     let chatLastMessageId = 0;
 
     function showStage(name) {
+        modalAuthRequired.classList.toggle('hidden', name !== 'auth-required');
         modalForm.classList.toggle('hidden', name !== 'form');
         modalOtp.classList.toggle('hidden', name !== 'otp');
         modalWaiting.classList.toggle('hidden', name !== 'waiting');
@@ -1484,7 +1580,26 @@
         modalTerminal.classList.toggle('hidden', name !== 'terminal');
     }
 
+    // Auth-required stage: "Vazgeç" / "Giriş Yap" butonları
+    document.getElementById('qm-auth-cancel').addEventListener('click', () => closeQuickModal());
+
     function openQuickModal(driver) {
+        // Anonim ziyaretçiler için: önce kayıt/giriş zorunlu (sabotaj koruması).
+        if (!FEROGO_AUTH) {
+            resetActiveRequest();
+            // Header'da seçilen sürücü görünmesin → minimum şey göster
+            document.getElementById('qm-driver-icon').textContent = '🔒';
+            document.getElementById('qm-driver-name').textContent = 'Önce giriş yap';
+            document.getElementById('qm-driver-rating').textContent = '';
+            document.getElementById('qm-driver-badge').innerHTML = '';
+            document.getElementById('qm-driver-meta').textContent = '';
+            showStage('auth-required');
+            modalEl.classList.remove('hidden');
+            modalEl.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            return;
+        }
+
         // Eğer gerçek sürücü varsa onu seç, yoksa mock'la devam (submit'te uyarı çıkar)
         const real = driver.vehicle_class_slug ? driver : pickRealDriverFor(driver);
         selectedRealDriver = real || null;
@@ -1703,14 +1818,18 @@
 
         pendingPayload = buildPayloadFromForm();
 
-        // Bu telefon için elimizde geçerli token var mı? → direkt gönder
+        // Login müşteri: session zaten doğrulanmış, OTP yok → direkt gönder.
+        if (FEROGO_AUTH) {
+            await submitRideRequest(null);
+            return;
+        }
+
+        // Anonim akış: cache'de token varsa kullan, yoksa OTP iste
         const cached = storedTokenFor(pendingPayload.customer_phone);
         if (cached) {
             await submitRideRequest(cached);
             return;
         }
-
-        // Yoksa OTP iste
         await requestOtp(pendingPayload.customer_phone);
     });
 
@@ -1835,7 +1954,9 @@
 
     async function submitRideRequest(verificationToken) {
         if (!pendingPayload) return;
-        const payload = Object.assign({}, pendingPayload, { verification_token: verificationToken });
+        const payload = Object.assign({}, pendingPayload);
+        if (verificationToken) payload.verification_token = verificationToken;
+        // Login yoksa name/phone form input'larından gelir; loginse hidden input'lardan.
 
         qmOtpVerify.disabled = true;
         qmOtpVerifyText.textContent = 'Talep gönderiliyor…';
@@ -1856,6 +1977,11 @@
             catch (_) { throw new Error('Sunucu beklenmedik bir cevap döndü.'); }
 
             if (!res.ok || !data.success) {
+                // Login müşteri ama server token istiyor = session düşmüş → login'e yönlendir
+                if (FEROGO_AUTH && data.errors && data.errors.verification_token) {
+                    window.location.href = LOGIN_URL;
+                    return;
+                }
                 // Token geçersizse cache'i sil → yeni OTP iste
                 if (data.phone_reverify_required) {
                     try { localStorage.removeItem('fero_otp_token:' + normalizePhoneJs(payload.customer_phone)); } catch (_) {}

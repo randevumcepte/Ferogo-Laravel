@@ -88,7 +88,7 @@
 
     const SEND_URL   = '{{ route('phone.send_otp') }}';
     const VERIFY_URL = '{{ route('phone.verify_otp') }}';
-    const PANEL_URL  = '{{ route('customer.panel') }}';
+    const PANEL_URL  = @json($returnUrl ?: route('customer.panel'));
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
     const $ = (id) => document.getElementById(id);

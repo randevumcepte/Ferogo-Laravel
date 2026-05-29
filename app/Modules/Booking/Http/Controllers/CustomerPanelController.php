@@ -22,14 +22,30 @@ class CustomerPanelController extends Controller
 
     /**
      * GET /musteri-giris — telefon + OTP giriş ekranı.
-     * Aslında OTP altyapısını kullanır; bu sadece UI sarmalayıcısı.
+     * ?return=<path> — login sonrası bu sayfaya dön (default: /musteri-paneli).
+     * Güvenlik: yalnızca relative path kabul edilir (open-redirect koruması).
      */
-    public function showLogin(): View|RedirectResponse
+    public function showLogin(Request $request): View|RedirectResponse
     {
+        $return = $this->safeReturnUrl($request->query('return'));
+
         if ($this->currentCustomer()) {
-            return redirect()->route('customer.panel');
+            return redirect($return ?: route('customer.panel'));
         }
-        return view('customer.login');
+
+        return view('customer.login', ['returnUrl' => $return]);
+    }
+
+    /**
+     * Sadece kendi domain'imizdeki relative path'leri kabul et.
+     * Açık yönlendirme (open redirect) koruması.
+     */
+    private function safeReturnUrl(?string $url): ?string
+    {
+        if (! $url) return null;
+        if (! str_starts_with($url, '/')) return null;
+        if (str_starts_with($url, '//')) return null;
+        return $url;
     }
 
     /**
