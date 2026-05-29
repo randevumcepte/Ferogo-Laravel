@@ -53,11 +53,18 @@
                     <span class="text-white">FERO</span><span class="text-brand">GO</span>
                 </span>
             </a>
-            <div class="hidden md:flex items-center gap-8 text-sm text-zinc-300">
+            <div class="hidden md:flex items-center gap-6 text-sm text-zinc-300">
                 <a href="{{ route('home') }}#hizmetler" class="hover:text-white transition">Hizmetler</a>
                 <a href="{{ route('ride.show') }}" class="hover:text-white transition {{ request()->routeIs('ride.*') ? 'text-white' : '' }}">Yolculuk Yapın</a>
                 <a href="{{ route('driver.apply') }}" class="hover:text-white transition {{ request()->routeIs('driver.*') ? 'text-white' : '' }}">Sürücü Olun</a>
                 <a href="tel:+908508401377" class="text-white font-medium">0850 840 13 77</a>
+                @auth
+                    @if (auth()->user()->type === 'customer')
+                        <a href="{{ route('customer.panel') }}" class="px-3 py-1.5 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-xs transition">Hesabım</a>
+                    @endif
+                @else
+                    <a href="{{ route('customer.login') }}" class="px-3 py-1.5 rounded-xl border border-white/20 hover:border-brand/40 hover:text-white text-xs font-semibold transition">Giriş Yap</a>
+                @endauth
             </div>
         </div>
     </nav>

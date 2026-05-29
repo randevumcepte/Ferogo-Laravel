@@ -61,7 +61,8 @@ class PhoneVerificationController extends Controller
 
     /**
      * POST /api/phone/verify-otp
-     * Body: { phone, code, fingerprint? }
+     * Body: { phone, code, fingerprint?, name? }
+     * Başarılı olursa: müşteri hesabı otomatik yaratılır + session'a login olur.
      */
     public function verifyOtp(Request $request): JsonResponse
     {
@@ -69,6 +70,7 @@ class PhoneVerificationController extends Controller
             'phone'       => ['required', 'string', 'max:32'],
             'code'        => ['required', 'string', 'size:6', 'regex:/^\d{6}$/'],
             'fingerprint' => ['nullable', 'string', 'max:64'],
+            'name'        => ['nullable', 'string', 'max:120'],
         ]);
 
         $result = $this->service->verifyOtp(
@@ -76,7 +78,12 @@ class PhoneVerificationController extends Controller
             $validated['code'],
             $request->ip(),
             $validated['fingerprint'] ?? null,
+            $validated['name'] ?? null,
         );
+
+        if ($result['ok']) {
+            $request->session()->regenerate();
+        }
 
         $status = $result['ok'] ? 200 : 422;
         return response()->json($result, $status);

@@ -271,6 +271,20 @@
             if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {} }
         }, { once: true });
 
+        // Offer geldiğinde sürekli çalan iki-tonlu bip — accept/reject'e basana kadar
+        let offerBeepInterval = null;
+        function startOfferBeep() {
+            if (offerBeepInterval) return;
+            const ring = () => { beep(880, 200); setTimeout(() => beep(1100, 220), 240); };
+            ring();
+            offerBeepInterval = setInterval(ring, 1500);
+            if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+        }
+        function stopOfferBeep() {
+            if (offerBeepInterval) { clearInterval(offerBeepInterval); offerBeepInterval = null; }
+            if (navigator.vibrate) navigator.vibrate(0);
+        }
+
         // === AVAILABILITY TOGGLE ===
         function renderAvailability(status) {
             availBtn.dataset.status = status;
@@ -321,12 +335,13 @@
             $('offer-duration').textContent = `${o.duration_minutes} dk`;
             $('offer-fare').textContent = o.estimated_fare ? `₺${Math.round(o.estimated_fare)}` : '—';
 
-            // Yeni offer geldiyse — ses + countdown reset
+            // Yeni offer geldiyse — sürekli bip + countdown reset
             if (o.public_id !== lastOfferId) {
                 lastOfferId = o.public_id;
-                beep(880, 200); setTimeout(() => beep(1100, 220), 240);
+                startOfferBeep();
 
                 $('offer-accept').onclick = async () => {
+                    stopOfferBeep();
                     $('offer-accept').disabled = true;
                     try {
                         const res = await fetch(ACCEPT_URL(o.public_id), {
@@ -339,6 +354,7 @@
                     finally { $('offer-accept').disabled = false; pollNow(); }
                 };
                 $('offer-reject').onclick = async () => {
+                    stopOfferBeep();
                     $('offer-reject').disabled = true;
                     try {
                         await fetch(REJECT_URL(o.public_id), {
@@ -580,10 +596,12 @@
                 if (data.offer) {
                     renderOffer(data.offer);
                 } else if (data.active) {
+                    stopOfferBeep();
                     if (countdownHandle) { clearInterval(countdownHandle); countdownHandle = null; }
                     lastOfferId = null;
                     renderActive(data.active, data.messages || []);
                 } else {
+                    stopOfferBeep();
                     if (countdownHandle) { clearInterval(countdownHandle); countdownHandle = null; }
                     lastOfferId = null;
                     showSection('idle');

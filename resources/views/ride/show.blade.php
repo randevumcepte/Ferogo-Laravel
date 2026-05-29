@@ -694,7 +694,7 @@
             <div class="text-center max-w-2xl mx-auto mb-16">
                 <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Süreç</div>
                 <h2 class="display-font text-4xl md:text-6xl text-white mb-5">Üç adım, 60 saniye.</h2>
-                <p class="text-lg text-zinc-400">Uygulamasız, üyeliksiz. Web'den rezervasyon, kapına şoför.</p>
+                <p class="text-lg text-zinc-400">Telefonunu doğrula, hesabın hazır. Web'den rezervasyon, kapına şoför.</p>
             </div>
 
             <div class="relative">
@@ -703,7 +703,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 relative">
                     @foreach([
                         ['01', 'Adresini yaz', 'Alış ve bırakış adresini gir, araç sınıfını seç. Fiyat anında ekranda.', '📍'],
-                        ['02', 'Onayla', 'Telefon ve isim — kart bilgisi istemeyiz, ödeme yolculuk sonunda.', '✓'],
+                        ['02', 'Telefonunu doğrula', 'SMS ile gelen kodu gir. Hesabın 30 saniyede hazır, ödeme yolculuk sonunda.', '✓'],
                         ['03', 'Yola çık', 'Şoför ve plaka SMS ile gelir. Kapına gelir, premium yolculuk başlar.', '🛣'],
                     ] as $step)
                         <div class="relative text-center">
@@ -824,9 +824,9 @@
                 {{-- Small card --}}
                 <div class="bento-card rounded-3xl p-7 border border-white/5">
                     <div class="text-3xl mb-4">📱</div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">05 · Üyelik yok</div>
-                    <h3 class="text-xl font-bold text-white mb-2">İndirme yok, üyelik yok</h3>
-                    <p class="text-sm text-zinc-400 leading-relaxed">Web'den rezervasyon, SMS ile takip. Bir uygulama daha indirmek zorunda değilsin.</p>
+                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">05 · Tek tıkla kayıt</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Uygulama yok, web'den hızlı kayıt</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed">SMS ile doğrula, hesabın hazır. Yolculuk geçmişini panelinden takip et — uygulama indirmek zorunda değilsin.</p>
                 </div>
 
                 {{-- Wide card --}}
@@ -1810,6 +1810,7 @@
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                 body: JSON.stringify({
                     phone: pendingPayload.customer_phone,
+                    name:  pendingPayload.customer_name,
                     code,
                     fingerprint: deviceFingerprint,
                 }),

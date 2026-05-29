@@ -7,6 +7,7 @@ use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Models\RideExtra;
 use App\Modules\Pricing\Services\FareCalculator;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -117,25 +118,39 @@ class ReservationService
     {
         $phone = $this->normalizePhone($data['customer_phone']);
 
+        // Mevcut sessionda login bir müşteri varsa ve telefonu eşleşiyorsa onu kullan.
+        $authed = Auth::user();
+        if ($authed && $authed->type === 'customer' && $authed->phone === $phone) {
+            return $authed;
+        }
+
         return User::firstOrCreate(
             ['phone' => $phone],
             [
-                'name' => $data['customer_name'],
-                'email' => 'guest-' . $phone . '@ferogo.local',
-                'password' => bcrypt(Str::random(40)),
-                'type' => 'customer',
-                'status' => 'active',
-                'tc_no' => $data['customer_tc_no'] ?? null,
+                'name'              => $data['customer_name'],
+                'email'             => 'c' . $phone . '@ferogo.local',
+                'password'          => bcrypt(Str::random(40)),
+                'type'              => 'customer',
+                'status'            => 'active',
+                'tc_no'             => $data['customer_tc_no'] ?? null,
+                'phone_verified_at' => now(),
             ]
         );
     }
 
+    /**
+     * Telefon normalizasyonu — CustomerTrustService ile birebir aynı kural:
+     * "+90 532 ...", "0532 ...", "5321234567" → "5321234567"
+     * (90 ve 0 prefix'leri at; 10 haneye düş)
+     */
     protected function normalizePhone(string $phone): string
     {
-        $digits = preg_replace('/\D/', '', $phone);
-        // Eğer 90 ile başlamıyorsa ve 10 hane ise başına +90 ekle
-        if (strlen($digits) === 10 && ! str_starts_with($digits, '90')) {
-            $digits = '90' . $digits;
+        $digits = preg_replace('/\D+/', '', $phone);
+        if (str_starts_with($digits, '90') && strlen($digits) === 12) {
+            $digits = substr($digits, 2);
+        }
+        if (str_starts_with($digits, '0') && strlen($digits) === 11) {
+            $digits = substr($digits, 1);
         }
         return $digits;
     }

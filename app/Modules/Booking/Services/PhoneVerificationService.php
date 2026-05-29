@@ -2,8 +2,11 @@
 
 namespace App\Modules\Booking\Services;
 
+use App\Models\User;
 use App\Modules\Booking\Models\PhoneVerification;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -127,19 +130,26 @@ class PhoneVerificationService
 
     /**
      * Kod doğrula → ride_request'te kullanılacak token döner.
+     * Doğrulama başarılı olursa müşteri User kaydı otomatik yaratılır/bulunur
+     * ve session'a login edilir. Yani OTP = kayıt + login adımı.
      *
-     * @return array{ok: bool, message?: string, token?: string}
+     * @return array{ok: bool, message?: string, token?: string, user_id?: int}
      */
-    public function verifyOtp(string $phone, string $code, ?string $ip = null, ?string $fingerprint = null): array
-    {
+    public function verifyOtp(
+        string $phone,
+        string $code,
+        ?string $ip = null,
+        ?string $fingerprint = null,
+        ?string $name = null,
+    ): array {
         $normalized = $this->trustService->normalizePhone($phone);
 
         // Brute-force koruması: telefon başına 1 dk içinde max 5 deneme
         $rlKey = self::RL_VERIFY . $normalized;
         if (RateLimiter::tooManyAttempts($rlKey, self::MAX_ATTEMPTS)) {
             return [
-                'ok'          => false,
-                'message'     => 'Çok fazla yanlış deneme. 1 dakika bekle.',
+                'ok'      => false,
+                'message' => 'Çok fazla yanlış deneme. 1 dakika bekle.',
             ];
         }
         RateLimiter::hit($rlKey, 60);
@@ -164,28 +174,83 @@ class PhoneVerificationService
             return ['ok' => false, 'message' => 'Kod hatalı. Tekrar dene.'];
         }
 
-        // Doğrulandı → token üret
-        $token = bin2hex(random_bytes(24));
-        $verification->update([
-            'verified_at'        => now(),
-            'verification_token' => $token,
-            'token_expires_at'   => now()->addSeconds(self::TOKEN_TTL_SECONDS),
-            'ip'                 => $ip ?? $verification->ip,
-            'fingerprint'        => $fingerprint ?? $verification->fingerprint,
+        // Doğrulandı → token üret + müşteri hesabı oluştur/güncelle + login
+        return DB::transaction(function () use ($verification, $normalized, $ip, $fingerprint, $name) {
+            $token = bin2hex(random_bytes(24));
+            $verification->update([
+                'verified_at'        => now(),
+                'verification_token' => $token,
+                'token_expires_at'   => now()->addSeconds(self::TOKEN_TTL_SECONDS),
+                'ip'                 => $ip ?? $verification->ip,
+                'fingerprint'        => $fingerprint ?? $verification->fingerprint,
+            ]);
+
+            PhoneVerification::where('phone', $normalized)
+                ->where('id', '!=', $verification->id)
+                ->whereNull('verified_at')
+                ->delete();
+
+            $user = $this->findOrCreateCustomer($normalized, $name);
+
+            // Session auth — müşteri panel + sonraki istekler için
+            Auth::login($user, remember: true);
+
+            return [
+                'ok'      => true,
+                'token'   => $token,
+                'user_id' => $user->id,
+            ];
+        });
+    }
+
+    /**
+     * Telefon ile müşteri kaydı bul/oluştur. Synthetic email kullanılır
+     * çünkü müşteri girişi sadece OTP ile — email ile login yok.
+     */
+    protected function findOrCreateCustomer(string $normalizedPhone, ?string $name = null): User
+    {
+        // 1) Phone match — type fark etmeksizin (driver ise dokunma, döndür)
+        $existing = User::where('phone', $normalizedPhone)->first();
+
+        if ($existing) {
+            $updates = ['phone_verified_at' => now()];
+            if ($name && $existing->type === 'customer' && (!$existing->name || $existing->name === 'Müşteri')) {
+                $updates['name'] = mb_substr($name, 0, 120);
+            }
+            $existing->update($updates);
+            return $existing;
+        }
+
+        // 2) Yoksa yeni müşteri
+        $syntheticEmail = 'c' . $normalizedPhone . '@ferogo.local';
+
+        // Aynı synthetic email zaten varsa (eski kayıt, farklı normalizasyon vs.) — yeniden kullan
+        $byEmail = User::where('email', $syntheticEmail)->first();
+        if ($byEmail) {
+            $byEmail->update([
+                'phone'             => $normalizedPhone,
+                'phone_verified_at' => now(),
+            ]);
+            return $byEmail;
+        }
+
+        return User::create([
+            'name'              => $name ? mb_substr($name, 0, 120) : 'Müşteri',
+            'email'             => $syntheticEmail,
+            'password'          => Hash::make(Str::random(40)), // OTP login, şifre kullanılmaz
+            'type'              => 'customer',
+            'phone'             => $normalizedPhone,
+            'phone_verified_at' => now(),
+            'status'            => 'active',
         ]);
-
-        // Bu telefondaki diğer pending kodları çöpe at
-        PhoneVerification::where('phone', $normalized)
-            ->where('id', '!=', $verification->id)
-            ->whereNull('verified_at')
-            ->delete();
-
-        return ['ok' => true, 'token' => $token];
     }
 
     /**
      * Ride request store ederken çağrılır. Token geçerliyse telefon eşleşmesini kontrol eder
      * ve token'ı tüketmeden döndürür (token 24 saat geçerli, tek kullanım değil).
+     *
+     * Yan etki: oturum yoksa kullanıcıyı otomatik login eder (token = telefonu kanıtlar,
+     * doğrulanmış kullanıcının panel erişimi olması doğal).
      *
      * @return array{ok: bool, message?: string}
      */
@@ -205,6 +270,14 @@ class PhoneVerificationService
 
         if (! $v) {
             return ['ok' => false, 'message' => 'Telefon doğrulaması geçersiz veya süresi dolmuş. Tekrar doğrula.'];
+        }
+
+        // Session yoksa veya farklı kullanıcı login ise → bu telefonun User'ını login et
+        if (! Auth::check() || Auth::user()?->phone !== $normalized) {
+            $user = User::where('phone', $normalized)->first();
+            if ($user && $user->status === 'active') {
+                Auth::login($user, remember: true);
+            }
         }
 
         return ['ok' => true];

@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Booking\Http\Controllers\CallController;
+use App\Modules\Booking\Http\Controllers\CustomerPanelController;
 use App\Modules\Booking\Http\Controllers\PhoneVerificationController;
 use App\Modules\Booking\Http\Controllers\ReservationController;
 use App\Modules\Booking\Http\Controllers\RideRequestController;
@@ -60,9 +61,18 @@ Route::prefix('api/ride-requests')->name('ride_requests.')->group(function () {
 
 // ─────────────────────────────────────────────────────────
 // KORUMA KALKANI — Telefon OTP doğrulama (fake çağrı / sabotaj koruma)
+// OTP doğrulanınca otomatik müşteri hesabı yaratılır + session'a login olur.
 // ─────────────────────────────────────────────────────────
 Route::post('/api/phone/send-otp',   [PhoneVerificationController::class, 'sendOtp'])->name('phone.send_otp');
 Route::post('/api/phone/verify-otp', [PhoneVerificationController::class, 'verifyOtp'])->name('phone.verify_otp');
+
+// ─────────────────────────────────────────────────────────
+// MÜŞTERİ PANELİ — telefon+OTP girişi, geçmiş, güven skoru
+// ─────────────────────────────────────────────────────────
+Route::get('/musteri-giris',         [CustomerPanelController::class, 'showLogin'])->name('customer.login');
+Route::get('/musteri-paneli',        [CustomerPanelController::class, 'panel'])->name('customer.panel');
+Route::get('/musteri-paneli/api/state', [CustomerPanelController::class, 'state'])->name('customer.api.state');
+Route::post('/musteri-cikis',        [CustomerPanelController::class, 'logout'])->name('customer.logout');
 
 // ─────────────────────────────────────────────────────────
 // FAZ 3 — Sürücü Paneli (login + dashboard + actions)
