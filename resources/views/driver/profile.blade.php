@@ -26,10 +26,16 @@
                 Panele dön
             </a>
             <div class="text-sm font-bold text-brand">Profil Yönetimi</div>
-            <form method="POST" action="{{ route('driver.logout') }}" class="inline">
-                @csrf
-                <button type="submit" class="text-xs text-zinc-500 hover:text-red-400 transition">Çıkış</button>
-            </form>
+            <div class="flex items-center gap-2">
+                <button type="submit" form="profile-form"
+                        class="px-4 py-2 rounded-xl bg-brand hover:bg-brand-600 text-black text-xs font-bold transition shadow-md shadow-brand/30">
+                    💾 Kaydet
+                </button>
+                <form method="POST" action="{{ route('driver.logout') }}" class="inline">
+                    @csrf
+                    <button type="submit" class="text-xs text-zinc-500 hover:text-red-400 transition">Çıkış</button>
+                </form>
+            </div>
         </div>
     </header>
 
@@ -51,7 +57,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('driver.profile.update') }}" enctype="multipart/form-data" class="space-y-6">
+        <form id="profile-form" method="POST" action="{{ route('driver.profile.update') }}" enctype="multipart/form-data" class="space-y-6">
             @csrf
 
             {{-- ===== Profil Bilgileri ===== --}}
@@ -169,23 +175,26 @@
                         @endif
 
                         <div id="new-photos-preview" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-3"></div>
+                        <div id="upload-status" class="hidden mb-3 text-xs text-zinc-400"></div>
 
                         <label for="vehicle-photos-input" class="block w-full px-4 py-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-dashed border-white/20 text-center cursor-pointer transition">
                             <div class="text-2xl mb-1">📷</div>
                             <div class="text-sm font-semibold">Fotoğraf Ekle</div>
-                            <div class="text-[10px] text-zinc-500 mt-1">Birden fazla seçebilirsin · JPG/PNG · maks 4 MB</div>
+                            <div class="text-[10px] text-zinc-500 mt-1">Birden fazla seçebilirsin · JPG/PNG · otomatik sıkıştırılır</div>
                         </label>
-                        <input id="vehicle-photos-input" type="file" name="vehicle_photos[]" accept="image/*" multiple class="hidden">
+                        <input id="vehicle-photos-input" type="file" accept="image/*" multiple class="hidden">
+                        {{-- AJAX upload sonrası path'leri buraya yazılır, form ile birlikte gider --}}
+                        <div id="new-photo-paths-container"></div>
                     </div>
                 </div>
             </section>
             @endif
 
             {{-- Submit --}}
-            <div class="sticky bottom-0 bg-black/90 backdrop-blur-md border-t border-white/10 -mx-4 px-4 py-4">
+            <div class="bg-zinc-950 border border-white/10 rounded-3xl p-5">
                 <button type="submit"
-                        class="w-full px-6 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold transition shadow-xl shadow-brand/30">
-                    Değişiklikleri Kaydet
+                        class="w-full px-6 py-4 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-base transition shadow-xl shadow-brand/30">
+                    💾 Değişiklikleri Kaydet
                 </button>
             </div>
         </form>
@@ -193,7 +202,10 @@
 
     <script>
     (function() {
-        // Avatar canlı önizleme
+        const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const UPLOAD_URL = '{{ route('driver.api.vehicle_photo') }}';
+
+        // ===== Avatar canlı önizleme =====
         const avatarInput   = document.getElementById('avatar-input');
         const avatarPreview = document.getElementById('avatar-preview');
         if (avatarInput) {
@@ -203,21 +215,101 @@
             });
         }
 
-        // Araç fotoğrafları canlı önizleme
-        const photosInput   = document.getElementById('vehicle-photos-input');
-        const photosPreview = document.getElementById('new-photos-preview');
+        // ===== Araç fotoğraf upload (resize + ayrı ayrı AJAX) =====
+        const photosInput     = document.getElementById('vehicle-photos-input');
+        const photosPreview   = document.getElementById('new-photos-preview');
+        const pathsContainer  = document.getElementById('new-photo-paths-container');
+        const statusEl        = document.getElementById('upload-status');
+
+        // Canvas ile resize — uzun kenar 1600px, JPEG quality 0.85 → ~300-700KB
+        async function resizeImage(file) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const MAX = 1600;
+                    let { width, height } = img;
+                    if (width > MAX || height > MAX) {
+                        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+                        else                { width  = Math.round(width  * MAX / height); height = MAX; }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width; canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    canvas.toBlob(blob => {
+                        if (!blob) return reject(new Error('canvas toBlob failed'));
+                        resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+                    }, 'image/jpeg', 0.85);
+                };
+                img.onerror = () => reject(new Error('image load failed'));
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        async function uploadOne(file, previewEl) {
+            const fd = new FormData();
+            fd.append('photo', file);
+            const res = await fetch(UPLOAD_URL, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: fd,
+            });
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                throw new Error('Upload failed: ' + res.status + ' ' + text.slice(0, 200));
+            }
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Yükleme başarısız.');
+            // Hidden input ekle ki form submit'inde gönderilsin
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'new_photo_paths[]';
+            input.value = data.path;
+            input.dataset.previewId = previewEl.id;
+            pathsContainer.appendChild(input);
+            // Önizleme rozetini ✓ yap
+            previewEl.querySelector('.upload-badge').innerHTML = '✓';
+            previewEl.querySelector('.upload-badge').classList.remove('bg-zinc-700', 'text-zinc-300');
+            previewEl.querySelector('.upload-badge').classList.add('bg-emerald-500', 'text-white');
+        }
+
         if (photosInput && photosPreview) {
-            photosInput.addEventListener('change', () => {
-                photosPreview.innerHTML = '';
-                [...photosInput.files].forEach(file => {
+            photosInput.addEventListener('change', async () => {
+                const files = [...photosInput.files];
+                if (files.length === 0) return;
+                statusEl.classList.remove('hidden');
+                statusEl.textContent = `${files.length} fotoğraf yükleniyor…`;
+                let done = 0, failed = 0;
+                for (const file of files) {
+                    // Preview ekle (yükleniyor durumunda)
+                    const previewId = 'preview-' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
                     const url = URL.createObjectURL(file);
                     photosPreview.insertAdjacentHTML('beforeend', `
-                        <div class="relative aspect-square rounded-xl overflow-hidden border border-brand/40 bg-zinc-900">
+                        <div id="${previewId}" class="relative aspect-square rounded-xl overflow-hidden border border-brand/40 bg-zinc-900">
                             <img src="${url}" alt="" class="w-full h-full object-cover">
-                            <span class="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-brand text-black text-[9px] font-bold uppercase tracking-wider">Yeni</span>
+                            <span class="upload-badge absolute top-1 right-1 w-5 h-5 rounded-full bg-zinc-700 text-zinc-300 flex items-center justify-center text-[10px] font-bold">⟳</span>
                         </div>
                     `);
-                });
+                    const previewEl = document.getElementById(previewId);
+                    try {
+                        const resized = await resizeImage(file);
+                        await uploadOne(resized, previewEl);
+                        done++;
+                    } catch (err) {
+                        console.error('upload failed', file.name, err);
+                        failed++;
+                        previewEl.querySelector('.upload-badge').innerHTML = '✕';
+                        previewEl.querySelector('.upload-badge').classList.remove('bg-zinc-700', 'text-zinc-300');
+                        previewEl.querySelector('.upload-badge').classList.add('bg-red-500', 'text-white');
+                        previewEl.title = err.message;
+                    }
+                    statusEl.textContent = `${done + failed} / ${files.length} işlendi${failed > 0 ? ` (${failed} başarısız)` : ''}`;
+                }
+                statusEl.textContent = failed === 0
+                    ? `✓ ${done} fotoğraf yüklendi. "Değişiklikleri Kaydet" basmayı unutma.`
+                    : `${done} yüklendi, ${failed} başarısız. Tekrar dene.`;
+                statusEl.classList.toggle('text-emerald-400', failed === 0 && done > 0);
+                statusEl.classList.toggle('text-red-400', failed > 0);
+                photosInput.value = ''; // sonraki seçim için reset
             });
         }
     })();

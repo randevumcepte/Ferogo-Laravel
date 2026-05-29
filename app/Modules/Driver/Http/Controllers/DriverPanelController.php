@@ -108,18 +108,19 @@ class DriverPanelController extends Controller
         if (! $driver) return redirect()->route('driver.login');
 
         $validated = $request->validate([
-            'name'                => ['required', 'string', 'max:120'],
-            'phone'               => ['required', 'string', 'max:20'],
-            'avatar'              => ['nullable', 'image', 'max:4096'],
-            'vehicle_brand'       => ['nullable', 'string', 'max:60'],
-            'vehicle_model'       => ['nullable', 'string', 'max:60'],
-            'vehicle_year'        => ['nullable', 'integer', 'between:1990,2030'],
-            'vehicle_color'       => ['nullable', 'string', 'max:30'],
-            'vehicle_plate'       => ['nullable', 'string', 'max:15'],
-            'vehicle_photos'      => ['nullable', 'array', 'max:20'],
-            'vehicle_photos.*'    => ['image', 'max:4096'],
-            'remove_photos'       => ['nullable', 'array'],
-            'remove_photos.*'     => ['string'],
+            'name'                  => ['required', 'string', 'max:120'],
+            'phone'                 => ['required', 'string', 'max:20'],
+            'avatar'                => ['nullable', 'image', 'max:4096'],
+            'vehicle_brand'         => ['nullable', 'string', 'max:60'],
+            'vehicle_model'         => ['nullable', 'string', 'max:60'],
+            'vehicle_year'          => ['nullable', 'integer', 'between:1990,2030'],
+            'vehicle_color'         => ['nullable', 'string', 'max:30'],
+            'vehicle_plate'         => ['nullable', 'string', 'max:15'],
+            // AJAX upload sonrası gelen path listesi (yeni yüklenenler)
+            'new_photo_paths'       => ['nullable', 'array', 'max:20'],
+            'new_photo_paths.*'     => ['string', 'max:255'],
+            'remove_photos'         => ['nullable', 'array'],
+            'remove_photos.*'       => ['string'],
         ]);
 
         // 1) Kullanıcı bilgileri
@@ -128,7 +129,6 @@ class DriverPanelController extends Controller
             'phone' => $validated['phone'],
         ];
         if ($request->hasFile('avatar')) {
-            // Eski avatar relative path ise sil (http url'leri silme — demo seed)
             if ($driver->user->avatar && ! str_starts_with($driver->user->avatar, 'http')) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($driver->user->avatar);
             }
@@ -147,7 +147,6 @@ class DriverPanelController extends Controller
                 'plate'               => $validated['vehicle_plate']   ?? null,
             ], fn ($v) => $v !== null && $v !== '');
 
-            // Mevcut foto listesini al
             $photos = is_array($vehicle->photos) ? $vehicle->photos : [];
 
             // Silinecek fotoğrafları çıkar
@@ -160,21 +159,47 @@ class DriverPanelController extends Controller
                 }
             }
 
-            // Yeni yüklenenleri ekle
-            if ($request->hasFile('vehicle_photos')) {
-                foreach ($request->file('vehicle_photos') as $file) {
-                    $photos[] = $file->store('vehicle-photos/' . $vehicle->id, 'public');
+            // AJAX ile önceden yüklenmiş yeni path'leri ekle (güvenlik için sadece bu sürücünün klasöründekiler)
+            if (! empty($validated['new_photo_paths'])) {
+                $prefix = 'vehicle-photos/' . $vehicle->id . '/';
+                foreach ($validated['new_photo_paths'] as $path) {
+                    if (str_starts_with($path, $prefix) && \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+                        $photos[] = $path;
+                    }
                 }
             }
 
-            // Maksimum 20
-            $photos = array_slice($photos, 0, 20);
-
+            $photos = array_values(array_unique(array_slice($photos, 0, 20)));
             $vData['photos'] = $photos;
             $vehicle->update($vData);
         }
 
         return redirect()->route('driver.profile')->with('success', 'Profil güncellendi.');
+    }
+
+    /**
+     * POST /surucu-paneli/api/vehicle-photo — tek fotoğraf AJAX upload.
+     * PHP POST limitini aşmamak için her fotoğraf ayrı istekte gönderilir.
+     */
+    public function uploadVehiclePhoto(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['success' => false, 'message' => 'Giriş gerekli.'], 401);
+        if (! $driver->currentVehicle) {
+            return response()->json(['success' => false, 'message' => 'Önce araç tanımla.'], 422);
+        }
+
+        $request->validate([
+            'photo' => ['required', 'image', 'max:8192'],
+        ]);
+
+        $path = $request->file('photo')->store('vehicle-photos/' . $driver->currentVehicle->id, 'public');
+
+        return response()->json([
+            'success' => true,
+            'path'    => $path,
+            'url'     => asset('storage/' . $path),
+        ]);
     }
 
     // ────────────────────────────────────────────────────────────
