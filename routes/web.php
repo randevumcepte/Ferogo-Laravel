@@ -2,6 +2,7 @@
 
 use App\Modules\Booking\Http\Controllers\CallController;
 use App\Modules\Booking\Http\Controllers\CustomerPanelController;
+use App\Modules\Booking\Http\Controllers\OtpDebugController;
 use App\Modules\Booking\Http\Controllers\PhoneVerificationController;
 use App\Modules\Booking\Http\Controllers\ReservationController;
 use App\Modules\Booking\Http\Controllers\RideRequestController;
@@ -65,6 +66,9 @@ Route::prefix('api/ride-requests')->name('ride_requests.')->group(function () {
 // ─────────────────────────────────────────────────────────
 Route::post('/api/phone/send-otp',   [PhoneVerificationController::class, 'sendOtp'])->name('phone.send_otp');
 Route::post('/api/phone/verify-otp', [PhoneVerificationController::class, 'verifyOtp'])->name('phone.verify_otp');
+
+// GEÇİCİ: SMS provider bağlanana kadar admin için OTP görüntüleyici
+Route::get('/admin-debug/otp', [OtpDebugController::class, 'show'])->name('admin.debug.otp');
 
 // ─────────────────────────────────────────────────────────
 // MÜŞTERİ PANELİ — telefon+OTP girişi, geçmiş, güven skoru
