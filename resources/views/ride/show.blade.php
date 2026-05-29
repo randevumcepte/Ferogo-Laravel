@@ -1465,13 +1465,16 @@
     const POLL_CHAT_MS    = 2500;
 
     // Sunucudan gelen login durumu — auth-required gate + OTP atlama için.
-    const FEROGO_AUTH = @json($authedCustomer ? [
-        'id'    => $authedCustomer->id,
-        'name'  => $authedCustomer->name,
-        'phone' => $authedCustomer->phone,
-        'trust_label' => $authedTrust?->trustLabel() ?? 'normal',
-        'trust_score' => (int) ($authedTrust?->trust_score ?? 50),
-    ] : null);
+    @php
+        $ferogoAuthPayload = $authedCustomer ? [
+            'id'          => $authedCustomer->id,
+            'name'        => $authedCustomer->name,
+            'phone'       => $authedCustomer->phone,
+            'trust_label' => $authedTrust?->trustLabel() ?? 'normal',
+            'trust_score' => (int) ($authedTrust?->trust_score ?? 50),
+        ] : null;
+    @endphp
+    const FEROGO_AUTH = {!! json_encode($ferogoAuthPayload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};
 
     // ===== CİHAZ FİNGERPRİNT (rate limit + sabotaj koruması) =====
     // Hafif: ekran + saat dilimi + dil + UA + canvas — sabit-ish 64 char hash
