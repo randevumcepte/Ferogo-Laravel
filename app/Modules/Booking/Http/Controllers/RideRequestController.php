@@ -425,8 +425,10 @@ class RideRequestController extends Controller
     /** Gerçek avatar varsa onu döner, yoksa initial-based UI Avatars URL'i üretir. */
     private function driverPhotoUrl(Driver $d): string
     {
-        if ($d->user?->avatar) {
-            return asset('storage/' . $d->user->avatar);
+        $avatar = $d->user?->avatar;
+        if ($avatar) {
+            // Tam URL (örn. pravatar) doğrudan döner; relative yol storage'a yönlenir
+            return str_starts_with($avatar, 'http') ? $avatar : asset('storage/' . $avatar);
         }
         $name = urlencode($d->user?->name ?? 'Sürücü');
         return "https://ui-avatars.com/api/?name={$name}&background=F0C040&color=000&size=256&bold=true&format=svg";

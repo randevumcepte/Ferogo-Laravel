@@ -41,15 +41,16 @@ class DemoDriverSeeder extends Seeder
 
         $center = [38.4192, 27.1287]; // İzmir Konak
 
+        // Pravatar.cc: stable AI/stock portraits, her id farklı yüz verir (12, 13, 33, 51, 60, 65, 68, 70 = erkek portreleri)
         $drivers = [
-            ['name' => 'Mehmet Karaca',   'email' => 'demo.driver.1@ferogo.test', 'phone' => '05321110001', 'class' => 'easy',     'brand' => 'Mercedes',   'model' => 'Vito',     'plate' => '35 AB 1234', 'rating' => 4.95, 'trips' => 1240, 'lat_off' => 0.008,  'lng_off' => -0.011],
-            ['name' => 'Burak Aydın',     'email' => 'demo.driver.2@ferogo.test', 'phone' => '05321110002', 'class' => 'easy',     'brand' => 'Volkswagen', 'model' => 'Passat',   'plate' => '35 KZ 4471', 'rating' => 4.88, 'trips' => 980,  'lat_off' => -0.012, 'lng_off' => 0.015],
-            ['name' => 'Tolga Şen',       'email' => 'demo.driver.3@ferogo.test', 'phone' => '05321110003', 'class' => 'platinum', 'brand' => 'Mercedes',   'model' => 'E-Class',  'plate' => '35 EM 8820', 'rating' => 4.92, 'trips' => 1520, 'lat_off' => 0.018,  'lng_off' => 0.009],
-            ['name' => 'Emre Demir',      'email' => 'demo.driver.4@ferogo.test', 'phone' => '05321110004', 'class' => 'easy',     'brand' => 'Skoda',      'model' => 'Superb',   'plate' => '35 BC 5532', 'rating' => 4.81, 'trips' => 620,  'lat_off' => -0.020, 'lng_off' => -0.018],
-            ['name' => 'Serkan Ozan',     'email' => 'demo.driver.5@ferogo.test', 'phone' => '05321110005', 'class' => 'vip',      'brand' => 'Mercedes',   'model' => 'S-Class',  'plate' => '35 TR 9908', 'rating' => 4.97, 'trips' => 2410, 'lat_off' => 0.005,  'lng_off' => 0.022],
-            ['name' => 'Hakan Yıldız',    'email' => 'demo.driver.6@ferogo.test', 'phone' => '05321110006', 'class' => 'platinum', 'brand' => 'Audi',       'model' => 'A6',       'plate' => '35 FG 3217', 'rating' => 4.85, 'trips' => 870,  'lat_off' => 0.025,  'lng_off' => -0.026],
-            ['name' => 'Cem Bulut',       'email' => 'demo.driver.7@ferogo.test', 'phone' => '05321110007', 'class' => 'easy',     'brand' => 'Renault',    'model' => 'Talisman', 'plate' => '35 HN 1188', 'rating' => 4.78, 'trips' => 510,  'lat_off' => -0.015, 'lng_off' => 0.028],
-            ['name' => 'Murat İşcan',     'email' => 'demo.driver.8@ferogo.test', 'phone' => '05321110008', 'class' => 'platinum', 'brand' => 'BMW',        'model' => '5 Series', 'plate' => '35 PQ 6644', 'rating' => 4.90, 'trips' => 1380, 'lat_off' => 0.028,  'lng_off' => 0.014],
+            ['name' => 'Mehmet Karaca',   'email' => 'demo.driver.1@ferogo.test', 'phone' => '05321110001', 'class' => 'easy',     'brand' => 'Mercedes',   'model' => 'Vito',     'plate' => '35 AB 1234', 'rating' => 4.95, 'trips' => 1240, 'lat_off' => 0.008,  'lng_off' => -0.011, 'avatar' => 'https://i.pravatar.cc/300?img=12'],
+            ['name' => 'Burak Aydın',     'email' => 'demo.driver.2@ferogo.test', 'phone' => '05321110002', 'class' => 'easy',     'brand' => 'Volkswagen', 'model' => 'Passat',   'plate' => '35 KZ 4471', 'rating' => 4.88, 'trips' => 980,  'lat_off' => -0.012, 'lng_off' => 0.015,  'avatar' => 'https://i.pravatar.cc/300?img=13'],
+            ['name' => 'Tolga Şen',       'email' => 'demo.driver.3@ferogo.test', 'phone' => '05321110003', 'class' => 'platinum', 'brand' => 'Mercedes',   'model' => 'E-Class',  'plate' => '35 EM 8820', 'rating' => 4.92, 'trips' => 1520, 'lat_off' => 0.018,  'lng_off' => 0.009,  'avatar' => 'https://i.pravatar.cc/300?img=33'],
+            ['name' => 'Emre Demir',      'email' => 'demo.driver.4@ferogo.test', 'phone' => '05321110004', 'class' => 'easy',     'brand' => 'Skoda',      'model' => 'Superb',   'plate' => '35 BC 5532', 'rating' => 4.81, 'trips' => 620,  'lat_off' => -0.020, 'lng_off' => -0.018, 'avatar' => 'https://i.pravatar.cc/300?img=51'],
+            ['name' => 'Serkan Ozan',     'email' => 'demo.driver.5@ferogo.test', 'phone' => '05321110005', 'class' => 'vip',      'brand' => 'Mercedes',   'model' => 'S-Class',  'plate' => '35 TR 9908', 'rating' => 4.97, 'trips' => 2410, 'lat_off' => 0.005,  'lng_off' => 0.022,  'avatar' => 'https://i.pravatar.cc/300?img=60'],
+            ['name' => 'Hakan Yıldız',    'email' => 'demo.driver.6@ferogo.test', 'phone' => '05321110006', 'class' => 'platinum', 'brand' => 'Audi',       'model' => 'A6',       'plate' => '35 FG 3217', 'rating' => 4.85, 'trips' => 870,  'lat_off' => 0.025,  'lng_off' => -0.026, 'avatar' => 'https://i.pravatar.cc/300?img=65'],
+            ['name' => 'Cem Bulut',       'email' => 'demo.driver.7@ferogo.test', 'phone' => '05321110007', 'class' => 'easy',     'brand' => 'Renault',    'model' => 'Talisman', 'plate' => '35 HN 1188', 'rating' => 4.78, 'trips' => 510,  'lat_off' => -0.015, 'lng_off' => 0.028,  'avatar' => 'https://i.pravatar.cc/300?img=68'],
+            ['name' => 'Murat İşcan',     'email' => 'demo.driver.8@ferogo.test', 'phone' => '05321110008', 'class' => 'platinum', 'brand' => 'BMW',        'model' => '5 Series', 'plate' => '35 PQ 6644', 'rating' => 4.90, 'trips' => 1380, 'lat_off' => 0.028,  'lng_off' => 0.014,  'avatar' => 'https://i.pravatar.cc/300?img=70'],
         ];
 
         foreach ($drivers as $i => $d) {
@@ -64,6 +65,7 @@ class DemoDriverSeeder extends Seeder
                     'type'     => 'driver',
                     'phone'    => $d['phone'],
                     'status'   => 'active',
+                    'avatar'   => $d['avatar'],
                 ],
             );
 
