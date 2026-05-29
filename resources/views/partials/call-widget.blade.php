@@ -188,10 +188,27 @@
     // ───── WebRTC ────────────────────────────────────────────
     async function getMic() {
         if (localStream) return localStream;
+        // HTTPS değilse tarayıcı mikrofona kesin izin vermez — net hata göster
+        if (!window.isSecureContext) {
+            showError('Sesli görüşme için sayfa HTTPS olmalı. Adres çubuğunda "https://" ile başlayan adresle aç.');
+            throw new Error('insecure context');
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showError('Bu tarayıcı sesli görüşmeyi desteklemiyor. Chrome veya Safari kullan.');
+            throw new Error('no getUserMedia');
+        }
         try {
             localStream = await navigator.mediaDevices.getUserMedia(AUDIO_CONSTRAINTS);
         } catch (err) {
-            showError('Mikrofon erişimi reddedildi. Tarayıcı ayarlarından izin ver.');
+            // İzin reddi vs cihaz yok ayrımı
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                showError('Mikrofon izni reddedildi. Tarayıcı adres çubuğunun yanındaki 🔒 simgesine basıp "Mikrofon → İzin Ver" seç, sonra sayfayı yenile.');
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                showError('Mikrofon bulunamadı. Cihazda mikrofon olduğundan ve başka bir uygulamanın kullanmadığından emin ol.');
+            } else {
+                showError('Mikrofon açılamadı: ' + (err.message || err.name));
+            }
+            console.warn('[call] getUserMedia failed', err);
             throw err;
         }
         return localStream;
