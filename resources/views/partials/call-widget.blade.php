@@ -13,7 +13,7 @@
 </style>
 
 {{-- Floating call widget — sayfanın üstünde overlay --}}
-<div id="call-widget" class="hidden fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-6">
+<div id="call-widget" class="hidden fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-6" style="z-index: 99999;">
     <div class="bg-zinc-950 border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
         {{-- Avatar + status --}}
         <div class="relative w-28 h-28 mx-auto mb-6">
@@ -139,6 +139,54 @@
     function callUrl(action) {
         const pid = getPid();
         return `/api/ride-requests/${encodeURIComponent(pid)}/call/${action}`;
+    }
+
+    // ───── Ringtone (Web Audio API ile sentezlenmiş — dosya yüklemeden) ─────
+    let ringAudioCtx = null;
+    let ringOsc = null;
+    let ringGain = null;
+    let ringInterval = null;
+    function startRingtone() {
+        stopRingtone();
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            ringAudioCtx = new AC();
+            // Klasik ringback: 1sn çalar, 1sn susar
+            const playBeep = () => {
+                if (!ringAudioCtx) return;
+                ringOsc = ringAudioCtx.createOscillator();
+                ringGain = ringAudioCtx.createGain();
+                ringOsc.type = 'sine';
+                ringOsc.frequency.value = 440; // A4
+                ringGain.gain.setValueAtTime(0, ringAudioCtx.currentTime);
+                ringGain.gain.linearRampToValueAtTime(0.18, ringAudioCtx.currentTime + 0.05);
+                ringGain.gain.linearRampToValueAtTime(0, ringAudioCtx.currentTime + 0.9);
+                ringOsc.connect(ringGain).connect(ringAudioCtx.destination);
+                ringOsc.start();
+                ringOsc.stop(ringAudioCtx.currentTime + 1.0);
+            };
+            playBeep();
+            ringInterval = setInterval(playBeep, 2000);
+            // Mobilde titreşim
+            if (navigator.vibrate) {
+                navigator.vibrate([400, 200, 400, 200, 400]);
+                const vibInterval = setInterval(() => navigator.vibrate([400, 200, 400]), 2000);
+                ringInterval._vibInterval = vibInterval;
+            }
+        } catch (e) {
+            console.warn('[call] ringtone failed', e);
+        }
+    }
+    function stopRingtone() {
+        if (ringInterval) {
+            if (ringInterval._vibInterval) clearInterval(ringInterval._vibInterval);
+            clearInterval(ringInterval);
+            ringInterval = null;
+        }
+        if (ringOsc) { try { ringOsc.stop(); } catch(e){} ringOsc = null; }
+        if (ringAudioCtx) { try { ringAudioCtx.close(); } catch(e){} ringAudioCtx = null; }
+        if (navigator.vibrate) navigator.vibrate(0);
     }
 
     // ───── UI rendering ──────────────────────────────────────
@@ -374,11 +422,13 @@
                 isInitiator = false;
                 lastSignalId = 0;
                 show('incoming');
+                startRingtone();
                 startSignalPolling();
                 return;
             }
             // Outgoing → karşı taraf kabul etti
             if (currentStatus === 'outgoing' && call.status === 'accepted' && currentCallId === call.id) {
+                stopRingtone();
                 // initiator → offer yap
                 if (isInitiator) await makeOffer();
                 show('active');
@@ -436,6 +486,7 @@
         }
     }
     async function acceptCall() {
+        stopRingtone();
         try {
             const res = await fetch(callUrl('accept'), {
                 method: 'POST',
@@ -446,12 +497,12 @@
             // mic iste, hazır ol — offer karşı taraftan gelecek
             await getMic();
             buildPc();
-            // localStream'i şimdi ekle (handleRemoteOffer'da yine eklenecek ama eklenmiş olabilir)
         } catch (e) {
             showError('Bağlantı hatası.');
         }
     }
     async function endCall(notifyServer) {
+        stopRingtone();
         if (notifyServer) {
             try {
                 await fetch(callUrl('end'), {
