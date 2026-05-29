@@ -207,17 +207,19 @@
         widget.classList.remove('hidden');
         peerEl.textContent = getPeerName();
         clearError();
-        ripple1.classList.toggle('hidden', status === 'active');
-        ripple2.classList.toggle('hidden', status === 'active');
-        ripple1.classList.toggle('call-ring-ripple', status !== 'active');
-        ripple2.classList.toggle('call-ring-ripple', status !== 'active');
-        timerEl.classList.toggle('hidden', status !== 'active');
+        const isConnected = (status === 'active');
+        ripple1.classList.toggle('hidden', isConnected);
+        ripple2.classList.toggle('hidden', isConnected);
+        ripple1.classList.toggle('call-ring-ripple', !isConnected);
+        ripple2.classList.toggle('call-ring-ripple', !isConnected);
+        timerEl.classList.toggle('hidden', !isConnected);
         grpIncoming.classList.toggle('hidden', status !== 'incoming');
-        grpActive.classList.toggle('hidden', status !== 'active');
+        grpActive.classList.toggle('hidden', status !== 'active' && status !== 'connecting');
         grpOutgoing.classList.toggle('hidden', status !== 'outgoing');
-        if (status === 'outgoing')      statusEl.textContent = 'Arıyor…';
-        else if (status === 'incoming') statusEl.textContent = 'Gelen çağrı';
-        else if (status === 'active')   statusEl.textContent = 'Bağlandı';
+        if (status === 'outgoing')        statusEl.textContent = 'Arıyor…';
+        else if (status === 'incoming')   statusEl.textContent = 'Gelen çağrı';
+        else if (status === 'connecting') statusEl.textContent = 'Bağlanıyor…';
+        else if (status === 'active')     statusEl.textContent = 'Bağlandı';
     }
     function startTimer() {
         timerSeconds = 0;
@@ -320,24 +322,36 @@
         };
         return pc;
     }
+    function addLocalTracks(peer, stream) {
+        // Idempotent: aynı track ikinci kez eklenmesin
+        const senders = peer.getSenders();
+        stream.getTracks().forEach(t => {
+            if (!senders.some(s => s.track && s.track.id === t.id)) {
+                peer.addTrack(t, stream);
+            }
+        });
+    }
     async function makeOffer() {
         const stream = await getMic();
         const peer = buildPc();
-        stream.getTracks().forEach(t => peer.addTrack(t, stream));
-        const offer = await peer.createOffer({ offerToReceiveAudio: true });
-        // Opus 48kHz mono — sabit kalite (kullanılabilirlik için bitrate'i sınırlama)
+        addLocalTracks(peer, stream);
+        const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
+        console.log('[call] offer sent');
         pushSignal('offer', { sdp: peer.localDescription.sdp, type: peer.localDescription.type });
     }
     async function handleRemoteOffer(payload) {
-        const stream = await getMic();
+        console.log('[call] remote offer received');
         const peer = buildPc();
-        stream.getTracks().forEach(t => peer.addTrack(t, stream));
+        // KRİTİK SIRA: önce setRemoteDescription (transceiver'lar kurulur), sonra addTrack
         await peer.setRemoteDescription({ type: payload.type, sdp: payload.sdp });
         remoteDescSet = true;
+        const stream = await getMic();
+        addLocalTracks(peer, stream);
         await drainIceQueue();
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
+        console.log('[call] answer sent');
         pushSignal('answer', { sdp: peer.localDescription.sdp, type: peer.localDescription.type });
     }
     async function handleRemoteAnswer(payload) {
@@ -487,18 +501,22 @@
     }
     async function acceptCall() {
         stopRingtone();
+        // Hemen "Bağlanıyor..." ekranına geç — kullanıcı feedback'i için
+        show('connecting');
         try {
+            // Önce mikrofon iste (Safari iOS izni burada sorar)
+            await getMic();
+            buildPc();
             const res = await fetch(callUrl('accept'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' },
             });
             const data = await res.json();
-            if (!data.success) { showError(data.message || 'Kabul edilemedi.'); return; }
-            // mic iste, hazır ol — offer karşı taraftan gelecek
-            await getMic();
-            buildPc();
+            if (!data.success) { showError(data.message || 'Kabul edilemedi.'); show('idle'); return; }
+            // Offer karşı taraftan gelecek (handleRemoteOffer)
         } catch (e) {
             showError('Bağlantı hatası.');
+            show('idle');
         }
     }
     async function endCall(notifyServer) {
