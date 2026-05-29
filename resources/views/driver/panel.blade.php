@@ -249,36 +249,42 @@
         let lastMessageId = 0;
         let countdownHandle = null;
 
-        // === SOUND (Web Audio beep) ===
+        // === SOUND (Web Audio beep — daha yüksek, canlı ton) ===
         let audioCtx = null;
-        function beep(freq = 880, ms = 220) {
+        function beep(freq = 880, ms = 220, vol = 0.6) {
             try {
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.type = 'sine';
+                // square wave klasik telefon zili karakteri verir
+                osc.type = 'square';
                 osc.frequency.value = freq;
                 gain.gain.value = 0.0001;
                 osc.connect(gain).connect(audioCtx.destination);
                 osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(vol, audioCtx.currentTime + 0.02);
                 gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + ms / 1000);
                 osc.stop(audioCtx.currentTime + ms / 1000 + 0.05);
             } catch (_) {}
         }
-        // İlk kullanıcı etkileşiminde context'i aç (mobil zorunluluk)
         document.addEventListener('click', () => {
             if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {} }
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         }, { once: true });
 
-        // Offer geldiğinde sürekli çalan iki-tonlu bip — accept/reject'e basana kadar
+        // Offer geldiğinde — yüksek sesli 3 tonlu klasik telefon zili döngülü
         let offerBeepInterval = null;
         function startOfferBeep() {
             if (offerBeepInterval) return;
-            const ring = () => { beep(880, 200); setTimeout(() => beep(1100, 220), 240); };
+            const ring = () => {
+                beep(1318, 150, 0.7);                              // E6 — yüksek dikkat çekici
+                setTimeout(() => beep(987, 150, 0.7), 180);        // B5
+                setTimeout(() => beep(1318, 200, 0.7), 360);       // E6 tekrar
+            };
             ring();
-            offerBeepInterval = setInterval(ring, 1500);
-            if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+            offerBeepInterval = setInterval(ring, 1200);
+            if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]);
         }
         function stopOfferBeep() {
             if (offerBeepInterval) { clearInterval(offerBeepInterval); offerBeepInterval = null; }

@@ -41,10 +41,17 @@
         </div>
 
         <div id="call-buttons-active" class="hidden flex flex-col gap-2">
-            <button type="button" id="call-btn-mute"
-                    class="px-4 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] border border-white/10 text-white text-sm font-semibold transition">
-                🎙 Mikrofon Açık
-            </button>
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" id="call-btn-mute"
+                        class="px-3 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] border border-white/10 text-white text-xs font-semibold transition">
+                    🎙 Mikrofon
+                </button>
+                <button type="button" id="call-btn-speaker"
+                        class="px-3 py-2.5 rounded-xl bg-brand/20 hover:bg-brand/30 border border-brand/40 text-brand text-xs font-semibold transition">
+                    🔊 Hoparlör
+                </button>
+            </div>
+            <div id="call-audio-meter" class="hidden text-[10px] text-zinc-500 text-center">karşı taraf: <span id="call-audio-level">—</span></div>
             <button type="button" id="call-btn-hangup"
                     class="px-4 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold transition shadow-lg shadow-red-500/30">
                 📞 Kapat
@@ -102,17 +109,23 @@
     const btnReject = $('call-btn-reject');
     const btnHangup = $('call-btn-hangup');
     const btnCancel = $('call-btn-cancel');
-    const btnMute   = $('call-btn-mute');
+    const btnMute    = $('call-btn-mute');
+    const btnSpeaker = $('call-btn-speaker');
+    const audioMeter = $('call-audio-meter');
+    const audioLevel = $('call-audio-level');
     const grpIncoming = $('call-buttons-incoming');
     const grpActive   = $('call-buttons-active');
     const grpOutgoing = $('call-buttons-outgoing');
 
+    // Audio element sesi maksimuma sabitle
+    audioEl.volume = 1.0;
+
     // ───── State ─────────────────────────────────────────────
     let currentCallId   = null;
-    let currentStatus   = 'idle';        // idle | outgoing | incoming | active | ended
-    let myRole          = null;          // 'customer' | 'driver'
+    let currentStatus   = 'idle';
+    let myRole          = null;
     let isInitiator     = false;
-    let pc              = null;          // RTCPeerConnection
+    let pc              = null;
     let localStream     = null;
     let lastSignalId    = 0;
     let statePollHandle = null;
@@ -120,8 +133,11 @@
     let timerHandle     = null;
     let timerSeconds    = 0;
     let muted           = false;
-    let pendingIceQueue = [];            // ICE candidates buffered until remote desc set
+    let speakerOn       = true;
+    let pendingIceQueue = [];
     let remoteDescSet   = false;
+    let statsHandle     = null;
+    let lastBytesReceived = 0;
 
     // ───── URL helpers ───────────────────────────────────────
     function getPid() {
@@ -274,7 +290,7 @@
         };
         // Sağlam ontrack: hem streams[0] hem ev.track fallback
         pc.ontrack = (ev) => {
-            console.log('[call] ontrack', { kind: ev.track.kind, streams: ev.streams.length });
+            console.log('[call] ontrack', { kind: ev.track.kind, streams: ev.streams.length, trackEnabled: ev.track.enabled, trackMuted: ev.track.muted });
             let stream;
             if (ev.streams && ev.streams[0]) {
                 stream = ev.streams[0];
@@ -286,17 +302,33 @@
                 stream.addTrack(ev.track);
             }
             audioEl.srcObject = stream;
+            audioEl.volume = 1.0;
+            audioEl.muted = false;
             // Autoplay reddedilirse butona tıklatma — user gesture'ı zaten var ama Safari için emniyet
             const tryPlay = () => audioEl.play().then(
-                () => console.log('[call] audio playing'),
+                () => console.log('[call] audio playing, volume=', audioEl.volume, 'muted=', audioEl.muted),
                 (err) => {
                     console.warn('[call] audio play failed, retrying after gesture', err);
-                    // Kullanıcı widget'ta herhangi bir butona basınca tekrar dene
-                    const retry = () => { audioEl.play().catch(()=>{}); document.removeEventListener('click', retry); };
+                    showError('Ses çalmak için ekrana dokun.');
+                    const retry = () => {
+                        audioEl.play().then(
+                            () => { clearError(); console.log('[call] audio playing after gesture'); },
+                            (e) => console.warn('[call] still failed', e)
+                        );
+                        document.removeEventListener('click', retry);
+                        document.removeEventListener('touchstart', retry);
+                    };
                     document.addEventListener('click', retry);
+                    document.addEventListener('touchstart', retry);
                 }
             );
             tryPlay();
+            // Track muted değişimi
+            ev.track.onunmute = () => console.log('[call] remote track unmuted');
+            ev.track.onmute   = () => console.log('[call] remote track muted');
+            ev.track.onended  = () => console.log('[call] remote track ended');
+            // Stats izleme — gerçekten paket geliyor mu?
+            startStatsMonitor();
         };
         pc.oniceconnectionstatechange = () => {
             console.log('[call] ICE state:', pc.iceConnectionState);
@@ -322,6 +354,43 @@
         };
         return pc;
     }
+    // Karşı taraftan ses paketi gelip gelmediğini izle — diagnostic
+    function startStatsMonitor() {
+        if (statsHandle) clearInterval(statsHandle);
+        lastBytesReceived = 0;
+        audioMeter.classList.remove('hidden');
+        statsHandle = setInterval(async () => {
+            if (!pc) return;
+            try {
+                const stats = await pc.getStats();
+                let inboundAudio = null;
+                stats.forEach(r => {
+                    if (r.type === 'inbound-rtp' && r.kind === 'audio') inboundAudio = r;
+                });
+                if (inboundAudio) {
+                    const bytes = inboundAudio.bytesReceived || 0;
+                    const delta = bytes - lastBytesReceived;
+                    lastBytesReceived = bytes;
+                    const kbps = Math.round((delta * 8) / 1024);
+                    audioLevel.textContent = kbps > 0 ? `${kbps} kbps ✓` : 'paket yok ✗';
+                    audioLevel.style.color = kbps > 0 ? '#34d399' : '#f87171';
+                    if (kbps === 0 && currentStatus === 'active') {
+                        console.warn('[call] stats: no audio packets received');
+                    }
+                } else {
+                    audioLevel.textContent = 'inbound yok';
+                }
+            } catch (e) {
+                console.warn('[call] stats failed', e);
+            }
+        }, 1500);
+    }
+    function stopStatsMonitor() {
+        if (statsHandle) { clearInterval(statsHandle); statsHandle = null; }
+        audioMeter.classList.add('hidden');
+        audioLevel.textContent = '—';
+    }
+
     function addLocalTracks(peer, stream) {
         // Idempotent: aynı track ikinci kez eklenmesin
         const senders = peer.getSenders();
@@ -521,6 +590,7 @@
     }
     async function endCall(notifyServer) {
         stopRingtone();
+        stopStatsMonitor();
         if (notifyServer) {
             try {
                 await fetch(callUrl('end'), {
@@ -556,7 +626,22 @@
         if (!localStream) return;
         muted = !muted;
         localStream.getAudioTracks().forEach(t => t.enabled = !muted);
-        btnMute.textContent = muted ? '🔇 Mikrofon Kapalı' : '🎙 Mikrofon Açık';
+        btnMute.textContent = muted ? '🔇 Kapalı' : '🎙 Mikrofon';
+    });
+    btnSpeaker.addEventListener('click', async () => {
+        speakerOn = !speakerOn;
+        audioEl.volume = speakerOn ? 1.0 : 0.4;
+        btnSpeaker.textContent = speakerOn ? '🔊 Hoparlör' : '🔈 Sessiz';
+        btnSpeaker.classList.toggle('bg-brand/20', speakerOn);
+        btnSpeaker.classList.toggle('text-brand', speakerOn);
+        btnSpeaker.classList.toggle('bg-white/[0.06]', !speakerOn);
+        btnSpeaker.classList.toggle('text-white', !speakerOn);
+        // setSinkId destekleyen tarayıcılarda çıkış cihazını zorla (Chrome desktop)
+        if (audioEl.setSinkId) {
+            try { await audioEl.setSinkId('default'); } catch (e) {}
+        }
+        // Tekrar play denemesi
+        audioEl.play().catch(()=>{});
     });
 
     // Public API
