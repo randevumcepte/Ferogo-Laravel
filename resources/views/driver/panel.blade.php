@@ -56,6 +56,10 @@
                     <span id="availability-dot" class="w-2 h-2 rounded-full"></span>
                     <span id="availability-label">—</span>
                 </button>
+                <a href="{{ route('driver.profile') }}"
+                   class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition" title="Profilim">
+                    👤
+                </a>
                 <form method="POST" action="{{ route('driver.logout') }}" class="inline">
                     @csrf
                     <button type="submit" class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition">Çıkış</button>

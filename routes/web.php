@@ -89,6 +89,8 @@ Route::post('/surucu-cikis',   [DriverPanelController::class, 'logout'])->name('
 // yok ve Filament admin paneli farklı bir guard. Controller her metoda kendisi
 // `currentDriver()` ile auth kontrolü yapıp ya redirect ya da 401 JSON döner.
 Route::get('/surucu-paneli',                                 [DriverPanelController::class, 'panel'])->name('driver.panel');
+Route::get('/surucu-paneli/profil',                          [DriverPanelController::class, 'showProfile'])->name('driver.profile');
+Route::post('/surucu-paneli/profil',                         [DriverPanelController::class, 'updateProfile'])->name('driver.profile.update');
 Route::get('/surucu-paneli/api/state',                       [DriverPanelController::class, 'state'])->name('driver.api.state');
 Route::post('/surucu-paneli/api/availability',               [DriverPanelController::class, 'setAvailability'])->name('driver.api.availability');
 Route::post('/surucu-paneli/api/offers/{publicId}/accept',   [DriverPanelController::class, 'acceptOffer'])->name('driver.api.accept');

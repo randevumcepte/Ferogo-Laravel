@@ -87,6 +87,97 @@ class DriverPanelController extends Controller
     }
 
     // ────────────────────────────────────────────────────────────
+    // PROFİL — sürücünün kendi bilgilerini düzenlemesi
+    // ────────────────────────────────────────────────────────────
+
+    public function showProfile(): View|RedirectResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return redirect()->route('driver.login');
+
+        return view('driver.profile', [
+            'driver'  => $driver->loadMissing('user', 'currentVehicle.vehicleClass'),
+            'user'    => $driver->user,
+            'vehicle' => $driver->currentVehicle,
+        ]);
+    }
+
+    public function updateProfile(Request $request): RedirectResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return redirect()->route('driver.login');
+
+        $validated = $request->validate([
+            'name'                => ['required', 'string', 'max:120'],
+            'phone'               => ['required', 'string', 'max:20'],
+            'avatar'              => ['nullable', 'image', 'max:4096'],
+            'vehicle_brand'       => ['nullable', 'string', 'max:60'],
+            'vehicle_model'       => ['nullable', 'string', 'max:60'],
+            'vehicle_year'        => ['nullable', 'integer', 'between:1990,2030'],
+            'vehicle_color'       => ['nullable', 'string', 'max:30'],
+            'vehicle_plate'       => ['nullable', 'string', 'max:15'],
+            'vehicle_photos'      => ['nullable', 'array', 'max:20'],
+            'vehicle_photos.*'    => ['image', 'max:4096'],
+            'remove_photos'       => ['nullable', 'array'],
+            'remove_photos.*'     => ['string'],
+        ]);
+
+        // 1) Kullanıcı bilgileri
+        $userData = [
+            'name'  => $validated['name'],
+            'phone' => $validated['phone'],
+        ];
+        if ($request->hasFile('avatar')) {
+            // Eski avatar relative path ise sil (http url'leri silme — demo seed)
+            if ($driver->user->avatar && ! str_starts_with($driver->user->avatar, 'http')) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($driver->user->avatar);
+            }
+            $userData['avatar'] = $request->file('avatar')->store('avatars/drivers', 'public');
+        }
+        $driver->user->update($userData);
+
+        // 2) Araç bilgileri
+        $vehicle = $driver->currentVehicle;
+        if ($vehicle) {
+            $vData = array_filter([
+                'brand'               => $validated['vehicle_brand']   ?? null,
+                'model'               => $validated['vehicle_model']   ?? null,
+                'year_of_manufacture' => $validated['vehicle_year']    ?? null,
+                'color'               => $validated['vehicle_color']   ?? null,
+                'plate'               => $validated['vehicle_plate']   ?? null,
+            ], fn ($v) => $v !== null && $v !== '');
+
+            // Mevcut foto listesini al
+            $photos = is_array($vehicle->photos) ? $vehicle->photos : [];
+
+            // Silinecek fotoğrafları çıkar
+            if (! empty($validated['remove_photos'])) {
+                foreach ($validated['remove_photos'] as $rm) {
+                    $photos = array_values(array_filter($photos, fn ($p) => $p !== $rm));
+                    if (! str_starts_with($rm, 'http')) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($rm);
+                    }
+                }
+            }
+
+            // Yeni yüklenenleri ekle
+            if ($request->hasFile('vehicle_photos')) {
+                foreach ($request->file('vehicle_photos') as $file) {
+                    $photos[] = $file->store('vehicle-photos/' . $vehicle->id, 'public');
+                }
+            }
+
+            // Maksimum 20
+            $photos = array_slice($photos, 0, 20);
+
+            $vData['photos'] = $photos;
+            $vehicle->update($vData);
+        }
+
+        return redirect()->route('driver.profile')->with('success', 'Profil güncellendi.');
+    }
+
+    // ────────────────────────────────────────────────────────────
     // API (polled by panel JS)
     // ────────────────────────────────────────────────────────────
 
