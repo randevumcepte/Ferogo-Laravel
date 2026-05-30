@@ -176,13 +176,27 @@
     let ringOsc = null;
     let ringGain = null;
     let ringInterval = null;
-    let ringVibInterval = null;  // ringInterval bir sayıdır, üzerine property atılamaz
+    let ringVibInterval = null;
+    const IN_IFRAME = (() => { try { return window.self !== window.top; } catch (_) { return true; } })();
+    // Iframe'de user gesture yoksa vibrate hep blocked olur — Chrome warning spam'i bitir
+    let vibrateAllowed = !IN_IFRAME;
+    document.addEventListener('click', () => { vibrateAllowed = true; }, { once: true, capture: true });
+
+    function tryVibrate(pattern) {
+        if (!vibrateAllowed || !navigator.vibrate) return;
+        try { navigator.vibrate(pattern); } catch (_) {}
+    }
+
     function startRingtone() {
         stopRingtone();
         try {
             const AC = window.AudioContext || window.webkitAudioContext;
             if (!AC) return;
             ringAudioCtx = new AC();
+            // İframe'de user gesture yoksa suspended başlar — resume() best effort
+            if (ringAudioCtx.state === 'suspended' && typeof ringAudioCtx.resume === 'function') {
+                ringAudioCtx.resume().catch(() => {});
+            }
             const playBeep = () => {
                 if (!ringAudioCtx) return;
                 ringOsc = ringAudioCtx.createOscillator();
@@ -198,15 +212,13 @@
             };
             playBeep();
             ringInterval = setInterval(playBeep, 2000);
-            // Mobilde titreşim — try/catch ile sar, kullanıcı gesture yoksa vibrate fail edebilir
-            if (navigator.vibrate) {
-                try {
-                    navigator.vibrate([400, 200, 400, 200, 400]);
-                    ringVibInterval = setInterval(() => {
-                        try { navigator.vibrate([400, 200, 400]); } catch (_) {}
-                    }, 2000);
-                } catch (_) { /* vibrate gesture yok, sessizce yut */ }
+            // Vibrate sadece izin varsa (parent tab veya kullanıcı tıkladı)
+            if (vibrateAllowed) {
+                tryVibrate([400, 200, 400, 200, 400]);
+                ringVibInterval = setInterval(() => tryVibrate([400, 200, 400]), 2000);
             }
+            // Sayfa başlığını yanıp söndürerek görsel ipucu
+            startTitleFlash();
         } catch (e) {
             console.warn('[call] ringtone failed', e);
         }
@@ -216,7 +228,30 @@
         if (ringInterval) { clearInterval(ringInterval); ringInterval = null; }
         if (ringOsc) { try { ringOsc.stop(); } catch(e){} ringOsc = null; }
         if (ringAudioCtx) { try { ringAudioCtx.close(); } catch(e){} ringAudioCtx = null; }
-        if (navigator.vibrate) { try { navigator.vibrate(0); } catch (_) {} }
+        // vibrate(0) bile blocked spam yaratıyor — sadece izin varsa dene
+        if (vibrateAllowed && navigator.vibrate) {
+            try { navigator.vibrate(0); } catch (_) {}
+        }
+        stopTitleFlash();
+    }
+
+    // Sayfa başlığı yanıp sönmesi (sesi olmayan iframe için görsel ipucu)
+    let _titleOrig = null;
+    let _titleHandle = null;
+    function startTitleFlash() {
+        try {
+            if (_titleHandle) return;
+            _titleOrig = document.title;
+            let on = false;
+            _titleHandle = setInterval(() => {
+                on = !on;
+                document.title = on ? '📞 Gelen Çağrı · ' + (_titleOrig || '') : (_titleOrig || '');
+            }, 900);
+        } catch (_) {}
+    }
+    function stopTitleFlash() {
+        if (_titleHandle) { clearInterval(_titleHandle); _titleHandle = null; }
+        if (_titleOrig !== null) { try { document.title = _titleOrig; } catch (_) {} _titleOrig = null; }
     }
 
     // ───── UI rendering ──────────────────────────────────────
