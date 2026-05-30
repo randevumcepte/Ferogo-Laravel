@@ -35,12 +35,24 @@
                 <span class="text-white">FERO</span><span class="text-brand">GO</span>
             </span>
         </a>
-        <div class="flex items-center gap-2 shrink-0">
-            <a href="{{ route('customer.profile') }}" class="px-3 py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/5 transition">Profilim</a>
+        @php
+            $navAvatarUrl = $user->avatar
+                ? (str_starts_with($user->avatar, 'http') ? $user->avatar : asset('storage/' . ltrim($user->avatar, '/')))
+                : null;
+        @endphp
+        <div class="flex items-center gap-3 shrink-0">
             <form method="POST" action="{{ route('customer.logout') }}" class="inline">
                 @csrf
                 <button type="submit" class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition">Çıkış</button>
             </form>
+            <a href="{{ route('customer.profile') }}" title="Profilim"
+               class="relative w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-sm overflow-hidden border-2 border-brand/40 hover:border-brand hover:scale-105 transition shadow-lg shadow-brand/20">
+                @if ($navAvatarUrl)
+                    <img src="{{ $navAvatarUrl }}" alt="" class="w-full h-full object-cover">
+                @else
+                    {{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}
+                @endif
+            </a>
         </div>
     </div>
 </header>
