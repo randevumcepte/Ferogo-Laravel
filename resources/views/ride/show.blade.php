@@ -570,10 +570,15 @@
                         <div id="qm-dp-credentials" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
                     </div>
 
-                    {{-- Vehicle photos --}}
+                    {{-- Vehicle photos (grid + click-to-lightbox) --}}
                     <div id="qm-dp-photos-wrap" class="hidden px-6 py-5 border-b border-white/5">
-                        <div class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-3">Araç Fotoğrafları</div>
-                        <div id="qm-dp-photos" class="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory" style="scrollbar-width: thin;"></div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="text-[10px] uppercase tracking-[0.25em] text-zinc-500">Araç Fotoğrafları</div>
+                            <div class="text-[10px] text-zinc-500">
+                                <span id="qm-dp-photos-count">—</span> fotoğraf · tıklayarak büyüt
+                            </div>
+                        </div>
+                        <div id="qm-dp-photos" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
                     </div>
 
                     {{-- Vehicle info --}}
@@ -851,6 +856,27 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    {{-- ============ PHOTO LIGHTBOX (araç fotoğraf full-screen viewer) ============ --}}
+    <div id="qm-lightbox" class="fixed inset-0 z-[1100] hidden items-center justify-center bg-black/95 backdrop-blur-sm">
+        <button type="button" id="qm-lightbox-close"
+                class="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white text-xl z-10 transition">
+            ✕
+        </button>
+        <button type="button" id="qm-lightbox-prev"
+                class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white text-xl z-10 transition">
+            ‹
+        </button>
+        <button type="button" id="qm-lightbox-next"
+                class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white text-xl z-10 transition">
+            ›
+        </button>
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs text-white tabular-nums z-10">
+            <span id="qm-lightbox-index">1</span> / <span id="qm-lightbox-total">1</span>
+        </div>
+        <img id="qm-lightbox-img" src="" alt="Araç fotoğrafı"
+             class="max-w-[92vw] max-h-[92vh] object-contain rounded-2xl shadow-2xl shadow-black/80">
     </div>
 
     @unless($embed)
@@ -1702,6 +1728,40 @@
     });
     document.getElementById('qm-dp-error-close').addEventListener('click', () => closeQuickModal());
 
+    // ===== PHOTO LIGHTBOX =====
+    let currentPhotos = [];
+    let currentLightboxIdx = 0;
+    const lightboxEl     = document.getElementById('qm-lightbox');
+    const lightboxImg    = document.getElementById('qm-lightbox-img');
+    const lightboxIndex  = document.getElementById('qm-lightbox-index');
+    const lightboxTotal  = document.getElementById('qm-lightbox-total');
+
+    function openLightbox(idx) {
+        if (!currentPhotos.length) return;
+        currentLightboxIdx = ((idx % currentPhotos.length) + currentPhotos.length) % currentPhotos.length;
+        lightboxImg.src = currentPhotos[currentLightboxIdx];
+        lightboxIndex.textContent = currentLightboxIdx + 1;
+        lightboxTotal.textContent = currentPhotos.length;
+        lightboxEl.classList.remove('hidden');
+        lightboxEl.classList.add('flex');
+    }
+    function closeLightbox() {
+        lightboxEl.classList.add('hidden');
+        lightboxEl.classList.remove('flex');
+    }
+    document.getElementById('qm-lightbox-close').addEventListener('click', closeLightbox);
+    document.getElementById('qm-lightbox-prev').addEventListener('click', () => openLightbox(currentLightboxIdx - 1));
+    document.getElementById('qm-lightbox-next').addEventListener('click', () => openLightbox(currentLightboxIdx + 1));
+    lightboxEl.addEventListener('click', (e) => {
+        if (e.target === lightboxEl) closeLightbox();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (lightboxEl.classList.contains('hidden')) return;
+        if (e.key === 'Escape')     closeLightbox();
+        if (e.key === 'ArrowLeft')  openLightbox(currentLightboxIdx - 1);
+        if (e.key === 'ArrowRight') openLightbox(currentLightboxIdx + 1);
+    });
+
     // API'den zengin profil çek + render
     async function fetchAndRenderDriverProfile(driverId) {
         const loading = document.getElementById('qm-dp-loading');
@@ -1791,15 +1851,28 @@
             insEl.innerHTML  = d.vehicle.insurance_valid  ? '<span class="text-emerald-400">●</span> Sigorta geçerli' : '<span class="text-amber-400">●</span> Sigorta süresi geçmiş';
             inspEl.innerHTML = d.vehicle.inspection_valid ? '<span class="text-emerald-400">●</span> Muayene geçerli' : '<span class="text-amber-400">●</span> Muayene süresi geçmiş';
 
-            // Photos carousel
-            const photos = d.vehicle.photos || [];
+            // Photos grid + lightbox
+            const photos = (d.vehicle.photos || []).filter(Boolean);
+            currentPhotos = photos;
             if (photos.length > 0) {
                 photosWrap.classList.remove('hidden');
-                document.getElementById('qm-dp-photos').innerHTML = photos.map(url =>
-                    `<a href="${url}" target="_blank" class="block shrink-0 snap-start rounded-xl overflow-hidden border border-white/10 hover:border-brand/40 transition">
-                        <img src="${url}" alt="" class="w-48 h-32 object-cover bg-zinc-900" loading="lazy">
-                    </a>`
+                document.getElementById('qm-dp-photos-count').textContent = photos.length;
+                document.getElementById('qm-dp-photos').innerHTML = photos.map((url, idx) =>
+                    `<button type="button" data-photo-idx="${idx}"
+                             class="qm-photo-thumb relative group block rounded-xl overflow-hidden border border-white/10 hover:border-brand/60 transition aspect-[3/2] bg-zinc-900 cursor-zoom-in">
+                        <img src="${url}" alt="" class="w-full h-full object-cover" loading="lazy">
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center">
+                            <span class="opacity-0 group-hover:opacity-100 text-white text-xl transition">🔍</span>
+                        </div>
+                    </button>`
                 ).join('');
+                // Thumbnail click -> lightbox
+                document.querySelectorAll('.qm-photo-thumb').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const idx = parseInt(btn.dataset.photoIdx, 10);
+                        openLightbox(idx);
+                    });
+                });
             } else {
                 photosWrap.classList.add('hidden');
             }
