@@ -202,6 +202,75 @@ class DriverPanelController extends Controller
         ]);
     }
 
+    private const DOCUMENT_TYPES = [
+        'license'         => ['column' => 'license_file_path',         'expires' => 'license_expires_at',    'label' => 'Ehliyet'],
+        'src'             => ['column' => 'src_file_path',             'expires' => 'src_expires_at',        'label' => 'SRC Sertifikası'],
+        'psychotechnic'   => ['column' => 'psychotechnic_file_path',   'expires' => 'psychotechnic_test_at', 'label' => 'Psikoteknik'],
+        'criminal_record' => ['column' => 'criminal_record_file_path', 'expires' => 'criminal_record_at',    'label' => 'Adli Sicil'],
+        'insurance'       => ['column' => 'insurance_file_path',       'expires' => 'insurance_expires_at',  'label' => 'Sigorta'],
+        'inspection'      => ['column' => 'inspection_file_path',      'expires' => 'inspection_expires_at', 'label' => 'Muayene'],
+    ];
+
+    /**
+     * POST /surucu-paneli/api/document — belge upload (PDF veya resim).
+     * Sürücü ehliyet, SRC, psikoteknik, sigorta vs. yükler.
+     */
+    public function uploadDocument(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['success' => false, 'message' => 'Giriş gerekli.'], 401);
+
+        $request->validate([
+            'type'    => ['required', 'string', 'in:' . implode(',', array_keys(self::DOCUMENT_TYPES))],
+            'file'    => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'expires' => ['nullable', 'date'],
+        ]);
+
+        $type   = $request->input('type');
+        $config = self::DOCUMENT_TYPES[$type];
+
+        // Eski dosya varsa sil
+        if ($driver->{$config['column']} && ! str_starts_with($driver->{$config['column']}, 'http')) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($driver->{$config['column']});
+        }
+
+        $path = $request->file('file')->store('driver-documents/' . $driver->id, 'public');
+
+        $update = [$config['column'] => $path];
+        if ($request->filled('expires')) {
+            $update[$config['expires']] = $request->input('expires');
+        }
+        $driver->update($update);
+
+        return response()->json([
+            'success' => true,
+            'path'    => $path,
+            'url'     => asset('storage/' . $path),
+            'label'   => $config['label'],
+        ]);
+    }
+
+    /**
+     * POST /surucu-paneli/api/document/delete — belgeyi sil.
+     */
+    public function deleteDocument(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['success' => false, 'message' => 'Giriş gerekli.'], 401);
+
+        $request->validate([
+            'type' => ['required', 'string', 'in:' . implode(',', array_keys(self::DOCUMENT_TYPES))],
+        ]);
+
+        $config = self::DOCUMENT_TYPES[$request->input('type')];
+        if ($driver->{$config['column']} && ! str_starts_with($driver->{$config['column']}, 'http')) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($driver->{$config['column']});
+        }
+        $driver->update([$config['column'] => null]);
+
+        return response()->json(['success' => true]);
+    }
+
     // ────────────────────────────────────────────────────────────
     // API (polled by panel JS)
     // ────────────────────────────────────────────────────────────

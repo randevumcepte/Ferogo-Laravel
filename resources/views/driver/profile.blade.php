@@ -184,6 +184,84 @@
             </section>
             @endif
 
+            {{-- ===== Belgeler ===== --}}
+            @php
+                $documents = [
+                    ['type' => 'license',         'label' => 'Ehliyet',         'icon' => '🪪', 'has_expiry' => true,  'expires_at' => $driver->license_expires_at,    'expires_label' => 'Geçerlilik bitişi', 'file_path' => $driver->license_file_path],
+                    ['type' => 'src',             'label' => 'SRC Sertifikası', 'icon' => '📜', 'has_expiry' => true,  'expires_at' => $driver->src_expires_at,        'expires_label' => 'Geçerlilik bitişi', 'file_path' => $driver->src_file_path],
+                    ['type' => 'psychotechnic',   'label' => 'Psikoteknik',     'icon' => '🧠', 'has_expiry' => true,  'expires_at' => $driver->psychotechnic_test_at, 'expires_label' => 'Test tarihi',        'file_path' => $driver->psychotechnic_file_path],
+                    ['type' => 'criminal_record', 'label' => 'Adli Sicil',      'icon' => '🛡', 'has_expiry' => true,  'expires_at' => $driver->criminal_record_at,    'expires_label' => 'Belge tarihi',       'file_path' => $driver->criminal_record_file_path],
+                    ['type' => 'insurance',       'label' => 'Sigorta',         'icon' => '🧾', 'has_expiry' => true,  'expires_at' => $driver->insurance_expires_at,  'expires_label' => 'Bitiş tarihi',       'file_path' => $driver->insurance_file_path],
+                    ['type' => 'inspection',      'label' => 'Muayene',         'icon' => '🔧', 'has_expiry' => true,  'expires_at' => $driver->inspection_expires_at, 'expires_label' => 'Bitiş tarihi',       'file_path' => $driver->inspection_file_path],
+                ];
+            @endphp
+
+            <section class="bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden">
+                <div class="px-6 py-4 border-b border-white/10">
+                    <div class="text-[10px] uppercase tracking-[0.25em] text-brand">Adım 3</div>
+                    <h2 class="text-lg font-bold">Resmi Belgeler</h2>
+                    <p class="text-xs text-zinc-500 mt-1">PDF veya fotoğraf yükle. Her belge ayrı kaydedilir — sayfa altındaki kaydet butonuna basmana gerek yok.</p>
+                </div>
+
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @foreach ($documents as $doc)
+                        @php
+                            $hasFile = ! empty($doc['file_path']);
+                            $isExpired = $doc['expires_at'] && $doc['expires_at']->isPast();
+                            $fileUrl = $hasFile ? (str_starts_with($doc['file_path'], 'http') ? $doc['file_path'] : asset('storage/' . $doc['file_path'])) : null;
+                        @endphp
+                        <div class="document-card rounded-2xl border @if($hasFile && !$isExpired) border-emerald-500/30 bg-emerald-500/5 @elseif($isExpired) border-red-500/30 bg-red-500/5 @else border-white/10 bg-white/[0.02] @endif p-4"
+                             data-doc-type="{{ $doc['type'] }}">
+                            <div class="flex items-start justify-between gap-3 mb-3">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="text-2xl">{{ $doc['icon'] }}</div>
+                                    <div>
+                                        <div class="text-sm font-bold text-white">{{ $doc['label'] }}</div>
+                                        <div class="text-[10px] uppercase tracking-wider mt-0.5
+                                            @if($hasFile && !$isExpired) text-emerald-400
+                                            @elseif($isExpired) text-red-400
+                                            @else text-zinc-500
+                                            @endif">
+                                            @if($hasFile && !$isExpired) ✓ Onaylı
+                                            @elseif($isExpired) ⚠ Süresi dolmuş
+                                            @else Yüklenmemiş
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                @if($hasFile)
+                                    <a href="{{ $fileUrl }}" target="_blank" class="text-[10px] text-brand hover:underline">Aç ↗</a>
+                                @endif
+                            </div>
+
+                            @if($doc['has_expiry'])
+                                <div class="mb-3">
+                                    <label class="block text-[9px] uppercase tracking-wider text-zinc-500 mb-1">{{ $doc['expires_label'] }}</label>
+                                    <input type="date" name="doc_expires_{{ $doc['type'] }}"
+                                           value="{{ $doc['expires_at']?->format('Y-m-d') }}"
+                                           class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none">
+                                </div>
+                            @endif
+
+                            <div class="flex items-center gap-2">
+                                <label class="flex-1 px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] border border-white/10 text-center text-xs font-semibold cursor-pointer transition">
+                                    📎 <span>{{ $hasFile ? 'Değiştir' : 'Yükle' }}</span>
+                                    <input type="file" accept=".pdf,image/*" class="hidden doc-file-input" data-doc-type="{{ $doc['type'] }}">
+                                </label>
+                                @if($hasFile)
+                                    <button type="button" class="px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-semibold transition doc-delete-btn"
+                                            data-doc-type="{{ $doc['type'] }}">
+                                        ✕
+                                    </button>
+                                @endif
+                            </div>
+
+                            <div class="doc-status hidden mt-2 text-[10px]"></div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+
             {{-- Submit --}}
             <div class="bg-zinc-950 border border-white/10 rounded-3xl p-5">
                 <button type="submit"
@@ -197,7 +275,9 @@
     <script>
     (function() {
         const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const UPLOAD_URL = '{{ route('driver.api.vehicle_photo') }}';
+        const UPLOAD_URL    = '{{ route('driver.api.vehicle_photo') }}';
+        const DOC_UPLOAD_URL = '{{ route('driver.api.document.upload') }}';
+        const DOC_DELETE_URL = '{{ route('driver.api.document.delete') }}';
 
         // ===== Avatar canlı önizleme =====
         const avatarInput   = document.getElementById('avatar-input');
@@ -306,6 +386,74 @@
                 photosInput.value = ''; // sonraki seçim için reset
             });
         }
+
+        // ===== Belge yükleme (AJAX, anında kaydedilir) =====
+        document.querySelectorAll('.doc-file-input').forEach(input => {
+            input.addEventListener('change', async () => {
+                const file = input.files[0];
+                if (!file) return;
+                const type = input.dataset.docType;
+                const card = input.closest('.document-card');
+                const statusEl = card.querySelector('.doc-status');
+                const expiresInput = card.querySelector(`input[name="doc_expires_${type}"]`);
+
+                statusEl.textContent = 'Yükleniyor…';
+                statusEl.classList.remove('hidden', 'text-emerald-400', 'text-red-400');
+                statusEl.classList.add('text-zinc-400');
+
+                const fd = new FormData();
+                fd.append('type', type);
+                fd.append('file', file);
+                if (expiresInput && expiresInput.value) fd.append('expires', expiresInput.value);
+
+                try {
+                    const res = await fetch(DOC_UPLOAD_URL, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                        body: fd,
+                    });
+                    if (!res.ok) {
+                        const txt = await res.text().catch(() => '');
+                        throw new Error('HTTP ' + res.status + ' ' + txt.slice(0, 200));
+                    }
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.message || 'Yükleme başarısız.');
+
+                    statusEl.textContent = '✓ Yüklendi. Sayfa yenileniyor…';
+                    statusEl.classList.remove('text-zinc-400');
+                    statusEl.classList.add('text-emerald-400');
+                    setTimeout(() => location.reload(), 600);
+                } catch (err) {
+                    console.error('document upload failed', type, err);
+                    statusEl.textContent = '✕ ' + (err.message || 'Hata');
+                    statusEl.classList.remove('text-zinc-400');
+                    statusEl.classList.add('text-red-400');
+                }
+                input.value = '';
+            });
+        });
+
+        // ===== Belge silme =====
+        document.querySelectorAll('.doc-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Bu belgeyi silmek istediğine emin misin?')) return;
+                const type = btn.dataset.docType;
+                try {
+                    const fd = new FormData();
+                    fd.append('type', type);
+                    const res = await fetch(DOC_DELETE_URL, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                        body: fd,
+                    });
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.message || 'Silinemedi.');
+                    location.reload();
+                } catch (err) {
+                    alert('Hata: ' + (err.message || 'Bilinmeyen'));
+                }
+            });
+        });
     })();
     </script>
 </body>

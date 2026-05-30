@@ -102,6 +102,8 @@ Route::get('/surucu-paneli',                                 [DriverPanelControl
 Route::get('/surucu-paneli/profil',                          [DriverPanelController::class, 'showProfile'])->name('driver.profile');
 Route::post('/surucu-paneli/profil',                         [DriverPanelController::class, 'updateProfile'])->name('driver.profile.update');
 Route::post('/surucu-paneli/api/vehicle-photo',              [DriverPanelController::class, 'uploadVehiclePhoto'])->name('driver.api.vehicle_photo');
+Route::post('/surucu-paneli/api/document',                   [DriverPanelController::class, 'uploadDocument'])->name('driver.api.document.upload');
+Route::post('/surucu-paneli/api/document/delete',            [DriverPanelController::class, 'deleteDocument'])->name('driver.api.document.delete');
 Route::get('/surucu-paneli/api/state',                       [DriverPanelController::class, 'state'])->name('driver.api.state');
 Route::post('/surucu-paneli/api/availability',               [DriverPanelController::class, 'setAvailability'])->name('driver.api.availability');
 Route::post('/surucu-paneli/api/offers/{publicId}/accept',   [DriverPanelController::class, 'acceptOffer'])->name('driver.api.accept');
