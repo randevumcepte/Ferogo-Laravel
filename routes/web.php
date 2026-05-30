@@ -81,6 +81,7 @@ Route::get('/admin-debug/otp', [OtpDebugController::class, 'show'])->name('admin
 Route::get('/musteri-giris',         [CustomerPanelController::class, 'showLogin'])->name('customer.login');
 Route::get('/musteri-paneli',        [CustomerPanelController::class, 'panel'])->name('customer.panel');
 Route::get('/musteri-paneli/api/state', [CustomerPanelController::class, 'state'])->name('customer.api.state');
+Route::get('/musteri-paneli/api/active-tracking', [CustomerPanelController::class, 'activeTracking'])->name('customer.api.tracking');
 Route::post('/musteri-cikis',        [CustomerPanelController::class, 'logout'])->name('customer.logout');
 
 // ─────────────────────────────────────────────────────────

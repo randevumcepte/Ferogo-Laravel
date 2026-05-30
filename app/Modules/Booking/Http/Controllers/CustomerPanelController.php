@@ -141,6 +141,80 @@ class CustomerPanelController extends Controller
         ]);
     }
 
+    /**
+     * GET /musteri-paneli/api/active-tracking
+     * Sürücü yoldaysa canlı konum + ETA + mesafe — kart polling'i için.
+     * Hedef: ride status driver_arriving ise pickup, in_progress ise dropoff.
+     */
+    public function activeTracking(): JsonResponse
+    {
+        $user = $this->currentCustomer();
+        if (! $user) return response()->json(['authenticated' => false], 401);
+
+        $ride = Ride::query()
+            ->with('driver:id,user_id,current_lat,current_lng,last_location_updated_at')
+            ->where('customer_user_id', $user->id)
+            ->whereIn('status', ['driver_arriving', 'in_progress', 'assigned'])
+            ->latest('id')
+            ->first();
+
+        if (! $ride || ! $ride->driver) {
+            return response()->json(['success' => true, 'tracking' => null]);
+        }
+
+        $dLat = (float) ($ride->driver->current_lat ?? 0);
+        $dLng = (float) ($ride->driver->current_lng ?? 0);
+        if ($dLat === 0.0 || $dLng === 0.0) {
+            return response()->json(['success' => true, 'tracking' => null]);
+        }
+
+        $pLat = (float) $ride->pickup_lat;
+        $pLng = (float) $ride->pickup_lng;
+        $dropoffLat = (float) $ride->dropoff_lat;
+        $dropoffLng = (float) $ride->dropoff_lng;
+
+        // driver_arriving → hedef pickup; in_progress → hedef dropoff
+        if ($ride->status === 'in_progress' && $dropoffLat && $dropoffLng) {
+            $targetLat = $dropoffLat;
+            $targetLng = $dropoffLng;
+            $targetLabel = 'dropoff';
+        } else {
+            $targetLat = $pLat;
+            $targetLng = $pLng;
+            $targetLabel = 'pickup';
+        }
+
+        $distance = $this->haversineKm($dLat, $dLng, $targetLat, $targetLng);
+        // Şehir içi ortalama: 1 km ~ 2.4 dk + sabit 0.8 dk reaktif buffer
+        $etaMinutes = max(1, (int) round($distance * 2.4 + 0.8));
+
+        return response()->json([
+            'success' => true,
+            'tracking' => [
+                'ride_id'      => $ride->id,
+                'ride_status'  => $ride->status,
+                'driver_lat'   => $dLat,
+                'driver_lng'   => $dLng,
+                'target_lat'   => $targetLat,
+                'target_lng'   => $targetLng,
+                'target_kind'  => $targetLabel,
+                'distance_km'  => round($distance, 2),
+                'eta_minutes'  => $etaMinutes,
+                'last_updated' => $ride->driver->last_location_updated_at?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthKm = 6371.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+        return 2 * $earthKm * asin(min(1.0, sqrt($a)));
+    }
+
     private function currentCustomer(): ?User
     {
         $user = Auth::user();

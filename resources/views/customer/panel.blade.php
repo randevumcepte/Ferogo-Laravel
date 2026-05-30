@@ -150,6 +150,34 @@
                 </span>
             </div>
 
+            {{-- Canlı takip (driver_arriving / in_progress) --}}
+            <div id="live-tracking" class="hidden px-6 py-5 border-b border-white/5 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent">
+                <div class="flex items-center gap-4">
+                    <div class="relative shrink-0">
+                        <div class="absolute inset-0 rounded-full bg-amber-400/30 animate-ping"></div>
+                        <div class="relative w-14 h-14 rounded-full bg-amber-500/20 border-2 border-amber-500/50 flex items-center justify-center text-3xl">
+                            🚗
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-[10px] uppercase tracking-[0.25em] text-amber-300 font-bold mb-0.5" id="tracking-label">Şoför Yolda</div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="tracking-eta" class="text-3xl font-extrabold tabular-nums text-white">—</span>
+                            <span class="text-sm text-zinc-400">dk kaldı</span>
+                        </div>
+                        <div class="text-xs text-zinc-400 mt-1">
+                            <span id="tracking-distance" class="text-amber-300 font-semibold">—</span> km uzakta
+                            <span class="text-zinc-600 mx-1">·</span>
+                            son güncelleme <span id="tracking-updated" class="text-zinc-300">—</span>
+                        </div>
+                        {{-- Distance progress bar --}}
+                        <div class="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                            <div id="tracking-progress" class="h-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             @if ($driver)
                 {{-- Driver hero --}}
                 <div class="px-6 py-5 border-b border-white/5 flex items-center gap-4 flex-wrap">
@@ -203,12 +231,22 @@
                         </div>
 
                         @if (count($photoUrls) > 0)
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-                                @foreach ($photoUrls as $url)
-                                    <a href="{{ $url }}" target="_blank" class="block rounded-xl overflow-hidden border border-white/10 hover:border-brand/40 transition aspect-[3/2] bg-zinc-900">
-                                        <img src="{{ $url }}" alt="" class="w-full h-full object-cover" loading="lazy">
-                                    </a>
-                                @endforeach
+                            <div class="mb-3" data-photos-wrap>
+                                <button type="button" data-photos-toggle
+                                        class="w-full inline-flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-brand/30 text-xs text-zinc-300 hover:text-white transition">
+                                    <span class="inline-flex items-center gap-2">
+                                        <span>📸</span>
+                                        <span>{{ count($photoUrls) }} araç fotoğrafı</span>
+                                    </span>
+                                    <span class="text-zinc-500 transition-transform" data-photos-icon>▼</span>
+                                </button>
+                                <div class="hidden mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2" data-photos-grid>
+                                    @foreach ($photoUrls as $url)
+                                        <a href="{{ $url }}" target="_blank" class="block rounded-xl overflow-hidden border border-white/10 hover:border-brand/40 transition aspect-[3/2] bg-zinc-900">
+                                            <img src="{{ $url }}" alt="" class="w-full h-full object-cover" loading="lazy">
+                                        </a>
+                                    @endforeach
+                                </div>
                             </div>
                         @endif
 
@@ -377,6 +415,114 @@
     </section>
 
 </main>
+
+<script>
+(function () {
+    'use strict';
+
+    // ===== Araç fotoğrafları toggle =====
+    document.querySelectorAll('[data-photos-toggle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const wrap = btn.closest('[data-photos-wrap]');
+            if (!wrap) return;
+            const grid = wrap.querySelector('[data-photos-grid]');
+            const icon = wrap.querySelector('[data-photos-icon]');
+            if (!grid) return;
+            const willOpen = grid.classList.contains('hidden');
+            grid.classList.toggle('hidden');
+            if (icon) icon.style.transform = willOpen ? 'rotate(180deg)' : '';
+        });
+    });
+
+    // ===== Canlı sürücü takibi =====
+    const TRACKING_URL = '{{ route('customer.api.tracking') }}';
+    const trackingEl  = document.getElementById('live-tracking');
+    if (!trackingEl) return;
+
+    const etaEl   = document.getElementById('tracking-eta');
+    const distEl  = document.getElementById('tracking-distance');
+    const updEl   = document.getElementById('tracking-updated');
+    const labelEl = document.getElementById('tracking-label');
+    const progressEl = document.getElementById('tracking-progress');
+
+    let initialDistance = null;
+    let lastUpdatedAt   = null;
+    let serverEta       = null;
+    let lastFetchAt     = null;
+    let countdownHandle = null;
+
+    function formatRelative(iso) {
+        if (!iso) return '—';
+        const then = new Date(iso).getTime();
+        if (isNaN(then)) return '—';
+        const diff = Math.max(0, (Date.now() - then) / 1000);
+        if (diff < 5) return 'az önce';
+        if (diff < 60) return Math.floor(diff) + ' sn önce';
+        if (diff < 3600) return Math.floor(diff / 60) + ' dk önce';
+        return Math.floor(diff / 3600) + ' sa önce';
+    }
+
+    function renderTick() {
+        if (serverEta === null || lastFetchAt === null) return;
+        // Saniye-saniye azalan ETA (server 5sn'de bir günceller, biz arada interpolate ederiz)
+        const elapsedSec = (Date.now() - lastFetchAt) / 1000;
+        const remainingMin = Math.max(0, serverEta - (elapsedSec / 60));
+        const display = remainingMin < 1 ? '<1' : Math.ceil(remainingMin);
+        if (etaEl) etaEl.textContent = display;
+        if (updEl) updEl.textContent = formatRelative(lastUpdatedAt);
+    }
+
+    async function pollTracking() {
+        try {
+            const res = await fetch(TRACKING_URL, { headers: { 'Accept': 'application/json' } });
+            if (res.status === 401) return;
+            const data = await res.json();
+            if (!data.success || !data.tracking) {
+                trackingEl.classList.add('hidden');
+                return;
+            }
+            const t = data.tracking;
+            const isMoving = ['driver_arriving', 'in_progress', 'assigned'].includes(t.ride_status);
+            if (!isMoving) {
+                trackingEl.classList.add('hidden');
+                return;
+            }
+            trackingEl.classList.remove('hidden');
+
+            if (labelEl) {
+                labelEl.textContent = t.ride_status === 'in_progress'
+                    ? 'Hedefe Doğru'
+                    : (t.ride_status === 'assigned' ? 'Şoför Atanıyor' : 'Şoför Yolda');
+            }
+
+            serverEta     = t.eta_minutes;
+            lastUpdatedAt = t.last_updated;
+            lastFetchAt   = Date.now();
+
+            if (initialDistance === null || initialDistance < t.distance_km) {
+                initialDistance = t.distance_km;
+            }
+            if (distEl)  distEl.textContent = (t.distance_km || 0).toFixed(1);
+
+            // Progress: ne kadar yol kat etti?
+            if (progressEl && initialDistance && initialDistance > 0) {
+                const covered = Math.max(0, initialDistance - t.distance_km);
+                const pct = Math.min(100, Math.max(0, (covered / initialDistance) * 100));
+                progressEl.style.width = pct.toFixed(0) + '%';
+            }
+
+            renderTick();
+        } catch (_) {}
+    }
+
+    pollTracking();
+    setInterval(pollTracking, 5000);
+
+    // Saniye-saniye smooth ETA azaltma
+    if (countdownHandle) clearInterval(countdownHandle);
+    countdownHandle = setInterval(renderTick, 1000);
+})();
+</script>
 
 </body>
 </html>
