@@ -99,36 +99,186 @@
         @endif
     </section>
 
-    {{-- ===== Active ride/request ===== --}}
+    {{-- ===== Aktif Yolculuk — zengin kart ===== --}}
     @if ($activeRequest || $activeRide)
-        <section class="rounded-3xl border border-emerald-500/30 bg-emerald-500/[0.05] p-6">
-            <div class="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-emerald-300 font-bold mb-3">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                Aktif Yolculuk
+        @php
+            $ar       = $activeRequest;
+            $ride     = $ar?->ride ?? $activeRide;
+            $driver   = $ar?->acceptedDriver;
+            $dUser    = $driver?->user;
+            $vehicle  = $driver?->currentVehicle;
+            $vClass   = $vehicle?->vehicleClass ?? $ride?->vehicleClass;
+            $photos   = is_array($vehicle?->photos) ? array_values(array_filter($vehicle->photos)) : [];
+            $photoUrls = array_map(function ($p) {
+                return str_starts_with($p, 'http') ? $p : asset('storage/' . ltrim($p, '/'));
+            }, $photos);
+
+            $expBandLabels = [
+                'under_1' => '1 yıldan az',
+                '1_to_3'  => '1-3 yıl',
+                '3_to_5'  => '3-5 yıl',
+                '5_plus'  => '5+ yıl',
+            ];
+            $expLabel = $driver ? ($expBandLabels[$driver->experience_band] ?? null) : null;
+
+            // Status banner
+            $rideStatus = $ride?->status;
+            $statusBanner = match (true) {
+                $ar && $ar->status === 'pending'                    => ['Sürücüye iletildi, yanıt bekleniyor', 'amber'],
+                $rideStatus === 'driver_arriving'                   => ['Şoför yolda', 'emerald'],
+                $rideStatus === 'in_progress'                       => ['Yolculukta', 'brand'],
+                $rideStatus === 'assigned' || $rideStatus === 'searching' => ['Sürücü atanıyor', 'amber'],
+                default                                             => ['Aktif', 'emerald'],
+            };
+            $bannerColor = $statusBanner[1];
+            $bannerCls = [
+                'emerald' => 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+                'amber'   => 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+                'brand'   => 'bg-brand/15 text-brand border-brand/30',
+            ][$bannerColor] ?? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+        @endphp
+
+        <section class="rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.03] to-transparent overflow-hidden">
+            {{-- Status banner --}}
+            <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between gap-3 flex-wrap">
+                <div class="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] font-bold text-emerald-300">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Aktif Yolculuk
+                </div>
+                <span class="px-3 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wider {{ $bannerCls }}">
+                    {{ $statusBanner[0] }}
+                </span>
             </div>
-            @if ($activeRequest)
-                <div class="text-sm text-zinc-300 mb-1">
-                    Durum: <span class="font-semibold text-white">
-                        @switch($activeRequest->status)
-                            @case('pending') Sürücüye iletildi, yanıt bekleniyor @break
-                            @case('accepted') Sürücü kabul etti — yola çıktı @break
-                            @default {{ $activeRequest->status }}
-                        @endswitch
-                    </span>
+
+            @if ($driver)
+                {{-- Driver hero --}}
+                <div class="px-6 py-5 border-b border-white/5 flex items-center gap-4 flex-wrap">
+                    @php
+                        $avatarUrl = $dUser?->avatar
+                            ? (str_starts_with($dUser->avatar, 'http') ? $dUser->avatar : asset('storage/' . ltrim($dUser->avatar, '/')))
+                            : null;
+                    @endphp
+                    <div class="w-16 h-16 rounded-2xl border-2 border-brand/40 bg-gradient-to-br from-brand to-brand-600 text-black font-extrabold text-2xl flex items-center justify-center shrink-0 overflow-hidden">
+                        @if ($avatarUrl)
+                            <img src="{{ $avatarUrl }}" alt="" class="w-full h-full object-cover">
+                        @else
+                            {{ mb_strtoupper(mb_substr($dUser?->name ?? 'S', 0, 1)) }}
+                        @endif
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 class="text-xl font-bold text-white truncate">{{ $dUser?->name ?? 'Sürücü' }}</h2>
+                            @if ($expLabel)
+                                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand/15 text-brand border border-brand/30">
+                                    {{ $expLabel }}
+                                </span>
+                            @endif
+                        </div>
+                        <div class="flex items-center gap-3 mt-1 text-sm">
+                            <span class="text-brand font-bold">★ {{ number_format((float) $driver->rating, 2) }}</span>
+                            <span class="text-zinc-500">·</span>
+                            <span class="text-zinc-400">{{ number_format((int) $driver->total_rides, 0, ',', '.') }} yolculuk</span>
+                        </div>
+                    </div>
                 </div>
-                @if ($activeRequest->acceptedDriver?->user)
-                    <div class="text-xs text-zinc-400">Sürücü: {{ $activeRequest->acceptedDriver->user->name }}</div>
+
+                {{-- Vehicle --}}
+                @if ($vehicle)
+                    <div class="px-6 py-5 border-b border-white/5">
+                        <div class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-3">Araç</div>
+                        <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
+                            <div class="min-w-0">
+                                <div class="text-base font-bold text-white">
+                                    {{ trim(($vehicle->brand ?? '') . ' ' . ($vehicle->model ?? '')) ?: 'Araç' }}
+                                </div>
+                                <div class="text-xs text-zinc-400 mt-0.5">
+                                    {{ collect([$vClass?->name, $vehicle->year_of_manufacture, $vehicle->color])->filter()->join(' · ') ?: '—' }}
+                                </div>
+                            </div>
+                            @if ($vehicle->plate)
+                                <div class="px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/30 text-brand font-bold tabular-nums">
+                                    {{ $vehicle->plate }}
+                                </div>
+                            @endif
+                        </div>
+
+                        @if (count($photoUrls) > 0)
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                                @foreach ($photoUrls as $url)
+                                    <a href="{{ $url }}" target="_blank" class="block rounded-xl overflow-hidden border border-white/10 hover:border-brand/40 transition aspect-[3/2] bg-zinc-900">
+                                        <img src="{{ $url }}" alt="" class="w-full h-full object-cover" loading="lazy">
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @php
+                            $features = [];
+                            if ($vehicle->has_baby_seat)    $features[] = ['👶', 'Bebek koltuğu'];
+                            if ($vehicle->has_child_seat)   $features[] = ['🧒', 'Çocuk koltuğu'];
+                            if ($vehicle->has_booster_seat) $features[] = ['🪑', 'Yükseltici'];
+                            if ($vehicle->pet_friendly)     $features[] = ['🐾', 'Evcil hayvan dostu'];
+                        @endphp
+                        @if (count($features))
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach ($features as [$icon, $label])
+                                    <span class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300">
+                                        <span>{{ $icon }}</span><span>{{ $label }}</span>
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
                 @endif
-            @elseif ($activeRide)
-                <div class="text-sm text-zinc-300">
-                    {{ $activeRide->pickup_address }} → {{ $activeRide->dropoff_address }}
-                </div>
-                <div class="text-xs text-zinc-500 mt-1">Durum: {{ $activeRide->status }}</div>
             @endif
 
-            <a href="{{ route('ride.show') }}" class="inline-block mt-4 text-xs text-brand hover:text-brand-600 underline underline-offset-2">
-                Detayları gör →
-            </a>
+            {{-- Route --}}
+            @if ($ride || $ar)
+                <div class="px-6 py-5 border-b border-white/5">
+                    <div class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-3">Güzergah</div>
+                    <div class="bg-black/30 rounded-2xl p-4 space-y-3 border border-white/5">
+                        <div class="flex items-start gap-3">
+                            <div class="flex flex-col items-center pt-1">
+                                <div class="w-3 h-3 rounded-full bg-brand"></div>
+                                <div class="w-px h-6 bg-white/15 my-1"></div>
+                                <div class="w-3 h-3 rounded-sm bg-white"></div>
+                            </div>
+                            <div class="flex-1 min-w-0 space-y-3">
+                                <div>
+                                    <div class="text-[10px] uppercase tracking-wider text-zinc-500">Alış</div>
+                                    <div class="text-sm text-white">{{ $ride?->pickup_address ?? $ar?->pickup_address ?? '—' }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] uppercase tracking-wider text-zinc-500">Bırakış</div>
+                                    <div class="text-sm text-white">{{ $ride?->dropoff_address ?? $ar?->dropoff_address ?? '—' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Stats --}}
+            <div class="px-6 py-5 grid grid-cols-3 gap-3">
+                <div class="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500">Mesafe</div>
+                    <div class="text-lg font-bold text-white mt-1">
+                        {{ number_format((float) ($ride?->estimated_distance_km ?? $ar?->distance_km ?? 0), 1) }} km
+                    </div>
+                </div>
+                <div class="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500">Süre</div>
+                    <div class="text-lg font-bold text-white mt-1">
+                        {{ (int) ($ride?->estimated_duration_minutes ?? $ar?->duration_minutes ?? 0) }} dk
+                    </div>
+                </div>
+                <div class="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500">Ücret</div>
+                    <div class="text-lg font-bold text-brand mt-1">
+                        ₺{{ number_format((float) ($ride?->total_fare ?? $ar?->estimated_fare ?? 0), 0, ',', '.') }}
+                    </div>
+                </div>
+            </div>
         </section>
     @endif
 

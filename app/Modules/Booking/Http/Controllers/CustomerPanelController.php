@@ -69,8 +69,13 @@ class CustomerPanelController extends Controller
             ->first();
 
         // Accepted (Ride'a bağlanmış) talepleri customer_user_id üzerinden bul
+        // Tüm sürücü/araç detayları kartta gözüksün diye geniş eager-load.
         $activeRequest = RideRequest::query()
-            ->with(['acceptedDriver.user', 'ride'])
+            ->with([
+                'acceptedDriver.user',
+                'acceptedDriver.currentVehicle.vehicleClass',
+                'ride.vehicleClass',
+            ])
             ->where('status', 'accepted')
             ->whereHas('ride', fn ($q) => $q->where('customer_user_id', $user->id))
             ->latest('id')
