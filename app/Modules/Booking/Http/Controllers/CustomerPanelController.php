@@ -68,8 +68,9 @@ class CustomerPanelController extends Controller
             ->latest('created_at')
             ->first();
 
-        // Accepted (Ride'a bağlanmış) talepleri customer_user_id üzerinden bul
-        // Tüm sürücü/araç detayları kartta gözüksün diye geniş eager-load.
+        // Accepted (Ride'a bağlanmış) talepleri customer_user_id üzerinden bul.
+        // ÖNEMLİ: Ride tamamlanmış/iptal olmuşsa "aktif" sayma — RideRequest.status
+        // 'accepted' kalır ama yolculuk bitmiştir, Son Yolculuklar listesine geçer.
         $activeRequest = RideRequest::query()
             ->with([
                 'acceptedDriver.user',
@@ -77,7 +78,10 @@ class CustomerPanelController extends Controller
                 'ride.vehicleClass',
             ])
             ->where('status', 'accepted')
-            ->whereHas('ride', fn ($q) => $q->where('customer_user_id', $user->id))
+            ->whereHas('ride', fn ($q) => $q
+                ->where('customer_user_id', $user->id)
+                ->whereNotIn('status', ['completed', 'cancelled', 'no_show'])
+            )
             ->latest('id')
             ->first();
 
@@ -128,7 +132,10 @@ class CustomerPanelController extends Controller
             ->get();
 
         $activeRequest = $candidates->first(function ($r) use ($user) {
-            return $this->trustService->normalizePhone($r->customer_phone) === $user->phone;
+            if ($this->trustService->normalizePhone($r->customer_phone) !== $user->phone) return false;
+            // Ride tamamlanmış/iptal olmuşsa aktif sayma — Son Yolculuklar'a geçer.
+            if ($r->ride && in_array($r->ride->status, ['completed', 'cancelled', 'no_show'], true)) return false;
+            return true;
         });
 
         return response()->json([
