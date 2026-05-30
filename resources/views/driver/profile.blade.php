@@ -26,16 +26,10 @@
                 Panele dön
             </a>
             <div class="text-sm font-bold text-brand">Profil Yönetimi</div>
-            <div class="flex items-center gap-2">
-                <button type="submit" form="profile-form"
-                        class="px-4 py-2 rounded-xl bg-brand hover:bg-brand-600 text-black text-xs font-bold transition shadow-md shadow-brand/30">
-                    💾 Kaydet
-                </button>
-                <form method="POST" action="{{ route('driver.logout') }}" class="inline">
-                    @csrf
-                    <button type="submit" class="text-xs text-zinc-500 hover:text-red-400 transition">Çıkış</button>
-                </form>
-            </div>
+            <form method="POST" action="{{ route('driver.logout') }}" class="inline">
+                @csrf
+                <button type="submit" class="text-xs text-zinc-500 hover:text-red-400 transition">Çıkış</button>
+            </form>
         </div>
     </header>
 
