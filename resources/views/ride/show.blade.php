@@ -314,8 +314,8 @@
                         </div>
                     </div>
 
-                    {{-- Bottom CTA --}}
-                    <div class="absolute bottom-4 left-4 right-4 z-[400] flex items-center justify-between gap-3 pointer-events-none">
+                    {{-- Bottom legend --}}
+                    <div class="absolute bottom-4 left-4 z-[400] pointer-events-none">
                         <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md text-xs text-zinc-300 pointer-events-auto">
                             <span class="text-brand">●</span> Senin konumun
                             <span class="text-zinc-600 mx-1">|</span>
@@ -323,10 +323,6 @@
                             <span class="text-zinc-600 mx-1">|</span>
                             <span class="inline-block w-2.5 h-2.5 rounded bg-zinc-600"></span> Yolculukta
                         </div>
-                        <a href="{{ route('home') }}#rezervasyon" class="pointer-events-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition shadow-lg shadow-brand/30">
-                            Birini çağır
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                        </a>
                     </div>
                 </div>
 
