@@ -21,15 +21,35 @@
     {{-- Top bar --}}
     <header class="sticky top-0 z-30 bg-black/85 backdrop-blur-md border-b border-white/10">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-            <a href="{{ route('driver.panel') }}" class="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                Panele dön
+            <a href="{{ route('home') }}" class="flex items-center gap-2 min-w-0">
+                <span class="text-2xl font-extrabold tracking-tight">
+                    <span class="text-white">FERO</span><span class="text-brand">GO</span>
+                </span>
             </a>
-            <div class="text-sm font-bold text-brand">Profil Yönetimi</div>
-            <form method="POST" action="{{ route('driver.logout') }}" class="inline">
-                @csrf
-                <button type="submit" class="text-xs text-zinc-500 hover:text-red-400 transition">Çıkış</button>
-            </form>
+
+            @php
+                $navAvatarUrl = $user->avatar
+                    ? (str_starts_with($user->avatar, 'http') ? $user->avatar : asset('storage/' . ltrim($user->avatar, '/')))
+                    : null;
+            @endphp
+
+            <div class="flex items-center gap-2 shrink-0">
+                <a href="{{ route('driver.panel') }}"
+                   class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition">
+                    ← Panele dön
+                </a>
+                <form method="POST" action="{{ route('driver.logout') }}" class="inline">
+                    @csrf
+                    <button type="submit" class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition">Çıkış</button>
+                </form>
+                <div class="relative w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-sm overflow-hidden border-2 border-brand/40 shadow-lg shadow-brand/20">
+                    @if ($navAvatarUrl)
+                        <img src="{{ $navAvatarUrl }}" alt="" class="w-full h-full object-cover">
+                    @else
+                        {{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}
+                    @endif
+                </div>
+            </div>
         </div>
     </header>
 

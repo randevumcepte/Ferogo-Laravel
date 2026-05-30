@@ -34,20 +34,17 @@
     {{-- ===== Top bar ===== --}}
     <header class="sticky top-0 z-30 bg-black/85 backdrop-blur-md border-b border-white/10">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-bold text-sm shrink-0">
-                    {{ mb_strtoupper(mb_substr($driver->user->name, 0, 1)) }}
-                </div>
-                <div class="min-w-0">
-                    <div class="text-sm font-semibold truncate">{{ $driver->user->name }}</div>
-                    <div class="text-[11px] text-zinc-500 truncate">
-                        ★ {{ number_format((float) $driver->rating, 2) }} · {{ $driver->total_rides }} yolculuk
-                        @if ($driver->currentVehicle)
-                            · {{ $driver->currentVehicle->plate }}
-                        @endif
-                    </div>
-                </div>
-            </div>
+            <a href="{{ route('home') }}" class="flex items-center gap-2 min-w-0">
+                <span class="text-2xl font-extrabold tracking-tight">
+                    <span class="text-white">FERO</span><span class="text-brand">GO</span>
+                </span>
+            </a>
+
+            @php
+                $navAvatarUrl = $driver->user->avatar
+                    ? (str_starts_with($driver->user->avatar, 'http') ? $driver->user->avatar : asset('storage/' . ltrim($driver->user->avatar, '/')))
+                    : null;
+            @endphp
 
             <div class="flex items-center gap-2 shrink-0">
                 <button id="availability-toggle"
@@ -56,19 +53,43 @@
                     <span id="availability-dot" class="w-2 h-2 rounded-full"></span>
                     <span id="availability-label">—</span>
                 </button>
-                <a href="{{ route('driver.profile') }}"
-                   class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition" title="Profilim">
-                    👤
-                </a>
                 <form method="POST" action="{{ route('driver.logout') }}" class="inline">
                     @csrf
                     <button type="submit" class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition">Çıkış</button>
                 </form>
+                <a href="{{ route('driver.profile') }}" title="Profilim"
+                   class="relative w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-sm overflow-hidden border-2 border-brand/40 hover:border-brand hover:scale-105 transition shadow-lg shadow-brand/20">
+                    @if ($navAvatarUrl)
+                        <img src="{{ $navAvatarUrl }}" alt="" class="w-full h-full object-cover">
+                    @else
+                        {{ mb_strtoupper(mb_substr($driver->user->name, 0, 1)) }}
+                    @endif
+                </a>
             </div>
         </div>
     </header>
 
     <main class="max-w-5xl mx-auto px-4 py-6 space-y-5">
+
+        {{-- ===== Driver kimlik özeti ===== --}}
+        <section class="rounded-3xl border border-white/10 bg-zinc-950 p-5 flex items-center gap-4">
+            <a href="{{ route('driver.profile') }}" class="w-14 h-14 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-xl shrink-0 overflow-hidden hover:opacity-90 transition border-2 border-brand/40">
+                @if ($navAvatarUrl)
+                    <img src="{{ $navAvatarUrl }}" alt="" class="w-full h-full object-cover">
+                @else
+                    {{ mb_strtoupper(mb_substr($driver->user->name, 0, 1)) }}
+                @endif
+            </a>
+            <div class="min-w-0 flex-1">
+                <h1 class="text-lg font-bold truncate">{{ $driver->user->name }}</h1>
+                <div class="text-xs text-zinc-500 truncate">
+                    ★ {{ number_format((float) $driver->rating, 2) }} · {{ $driver->total_rides }} yolculuk
+                    @if ($driver->currentVehicle)
+                        · {{ $driver->currentVehicle->plate }}
+                    @endif
+                </div>
+            </div>
+        </section>
 
         {{-- ===== Offer card (pending teklif) ===== --}}
         <section id="offer-card" class="hidden">
