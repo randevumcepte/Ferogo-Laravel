@@ -142,12 +142,26 @@
         @php
             $activePid = $activeRequest?->public_id;
         @endphp
-        <iframe src="{{ route('ride.show') }}?embed=1{{ $activePid ? '&active_request=' . urlencode($activePid) : '' }}"
+        <iframe id="radar-iframe"
+                src="{{ route('ride.show') }}?embed=1{{ $activePid ? '&active_request=' . urlencode($activePid) : '' }}"
                 class="w-full block border-0"
-                style="height: 900px; background: #0a0a0a;"
+                style="height: 900px; background: #0a0a0a; overflow: hidden;"
+                scrolling="no"
                 title="Canlı sürücü radarı"
                 allow="geolocation"
                 referrerpolicy="same-origin"></iframe>
+        <script>
+            // iframe içindeki sayfa postMessage ile yüksekliğini bildirir → scroll çıkmaz
+            (function () {
+                const ifr = document.getElementById('radar-iframe');
+                if (!ifr) return;
+                window.addEventListener('message', (e) => {
+                    if (!e.data || e.data.type !== 'ferogo:iframe-height') return;
+                    const h = parseInt(e.data.height, 10);
+                    if (h > 200 && h < 5000) ifr.style.height = h + 'px';
+                });
+            })();
+        </script>
     </section>
 
     {{-- ===== Recent rides ===== --}}

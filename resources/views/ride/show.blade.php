@@ -2532,8 +2532,31 @@
             if (ar && !activeRequestId) {
                 activeRequestId = ar;
                 console.log('[radar] activeRequestId bootstrap from URL:', ar);
-                // Status polling'i hemen başlat ki accepted/waiting durumlarını yakalasın
                 if (typeof startStatusPolling === 'function') startStatusPolling();
+            }
+
+            // Embed: iframe yüksekliği parent'a bildir → parent iframe scroll çıkmasın
+            if (u.searchParams.get('embed') === '1' && window.parent !== window) {
+                const sendHeight = () => {
+                    try {
+                        const h = Math.max(
+                            document.documentElement.scrollHeight || 0,
+                            document.body?.scrollHeight || 0,
+                        );
+                        if (h > 0) window.parent.postMessage({ type: 'ferogo:iframe-height', height: h }, '*');
+                    } catch (_) {}
+                };
+                // İlk yükleme + DOM değişikliklerinde + periyodik
+                window.addEventListener('load', sendHeight);
+                document.addEventListener('DOMContentLoaded', sendHeight);
+                setTimeout(sendHeight, 200);
+                setTimeout(sendHeight, 800);
+                setTimeout(sendHeight, 2000);
+                if (window.ResizeObserver) {
+                    new ResizeObserver(sendHeight).observe(document.body);
+                } else {
+                    setInterval(sendHeight, 2000);
+                }
             }
         } catch (_) {}
     })();
