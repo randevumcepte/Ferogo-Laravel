@@ -35,7 +35,6 @@
             <span class="font-bold truncate">Ferogo</span>
         </a>
         <div class="flex items-center gap-2 shrink-0">
-            <a href="{{ route('ride.show') }}" class="px-3 py-2 rounded-xl text-xs font-semibold bg-brand hover:bg-brand-600 text-black transition">Yolculuk Yap</a>
             <form method="POST" action="{{ route('customer.logout') }}" class="inline">
                 @csrf
                 <button type="submit" class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition">Çıkış</button>
