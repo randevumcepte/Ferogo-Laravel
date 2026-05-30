@@ -426,7 +426,7 @@ class RideRequestController extends Controller
             'estimated_fare'       => isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null,
             'candidate_driver_ids' => $orderedCandidates,
             'phone_verified_at'    => now(),
-            'verification_token'   => $validated['verification_token'],
+            'verification_token'   => $validated['verification_token'] ?? null,
             'client_ip'            => $ip,
             'client_fingerprint'   => $fingerprint,
             'user_agent'           => substr((string) $request->userAgent(), 0, 500),
