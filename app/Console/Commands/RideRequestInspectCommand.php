@@ -38,7 +38,7 @@ class RideRequestInspectCommand extends Command
         $this->line('');
 
         $requests = RideRequest::query()
-            ->with(['offeredDriver.user', 'acceptedDriver.user'])
+            ->with(['offeredDriver.user', 'acceptedDriver.user', 'ride'])
             ->latest('id')
             ->limit($count)
             ->get();
@@ -63,6 +63,12 @@ class RideRequestInspectCommand extends Command
                 ? '#' . $offered->id . ' ' . ($offered->user->name ?? '?') . ' [' . $offered->availability_status . ']'
                 : '—';
 
+            // Ride status — driver panelinin "Aktif yolculuk" göstermesi/göstermemesinin sebebi.
+            $rideInfo = '—';
+            if ($r->ride) {
+                $rideInfo = '#' . $r->ride->id . ' [' . $r->ride->status . ']';
+            }
+
             return [
                 'id'              => $r->id,
                 'public_id'       => substr($r->public_id, 0, 8) . '…',
@@ -73,21 +79,24 @@ class RideRequestInspectCommand extends Command
                 'candidate_idx'   => ($r->current_candidate_index ?? 0) . '/' . count($r->candidate_driver_ids ?? []),
                 'rejections'      => $r->rejection_count,
                 'expires'         => $expiresInfo,
-                'ride_id'         => $r->ride_id ?: '—',
+                'ride'            => $rideInfo,
             ];
         })->toArray();
 
         $this->table(
-            ['ID', 'Public', 'Created', 'Status', 'Phone', 'Offered Driver', 'Aday#', 'Red', 'Expires', 'Ride'],
+            ['ID', 'Public', 'Created', 'Status', 'Phone', 'Offered Driver', 'Aday#', 'Red', 'Expires', 'Ride [status]'],
             $rows
         );
 
         $this->line('');
-        $this->comment('Yorumlama:');
-        $this->line('  · status=pending + offered driver "online" + expires not past → sürücüde görünmeli');
-        $this->line('  · status=pending + offered driver "offline/busy" → sürücü teklifi göremez (gerekirse 60s sonra fallback\'e geçer)');
-        $this->line('  · status=exhausted → tüm adaylar reddetti / timeout');
-        $this->line('  · status=accepted + ride_id dolu → başarılı');
+        $this->comment('Driver paneli "Aktif Yolculuk" yerine "Yeni talep bekleniyor" gösterir EĞER:');
+        $this->line('  · request status != accepted   VEYA');
+        $this->line('  · Ride status IN [completed, cancelled, no_show]');
+        $this->line('');
+        $this->comment('Hızlı teşhis:');
+        $this->line('  · pending + offered online → sürücüde offer GÖRÜNMELİ. Görünmüyorsa polling/JS sorunu');
+        $this->line('  · accepted + Ride [completed] → eski test, surucu zaten teslim etmis');
+        $this->line('  · accepted + Ride [driver_arriving|in_progress] → AKTIF olmali, surucu ekranda gormeli');
 
         return self::SUCCESS;
     }
