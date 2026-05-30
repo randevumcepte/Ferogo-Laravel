@@ -82,6 +82,10 @@ Route::get('/musteri-giris',         [CustomerPanelController::class, 'showLogin
 Route::get('/musteri-paneli',        [CustomerPanelController::class, 'panel'])->name('customer.panel');
 Route::get('/musteri-paneli/api/state', [CustomerPanelController::class, 'state'])->name('customer.api.state');
 Route::get('/musteri-paneli/api/active-tracking', [CustomerPanelController::class, 'activeTracking'])->name('customer.api.tracking');
+Route::get('/musteri-paneli/profil',  [CustomerPanelController::class, 'showProfile'])->name('customer.profile');
+Route::post('/musteri-paneli/profil', [CustomerPanelController::class, 'updateProfile'])->name('customer.profile.update');
+Route::get('/musteri-paneli/profil/verilerimi-indir', [CustomerPanelController::class, 'downloadData'])->name('customer.profile.data');
+Route::post('/musteri-paneli/profil/hesabi-sil',      [CustomerPanelController::class, 'deleteAccount'])->name('customer.profile.delete');
 Route::post('/musteri-cikis',        [CustomerPanelController::class, 'logout'])->name('customer.logout');
 
 // ─────────────────────────────────────────────────────────

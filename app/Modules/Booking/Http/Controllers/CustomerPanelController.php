@@ -149,6 +149,160 @@ class CustomerPanelController extends Controller
     }
 
     /**
+     * GET /musteri-paneli/profil — profil sayfası (görsel kart)
+     */
+    public function showProfile(): View|RedirectResponse
+    {
+        $user = $this->currentCustomer();
+        if (! $user) return redirect()->route('customer.login');
+
+        $trust = $this->trustService->getOrCreate($user->phone ?? '');
+
+        // Üyelikten beri geçen süre
+        $memberSince = $user->created_at;
+        $memberDays  = $memberSince ? (int) $memberSince->diffInDays(now()) : 0;
+
+        $totalRides    = \App\Modules\Booking\Models\Ride::where('customer_user_id', $user->id)->count();
+        $completedRides = \App\Modules\Booking\Models\Ride::where('customer_user_id', $user->id)
+            ->where('status', 'completed')->count();
+
+        return view('customer.profile', [
+            'user'           => $user,
+            'trust'          => $trust,
+            'memberSince'    => $memberSince,
+            'memberDays'     => $memberDays,
+            'totalRides'     => $totalRides,
+            'completedRides' => $completedRides,
+        ]);
+    }
+
+    /**
+     * POST /musteri-paneli/profil — isim + avatar güncelleme
+     */
+    public function updateProfile(Request $request): RedirectResponse
+    {
+        $user = $this->currentCustomer();
+        if (! $user) return redirect()->route('customer.login');
+
+        $validated = $request->validate([
+            'name'   => ['required', 'string', 'max:120'],
+            'avatar' => ['nullable', 'image', 'max:4096'],
+            'remove_avatar' => ['nullable', 'boolean'],
+        ]);
+
+        $updates = ['name' => $validated['name']];
+
+        if ($request->boolean('remove_avatar') && $user->avatar) {
+            if (! str_starts_with($user->avatar, 'http')) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            }
+            $updates['avatar'] = null;
+        } elseif ($request->hasFile('avatar')) {
+            // Eski avatar sil
+            if ($user->avatar && ! str_starts_with($user->avatar, 'http')) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            }
+            $updates['avatar'] = $request->file('avatar')->store('avatars/customers', 'public');
+        }
+
+        $user->update($updates);
+
+        return redirect()->route('customer.profile')->with('success', 'Profil güncellendi.');
+    }
+
+    /**
+     * GET /musteri-paneli/profil/verilerimi-indir — KVKK veri indirme (JSON)
+     */
+    public function downloadData()
+    {
+        $user = $this->currentCustomer();
+        if (! $user) return redirect()->route('customer.login');
+
+        $rides = \App\Modules\Booking\Models\Ride::where('customer_user_id', $user->id)
+            ->with('vehicleClass')
+            ->get()
+            ->map(fn ($r) => [
+                'id'                => $r->id,
+                'created_at'        => $r->created_at?->toIso8601String(),
+                'status'            => $r->status,
+                'pickup_address'    => $r->pickup_address,
+                'dropoff_address'   => $r->dropoff_address,
+                'distance_km'       => $r->estimated_distance_km,
+                'total_fare'        => $r->total_fare,
+                'vehicle_class'     => $r->vehicleClass?->name,
+            ]);
+
+        $trust = $this->trustService->getOrCreate($user->phone ?? '');
+
+        $payload = [
+            'export_date' => now()->toIso8601String(),
+            'user' => [
+                'name'              => $user->name,
+                'phone'             => $user->phone,
+                'email'             => $user->email,
+                'phone_verified_at' => $user->phone_verified_at?->toIso8601String(),
+                'created_at'        => $user->created_at?->toIso8601String(),
+            ],
+            'trust' => [
+                'trust_score'                  => $trust->trust_score,
+                'total_requests'               => $trust->total_requests,
+                'total_completed'              => $trust->total_completed,
+                'total_no_shows'               => $trust->total_no_shows,
+                'total_customer_cancellations' => $trust->total_customer_cancellations,
+            ],
+            'rides' => $rides,
+        ];
+
+        $filename = 'ferogo-verilerim-' . now()->format('Y-m-d') . '.json';
+        return response()
+            ->json($payload, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    /**
+     * POST /musteri-paneli/profil/hesabi-sil — KVKK hesap silme
+     * Soft delete: kullanıcının kişisel alanları temizlenir, ride history korunur
+     * (yasal mali kayıt zorunluluğu — Ride'lar tutulur ama anonimleştirilir).
+     */
+    public function deleteAccount(Request $request): RedirectResponse
+    {
+        $user = $this->currentCustomer();
+        if (! $user) return redirect()->route('customer.login');
+
+        $request->validate([
+            'confirm' => ['required', 'in:SIL'],
+        ], [
+            'confirm.required' => 'Onay alanına SİL yazmalısın.',
+            'confirm.in'       => 'Onay alanına büyük harflerle SİL yazmalısın.',
+        ]);
+
+        // Avatar sil
+        if ($user->avatar && ! str_starts_with($user->avatar, 'http')) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+        }
+
+        // Kişisel bilgiler anonimleştir, hesabı pasifleştir
+        $user->update([
+            'name'              => 'Silinmiş Kullanıcı #' . $user->id,
+            'email'             => 'deleted-' . $user->id . '@ferogo.local',
+            'phone'             => null,
+            'tc_no'             => null,
+            'birth_date'        => null,
+            'gender'            => null,
+            'avatar'            => null,
+            'phone_verified_at' => null,
+            'status'            => 'suspended',
+            'password'          => bcrypt(\Illuminate\Support\Str::random(60)),
+        ]);
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('home')->with('success', 'Hesabın silindi. Yolculuk geçmişi yasal sebeplerle anonim olarak saklanır.');
+    }
+
+    /**
      * GET /musteri-paneli/api/active-tracking
      * Sürücü yoldaysa canlı konum + ETA + mesafe — kart polling'i için.
      * Hedef: ride status driver_arriving ise pickup, in_progress ise dropoff.
