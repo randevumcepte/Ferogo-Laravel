@@ -134,6 +134,32 @@
                 </div>
 
                 <div class="p-6 space-y-5">
+                    {{-- Araç sınıfı seçimi: Easy / Platinum / VIP --}}
+                    @if (isset($vehicleClasses) && $vehicleClasses->count() > 0)
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Araç Sınıfı</label>
+                        <div class="grid grid-cols-{{ min($vehicleClasses->count(), 3) }} gap-2">
+                            @foreach ($vehicleClasses as $vc)
+                                @php
+                                    $selected = (int) old('vehicle_class_id', $vehicle->vehicle_class_id) === (int) $vc->id;
+                                    $accent = match($vc->slug) {
+                                        'vip'      => 'from-brand to-brand-600 text-black border-brand/60',
+                                        'platinum' => 'from-zinc-200 to-zinc-400 text-zinc-900 border-zinc-300/40',
+                                        default    => 'from-zinc-700 to-zinc-900 text-white border-white/20',
+                                    };
+                                @endphp
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="vehicle_class_id" value="{{ $vc->id }}" {{ $selected ? 'checked' : '' }} class="peer sr-only">
+                                    <div class="px-3 py-3 rounded-xl text-center text-sm font-bold transition border-2 bg-gradient-to-br {{ $accent }} {{ $selected ? 'opacity-100 scale-100 ring-2 ring-brand/60' : 'opacity-50 hover:opacity-80' }}">
+                                        {{ $vc->name }}
+                                    </div>
+                                </label>
+                            @endforeach
+                        </div>
+                        <div class="text-[10px] text-zinc-500 mt-1.5">Sınıfını araç modeline uygun seç — müşteriler buna göre filtreliyor.</div>
+                    </div>
+                    @endif
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Marka</label>

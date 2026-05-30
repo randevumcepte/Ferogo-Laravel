@@ -96,9 +96,10 @@ class DriverPanelController extends Controller
         if (! $driver) return redirect()->route('driver.login');
 
         return view('driver.profile', [
-            'driver'  => $driver->loadMissing('user', 'currentVehicle.vehicleClass'),
-            'user'    => $driver->user,
-            'vehicle' => $driver->currentVehicle,
+            'driver'         => $driver->loadMissing('user', 'currentVehicle.vehicleClass'),
+            'user'           => $driver->user,
+            'vehicle'        => $driver->currentVehicle,
+            'vehicleClasses' => \App\Modules\Vehicle\Models\VehicleClass::where('is_active', true)->orderBy('id')->get(['id', 'slug', 'name']),
         ]);
     }
 
@@ -111,6 +112,7 @@ class DriverPanelController extends Controller
             'name'                  => ['required', 'string', 'max:120'],
             'phone'                 => ['required', 'string', 'max:20'],
             'avatar'                => ['nullable', 'image', 'max:4096'],
+            'vehicle_class_id'      => ['nullable', 'integer', 'exists:vehicle_classes,id'],
             'vehicle_brand'         => ['nullable', 'string', 'max:60'],
             'vehicle_model'         => ['nullable', 'string', 'max:60'],
             'vehicle_year'          => ['nullable', 'integer', 'between:1990,2030'],
@@ -140,11 +142,12 @@ class DriverPanelController extends Controller
         $vehicle = $driver->currentVehicle;
         if ($vehicle) {
             $vData = array_filter([
-                'brand'               => $validated['vehicle_brand']   ?? null,
-                'model'               => $validated['vehicle_model']   ?? null,
-                'year_of_manufacture' => $validated['vehicle_year']    ?? null,
-                'color'               => $validated['vehicle_color']   ?? null,
-                'plate'               => $validated['vehicle_plate']   ?? null,
+                'vehicle_class_id'    => $validated['vehicle_class_id'] ?? null,
+                'brand'               => $validated['vehicle_brand']    ?? null,
+                'model'               => $validated['vehicle_model']    ?? null,
+                'year_of_manufacture' => $validated['vehicle_year']     ?? null,
+                'color'               => $validated['vehicle_color']    ?? null,
+                'plate'               => $validated['vehicle_plate']    ?? null,
             ], fn ($v) => $v !== null && $v !== '');
 
             $photos = is_array($vehicle->photos) ? $vehicle->photos : [];
