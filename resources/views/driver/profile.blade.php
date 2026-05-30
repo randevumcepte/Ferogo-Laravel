@@ -149,27 +149,75 @@
                 <div class="p-6 space-y-5">
                     {{-- Araç sınıfı seçimi: Easy / Platinum / VIP --}}
                     @if (isset($vehicleClasses) && $vehicleClasses->count() > 0)
+                    @php
+                        $classMeta = [
+                            'easy' => [
+                                'accent'   => 'from-zinc-700 to-zinc-900 text-white',
+                                'border'   => 'border-white/20',
+                                'icon'     => '🚗',
+                                'tagline'  => 'Ekonomik standart',
+                                'detail'   => 'Standart sedan veya MPV (Passat, Vito, Talisman vb.). Şehir içi ve havalimanı transferleri için ekonomik seçenek. Klimalı, temiz, konforlu.',
+                                'examples' => 'Volkswagen Passat · Mercedes Vito · Renault Talisman · Skoda Superb',
+                            ],
+                            'platinum' => [
+                                'accent'   => 'from-zinc-200 to-zinc-400 text-zinc-900',
+                                'border'   => 'border-zinc-300/40',
+                                'icon'     => '👔',
+                                'tagline'  => 'Lüks sedan · iş seyahati',
+                                'detail'   => 'Üst segment iş sınıfı sedan. İş seyahatleri, VIP misafir karşılama, kurumsal transferler için ideal. Premium konfor + sessiz iç mekan.',
+                                'examples' => 'Mercedes E-Class · Audi A6 · BMW 5 Series',
+                            ],
+                            'vip' => [
+                                'accent'   => 'from-brand to-brand-600 text-black',
+                                'border'   => 'border-brand/60',
+                                'icon'     => '👑',
+                                'tagline'  => 'Premium · protokol',
+                                'detail'   => 'En üst sınıf lüks sedan/limuzin. Protokol görevleri, özel etkinlikler, üst düzey misafir ağırlama. Profesyonel takım elbiseli sürücü, premium içecek servisi.',
+                                'examples' => 'Mercedes S-Class · BMW 7 Series · Audi A8 · Maybach',
+                            ],
+                        ];
+                    @endphp
                     <div>
-                        <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Araç Sınıfı</label>
-                        <div class="grid grid-cols-{{ min($vehicleClasses->count(), 3) }} gap-2">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500">Araç Sınıfı</label>
+                            <span class="text-[10px] text-zinc-500">Müşteriler bu sınıfa göre seçim yapar</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-{{ min($vehicleClasses->count(), 3) }} gap-3">
                             @foreach ($vehicleClasses as $vc)
                                 @php
                                     $selected = (int) old('vehicle_class_id', $vehicle->vehicle_class_id) === (int) $vc->id;
-                                    $accent = match($vc->slug) {
-                                        'vip'      => 'from-brand to-brand-600 text-black border-brand/60',
-                                        'platinum' => 'from-zinc-200 to-zinc-400 text-zinc-900 border-zinc-300/40',
-                                        default    => 'from-zinc-700 to-zinc-900 text-white border-white/20',
-                                    };
+                                    $meta = $classMeta[$vc->slug] ?? $classMeta['easy'];
                                 @endphp
-                                <label class="cursor-pointer">
-                                    <input type="radio" name="vehicle_class_id" value="{{ $vc->id }}" {{ $selected ? 'checked' : '' }} class="peer sr-only">
-                                    <div class="px-3 py-3 rounded-xl text-center text-sm font-bold transition border-2 bg-gradient-to-br {{ $accent }} {{ $selected ? 'opacity-100 scale-100 ring-2 ring-brand/60' : 'opacity-50 hover:opacity-80' }}">
-                                        {{ $vc->name }}
+                                <div class="vehicle-class-option" data-slug="{{ $vc->slug }}">
+                                    <input type="radio"
+                                           id="vc-{{ $vc->id }}"
+                                           name="vehicle_class_id"
+                                           value="{{ $vc->id }}"
+                                           {{ $selected ? 'checked' : '' }}
+                                           class="peer sr-only">
+                                    <label for="vc-{{ $vc->id }}"
+                                           class="block cursor-pointer rounded-2xl border-2 {{ $meta['border'] }} bg-gradient-to-br {{ $meta['accent'] }} p-4 opacity-50 hover:opacity-80 transition peer-checked:opacity-100 peer-checked:ring-4 peer-checked:ring-brand/60 peer-checked:scale-[1.02]">
+                                        <div class="flex items-start justify-between gap-2 mb-2">
+                                            <div class="text-2xl">{{ $meta['icon'] }}</div>
+                                            <button type="button"
+                                                    class="vc-info-btn w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 text-current flex items-center justify-center text-xs font-bold transition shrink-0"
+                                                    data-slug="{{ $vc->slug }}"
+                                                    aria-label="Bilgi"
+                                                    title="Detay">
+                                                i
+                                            </button>
+                                        </div>
+                                        <div class="text-base font-extrabold tracking-tight">{{ $vc->name }}</div>
+                                        <div class="text-[11px] opacity-80 mt-0.5">{{ $meta['tagline'] }}</div>
+                                    </label>
+                                    <div class="vc-info-panel hidden mt-2 p-3 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-zinc-300 leading-relaxed" data-slug="{{ $vc->slug }}">
+                                        <div class="mb-2">{{ $meta['detail'] }}</div>
+                                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Örnek modeller</div>
+                                        <div class="text-[11px] text-zinc-400">{{ $meta['examples'] }}</div>
                                     </div>
-                                </label>
+                                </div>
                             @endforeach
                         </div>
-                        <div class="text-[10px] text-zinc-500 mt-1.5">Sınıfını araç modeline uygun seç — müşteriler buna göre filtreliyor.</div>
                     </div>
                     @endif
 
@@ -345,6 +393,17 @@
         const UPLOAD_URL    = '{{ route('driver.api.vehicle_photo') }}';
         const DOC_UPLOAD_URL = '{{ route('driver.api.document.upload') }}';
         const DOC_DELETE_URL = '{{ route('driver.api.document.delete') }}';
+
+        // ===== Araç sınıfı (i) bilgi paneli toggle =====
+        document.querySelectorAll('.vc-info-btn').forEach(btn => {
+            btn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                const slug = btn.dataset.slug;
+                const panel = document.querySelector(`.vc-info-panel[data-slug="${slug}"]`);
+                if (panel) panel.classList.toggle('hidden');
+            });
+        });
 
         // ===== Avatar canlı önizleme =====
         const avatarInput   = document.getElementById('avatar-input');
