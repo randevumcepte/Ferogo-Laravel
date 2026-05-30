@@ -145,7 +145,10 @@
             </a>
         </div>
 
-        <iframe src="{{ route('ride.show') }}?embed=1"
+        @php
+            $activePid = $activeRequest?->public_id;
+        @endphp
+        <iframe src="{{ route('ride.show') }}?embed=1{{ $activePid ? '&active_request=' . urlencode($activePid) : '' }}"
                 class="w-full block border-0"
                 style="height: 900px; background: #0a0a0a;"
                 title="Canlı sürücü radarı"

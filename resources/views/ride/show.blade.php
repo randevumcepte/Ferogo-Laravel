@@ -2523,6 +2523,21 @@
     initObserver.observe(mapEl);
 
     // ===== Sesli görüşme widget'ı için global hook'lar =====
+    // Embed modunda (müşteri panelinden iframe) URL'den active_request param'i gelir
+    // → activeRequestId'yi bootstrap et ki call widget pollState publicId'yi bulsun.
+    (() => {
+        try {
+            const u = new URL(window.location.href);
+            const ar = u.searchParams.get('active_request');
+            if (ar && !activeRequestId) {
+                activeRequestId = ar;
+                console.log('[radar] activeRequestId bootstrap from URL:', ar);
+                // Status polling'i hemen başlat ki accepted/waiting durumlarını yakalasın
+                if (typeof startStatusPolling === 'function') startStatusPolling();
+            }
+        } catch (_) {}
+    })();
+
     window.callWidgetGetPublicId = () => activeRequestId;
     window.callWidgetGetPeerName = () => {
         const el = document.getElementById('qm-accepted-name');
