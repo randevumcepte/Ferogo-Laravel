@@ -2,9 +2,13 @@
 
 namespace App\Filament\Resources\App\Modules\Driver\Models\Drivers\Tables;
 
+use App\Modules\Driver\Models\Driver;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -109,7 +113,39 @@ class DriversTable
             ])
             ->defaultSort('id', 'desc')
             ->recordActions([
-                EditAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    Action::make('approve_documents')
+                        ->label('Tüm belgeleri onayla')
+                        ->icon(\Filament\Support\Icons\Heroicon::OutlinedCheckBadge)
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Yüklenmiş belgeleri onayla')
+                        ->modalDescription('Bu sürücünün yüklediği tüm belgeler "onaylı" olarak işaretlenecek.')
+                        ->action(function (Driver $d) {
+                            $now = now();
+                            $update = [];
+                            $cols = [
+                                'license_file_path'         => 'license_approved_at',
+                                'src_file_path'             => 'src_approved_at',
+                                'psychotechnic_file_path'   => 'psychotechnic_approved_at',
+                                'criminal_record_file_path' => 'criminal_record_approved_at',
+                                'insurance_file_path'       => 'insurance_approved_at',
+                                'inspection_file_path'      => 'inspection_approved_at',
+                            ];
+                            foreach ($cols as $fileCol => $approvedCol) {
+                                if ($d->{$fileCol} && empty($d->{$approvedCol})) {
+                                    $update[$approvedCol] = $now;
+                                }
+                            }
+                            if (! empty($update)) {
+                                $d->update($update);
+                                Notification::make()->success()->title(count($update) . ' belge onaylandı')->send();
+                            } else {
+                                Notification::make()->info()->title('Onaylanacak belge yok')->send();
+                            }
+                        }),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

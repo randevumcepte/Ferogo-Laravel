@@ -120,11 +120,24 @@
 
             {{-- ===== Araç Bilgileri ===== --}}
             @if ($vehicle)
+            @if (isset($pendingVehicleRequest) && $pendingVehicleRequest)
+                <div class="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 text-sm text-yellow-200 flex items-start gap-3">
+                    <span class="text-2xl">🕒</span>
+                    <div>
+                        <div class="font-bold">Araç değişikliği onay bekliyor</div>
+                        <div class="text-xs text-yellow-300/80 mt-1">
+                            {{ $pendingVehicleRequest->created_at->diffForHumans() }} talep edildi. Süper admin onayladığında değişiklikler müşterilere yansır.
+                            Bu sırada eski araç bilgilerin canlıda görünmeye devam eder.
+                        </div>
+                    </div>
+                </div>
+            @endif
             <section class="bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden">
                 <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between">
                     <div>
                         <div class="text-[10px] uppercase tracking-[0.25em] text-brand">Adım 2</div>
                         <h2 class="text-lg font-bold">Araç Bilgileri</h2>
+                        <p class="text-xs text-zinc-500 mt-1">Değişiklikler admin onayından sonra yayına girer.</p>
                     </div>
                     @if ($vehicle->vehicleClass)
                         <span class="px-2.5 py-1 rounded-md bg-brand/15 text-brand text-[10px] font-bold uppercase tracking-wider">
@@ -233,12 +246,12 @@
             {{-- ===== Belgeler ===== --}}
             @php
                 $documents = [
-                    ['type' => 'license',         'label' => 'Ehliyet',         'icon' => '🪪', 'has_expiry' => true,  'expires_at' => $driver->license_expires_at,    'expires_label' => 'Geçerlilik bitişi', 'file_path' => $driver->license_file_path],
-                    ['type' => 'src',             'label' => 'SRC Sertifikası', 'icon' => '📜', 'has_expiry' => true,  'expires_at' => $driver->src_expires_at,        'expires_label' => 'Geçerlilik bitişi', 'file_path' => $driver->src_file_path],
-                    ['type' => 'psychotechnic',   'label' => 'Psikoteknik',     'icon' => '🧠', 'has_expiry' => true,  'expires_at' => $driver->psychotechnic_test_at, 'expires_label' => 'Test tarihi',        'file_path' => $driver->psychotechnic_file_path],
-                    ['type' => 'criminal_record', 'label' => 'Adli Sicil',      'icon' => '🛡', 'has_expiry' => true,  'expires_at' => $driver->criminal_record_at,    'expires_label' => 'Belge tarihi',       'file_path' => $driver->criminal_record_file_path],
-                    ['type' => 'insurance',       'label' => 'Sigorta',         'icon' => '🧾', 'has_expiry' => true,  'expires_at' => $driver->insurance_expires_at,  'expires_label' => 'Bitiş tarihi',       'file_path' => $driver->insurance_file_path],
-                    ['type' => 'inspection',      'label' => 'Muayene',         'icon' => '🔧', 'has_expiry' => true,  'expires_at' => $driver->inspection_expires_at, 'expires_label' => 'Bitiş tarihi',       'file_path' => $driver->inspection_file_path],
+                    ['type' => 'license',         'label' => 'Ehliyet',         'icon' => '🪪', 'has_expiry' => true,  'expires_at' => $driver->license_expires_at,    'expires_label' => 'Geçerlilik bitişi', 'file_path' => $driver->license_file_path,         'approved_at' => $driver->license_approved_at],
+                    ['type' => 'src',             'label' => 'SRC Sertifikası', 'icon' => '📜', 'has_expiry' => true,  'expires_at' => $driver->src_expires_at,        'expires_label' => 'Geçerlilik bitişi', 'file_path' => $driver->src_file_path,             'approved_at' => $driver->src_approved_at],
+                    ['type' => 'psychotechnic',   'label' => 'Psikoteknik',     'icon' => '🧠', 'has_expiry' => true,  'expires_at' => $driver->psychotechnic_test_at, 'expires_label' => 'Test tarihi',        'file_path' => $driver->psychotechnic_file_path,    'approved_at' => $driver->psychotechnic_approved_at],
+                    ['type' => 'criminal_record', 'label' => 'Adli Sicil',      'icon' => '🛡', 'has_expiry' => true,  'expires_at' => $driver->criminal_record_at,    'expires_label' => 'Belge tarihi',       'file_path' => $driver->criminal_record_file_path,  'approved_at' => $driver->criminal_record_approved_at],
+                    ['type' => 'insurance',       'label' => 'Sigorta',         'icon' => '🧾', 'has_expiry' => true,  'expires_at' => $driver->insurance_expires_at,  'expires_label' => 'Bitiş tarihi',       'file_path' => $driver->insurance_file_path,        'approved_at' => $driver->insurance_approved_at],
+                    ['type' => 'inspection',      'label' => 'Muayene',         'icon' => '🔧', 'has_expiry' => true,  'expires_at' => $driver->inspection_expires_at, 'expires_label' => 'Bitiş tarihi',       'file_path' => $driver->inspection_file_path,       'approved_at' => $driver->inspection_approved_at],
                 ];
             @endphp
 
@@ -252,11 +265,17 @@
                 <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                     @foreach ($documents as $doc)
                         @php
-                            $hasFile = ! empty($doc['file_path']);
-                            $isExpired = $doc['expires_at'] && $doc['expires_at']->isPast();
-                            $fileUrl = $hasFile ? (str_starts_with($doc['file_path'], 'http') ? $doc['file_path'] : asset('storage/' . $doc['file_path'])) : null;
+                            $hasFile     = ! empty($doc['file_path']);
+                            $isExpired   = $doc['expires_at'] && $doc['expires_at']->isPast();
+                            $isApproved  = $hasFile && ! empty($doc['approved_at']);
+                            $isPending   = $hasFile && empty($doc['approved_at']);
+                            $fileUrl     = $hasFile ? (str_starts_with($doc['file_path'], 'http') ? $doc['file_path'] : asset('storage/' . $doc['file_path'])) : null;
+                            $borderClass = $isExpired      ? 'border-red-500/30 bg-red-500/5'
+                                         : ($isApproved   ? 'border-emerald-500/30 bg-emerald-500/5'
+                                         : ($isPending    ? 'border-yellow-500/30 bg-yellow-500/5'
+                                                          : 'border-white/10 bg-white/[0.02]'));
                         @endphp
-                        <div class="document-card rounded-2xl border @if($hasFile && !$isExpired) border-emerald-500/30 bg-emerald-500/5 @elseif($isExpired) border-red-500/30 bg-red-500/5 @else border-white/10 bg-white/[0.02] @endif p-4"
+                        <div class="document-card rounded-2xl border {{ $borderClass }} p-4"
                              data-doc-type="{{ $doc['type'] }}">
                             <div class="flex items-start justify-between gap-3 mb-3">
                                 <div class="flex items-center gap-2.5">
@@ -264,12 +283,14 @@
                                     <div>
                                         <div class="text-sm font-bold text-white">{{ $doc['label'] }}</div>
                                         <div class="text-[10px] uppercase tracking-wider mt-0.5
-                                            @if($hasFile && !$isExpired) text-emerald-400
-                                            @elseif($isExpired) text-red-400
+                                            @if($isExpired) text-red-400
+                                            @elseif($isApproved) text-emerald-400
+                                            @elseif($isPending) text-yellow-400
                                             @else text-zinc-500
                                             @endif">
-                                            @if($hasFile && !$isExpired) ✓ Onaylı
-                                            @elseif($isExpired) ⚠ Süresi dolmuş
+                                            @if($isExpired) ⚠ Süresi dolmuş
+                                            @elseif($isApproved) ✓ Onaylı
+                                            @elseif($isPending) 🕒 Onay bekliyor
                                             @else Yüklenmemiş
                                             @endif
                                         </div>

@@ -95,11 +95,18 @@ class DriverPanelController extends Controller
         $driver = $this->currentDriver();
         if (! $driver) return redirect()->route('driver.login');
 
+        $pendingVehicleRequest = \App\Modules\Driver\Models\DriverChangeRequest::where('driver_id', $driver->id)
+            ->where('type', 'vehicle')
+            ->where('status', 'pending')
+            ->latest('id')
+            ->first();
+
         return view('driver.profile', [
-            'driver'         => $driver->loadMissing('user', 'currentVehicle.vehicleClass'),
-            'user'           => $driver->user,
-            'vehicle'        => $driver->currentVehicle,
-            'vehicleClasses' => \App\Modules\Vehicle\Models\VehicleClass::where('is_active', true)->orderBy('id')->get(['id', 'slug', 'name']),
+            'driver'                 => $driver->loadMissing('user', 'currentVehicle.vehicleClass'),
+            'user'                   => $driver->user,
+            'vehicle'                => $driver->currentVehicle,
+            'vehicleClasses'         => \App\Modules\Vehicle\Models\VehicleClass::where('is_active', true)->orderBy('id')->get(['id', 'slug', 'name']),
+            'pendingVehicleRequest'  => $pendingVehicleRequest,
         ]);
     }
 
@@ -138,43 +145,52 @@ class DriverPanelController extends Controller
         }
         $driver->user->update($userData);
 
-        // 2) Araç bilgileri
+        // 2) Araç bilgileri & fotoğrafları → ADMİN ONAYINA gider (canlıya direkt yansımaz)
         $vehicle = $driver->currentVehicle;
         if ($vehicle) {
-            $vData = array_filter([
+            $requestedChanges = [];
+
+            $fieldMap = [
                 'vehicle_class_id'    => $validated['vehicle_class_id'] ?? null,
                 'brand'               => $validated['vehicle_brand']    ?? null,
                 'model'               => $validated['vehicle_model']    ?? null,
                 'year_of_manufacture' => $validated['vehicle_year']     ?? null,
                 'color'               => $validated['vehicle_color']    ?? null,
                 'plate'               => $validated['vehicle_plate']    ?? null,
-            ], fn ($v) => $v !== null && $v !== '');
+            ];
+            foreach ($fieldMap as $col => $val) {
+                if ($val === null || $val === '') continue;
+                if ((string) $vehicle->{$col} !== (string) $val) {
+                    $requestedChanges[$col] = $val;
+                }
+            }
 
-            $photos = is_array($vehicle->photos) ? $vehicle->photos : [];
-
-            // Silinecek fotoğrafları çıkar
+            // Foto değişiklikleri (silme + ekleme)
             if (! empty($validated['remove_photos'])) {
-                foreach ($validated['remove_photos'] as $rm) {
-                    $photos = array_values(array_filter($photos, fn ($p) => $p !== $rm));
-                    if (! str_starts_with($rm, 'http')) {
-                        \Illuminate\Support\Facades\Storage::disk('public')->delete($rm);
-                    }
-                }
+                $requestedChanges['remove_photos'] = array_values($validated['remove_photos']);
             }
-
-            // AJAX ile önceden yüklenmiş yeni path'leri ekle (güvenlik için sadece bu sürücünün klasöründekiler)
             if (! empty($validated['new_photo_paths'])) {
+                // Güvenlik: sadece bu sürücünün klasöründeki path'leri kabul et
                 $prefix = 'vehicle-photos/' . $vehicle->id . '/';
-                foreach ($validated['new_photo_paths'] as $path) {
-                    if (str_starts_with($path, $prefix) && \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
-                        $photos[] = $path;
-                    }
-                }
+                $newPaths = array_values(array_filter(
+                    $validated['new_photo_paths'],
+                    fn ($p) => str_starts_with($p, $prefix) && \Illuminate\Support\Facades\Storage::disk('public')->exists($p)
+                ));
+                if (! empty($newPaths)) $requestedChanges['add_photos'] = $newPaths;
             }
 
-            $photos = array_values(array_unique(array_slice($photos, 0, 20)));
-            $vData['photos'] = $photos;
-            $vehicle->update($vData);
+            if (! empty($requestedChanges)) {
+                \App\Modules\Driver\Models\DriverChangeRequest::create([
+                    'driver_id' => $driver->id,
+                    'type'      => 'vehicle',
+                    'payload'   => $requestedChanges,
+                    'status'    => 'pending',
+                ]);
+
+                return redirect()->route('driver.profile')->with('success',
+                    'Araç değişiklikleri onaya gönderildi. Süper admin onayladığında müşterilere görünür olur.'
+                );
+            }
         }
 
         return redirect()->route('driver.profile')->with('success', 'Profil güncellendi.');
