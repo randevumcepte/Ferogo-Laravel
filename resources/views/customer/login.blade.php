@@ -14,20 +14,69 @@
             theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }, colors: { brand: { DEFAULT: '#F0C040', 500: '#F0C040', 600: '#D9A621' } } } }
         }
     </script>
-    <style>body { font-family: 'Inter', sans-serif; }</style>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes drift-1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50%      { transform: translate(40px, -30px) scale(1.05); }
+        }
+        @keyframes drift-2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50%      { transform: translate(-30px, 25px) scale(1.08); }
+        }
+        @keyframes drift-3 {
+            0%, 100% { transform: translate(0, 0); }
+            50%      { transform: translate(20px, 30px); }
+        }
+        .drift-1 { animation: drift-1 14s ease-in-out infinite; }
+        .drift-2 { animation: drift-2 18s ease-in-out infinite; }
+        .drift-3 { animation: drift-3 22s ease-in-out infinite; }
+        .grid-bg {
+            background-image:
+                linear-gradient(rgba(240,192,64,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(240,192,64,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50%      { opacity: 1; transform: scale(1.2); }
+        }
+        .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+    </style>
 </head>
-<body class="bg-black text-white min-h-screen flex flex-col">
+<body class="bg-black text-white min-h-screen flex flex-col relative overflow-hidden">
 
-<div class="flex-1 flex items-center justify-center px-4 py-12">
+{{-- Background atmosphere --}}
+<div class="absolute inset-0 grid-bg opacity-40 pointer-events-none"></div>
+<div class="drift-1 absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] rounded-full bg-brand/15 blur-[150px] pointer-events-none"></div>
+<div class="drift-2 absolute bottom-[-15%] right-[-10%] w-[36rem] h-[36rem] rounded-full bg-brand/10 blur-[140px] pointer-events-none"></div>
+<div class="drift-3 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] rounded-full bg-emerald-500/[0.04] blur-[120px] pointer-events-none"></div>
+
+{{-- Top-left logo (sticky to corner) --}}
+<header class="relative z-10 px-6 py-5">
+    <a href="{{ route('home') }}" class="inline-flex items-center gap-2">
+        <span class="text-xl font-extrabold tracking-tight">
+            <span class="text-white">FERO</span><span class="text-brand">GO</span>
+        </span>
+    </a>
+</header>
+
+<div class="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
     <div class="w-full max-w-md">
+        {{-- Big center logo (same as homepage HERO) --}}
         <a href="{{ route('home') }}" class="block text-center mb-8">
-            <div class="inline-flex items-center gap-2">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-lg">F</div>
-                <span class="text-xl font-bold">Ferogo</span>
+            <span class="text-4xl sm:text-5xl font-extrabold tracking-tight">
+                <span class="text-white">FERO</span><span class="text-brand glow-text">GO</span>
+            </span>
+            <div class="mt-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.3em] text-zinc-500">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>
+                Premium Şoförlü Transfer
             </div>
         </a>
 
-        <div class="bg-zinc-950 border border-white/10 rounded-3xl p-7 shadow-2xl shadow-black/40">
+        <div class="relative bg-zinc-950/80 backdrop-blur-xl border border-white/10 rounded-3xl p-7 shadow-2xl shadow-black/60">
+            {{-- Subtle glow on top edge --}}
+            <div class="absolute -top-px left-12 right-12 h-px bg-gradient-to-r from-transparent via-brand/40 to-transparent"></div>
             {{-- Step 1: phone --}}
             <div id="step-phone">
                 <h1 class="text-2xl font-bold mb-1">Müşteri Girişi</h1>
