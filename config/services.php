@@ -43,14 +43,15 @@ return [
      * TURN: P2P kurulamadığında relay — production için ŞART, özellikle
      *       Türk mobil operatörleri simetrik NAT kullanır.
      *
-     * Kendi coturn'ünü sunucuya kur (Ubuntu):
+     * Kendi coturn'ünü sunucuya kur (Ubuntu, FreePBX makinesinde):
      *   apt install coturn
-     *   /etc/turnserver.conf'a: realm=ferogo.com, listening-port=3478,
-     *     tls-listening-port=5349, user=ferogo:GIZLISIFRE, fingerprint, lt-cred-mech
+     *   /etc/turnserver.conf'a: realm=appnew.randevumcepte.com.tr,
+     *     listening-port=3478, tls-listening-port=5349,
+     *     user=ferogo:GIZLISIFRE, fingerprint, lt-cred-mech
      *   ufw allow 3478, 5349, 49152:65535/udp
      *
-     * .env örnek:
-     *   TURN_URLS="turn:turn.ferogo.com:3478,turns:turn.ferogo.com:5349"
+     * .env örnek (FreePBX sunucu IP: 89.252.140.61):
+     *   TURN_URLS="turn:89.252.140.61:3478,turn:89.252.140.61:3478?transport=tcp"
      *   TURN_USERNAME=ferogo
      *   TURN_CREDENTIAL=GIZLISIFRE
      */

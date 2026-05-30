@@ -2280,24 +2280,29 @@
             catch (_) { throw new Error('Sunucu beklenmedik bir cevap döndü.'); }
 
             if (!res.ok || !data.success) {
-                // Login müşteri ama server token istiyor = session düşmüş → login'e yönlendir
-                if (FEROGO_AUTH && data.errors && data.errors.verification_token) {
-                    window.location.href = LOGIN_URL;
-                    return;
-                }
-                // Token geçersizse cache'i sil → yeni OTP iste
-                if (data.phone_reverify_required) {
+                // Console'a tam yanıtı log'la — kullanıcı görmese de teşhis için
+                console.warn('[RR-STORE] failed', { status: res.status, body: data });
+
+                // Anonim akış: token geçersizse OTP iste (session düşmüşse görmüyoruz, baştan başla)
+                if (!FEROGO_AUTH && data.phone_reverify_required) {
                     try { localStorage.removeItem('fero_otp_token:' + normalizePhoneJs(payload.customer_phone)); } catch (_) {}
                     await requestOtp(payload.customer_phone);
                     return;
                 }
-                let msg;
-                if (data.errors) msg = Object.values(data.errors)[0][0];
-                else if (data.message) msg = data.message;
-                else msg = 'Talep gönderilemedi. Tekrar dene.';
+
+                // Hata mesajını TÜM detaylarıyla form'da göster — auto-redirect YOK
+                let msgs = [];
+                if (data.errors && typeof data.errors === 'object') {
+                    Object.entries(data.errors).forEach(([field, arr]) => {
+                        const list = Array.isArray(arr) ? arr : [arr];
+                        msgs.push(`${field}: ${list.join(', ')}`);
+                    });
+                }
+                if (data.message && !msgs.length) msgs.push(data.message);
+                if (!msgs.length) msgs.push(`Sunucu hatası (${res.status}). Tekrar dene.`);
 
                 const target = modalOtp.classList.contains('hidden') ? qmError : qmOtpError;
-                target.textContent = msg;
+                target.innerHTML = msgs.map(m => `<div>${m.replace(/</g, '&lt;')}</div>`).join('');
                 target.classList.remove('hidden');
                 return;
             }

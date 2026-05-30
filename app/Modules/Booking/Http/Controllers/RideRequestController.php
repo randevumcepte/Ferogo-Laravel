@@ -248,36 +248,67 @@ class RideRequestController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Debug log — her ride_request POST'unu kayıt al, validation hatasında neyin reddedildiğini görelim
+        $logKey = '[RR-STORE ' . substr(uniqid(), -6) . ']';
+        \Illuminate\Support\Facades\Log::info($logKey . ' input', [
+            'auth_id'           => Auth::id(),
+            'auth_type'         => Auth::user()?->type,
+            'auth_phone'        => Auth::user()?->phone,
+            'auth_verified_at'  => Auth::user()?->phone_verified_at,
+            'fields' => collect($request->only([
+                'vehicle_class_slug', 'customer_name', 'customer_phone',
+                'pickup_address', 'dropoff_address', 'distance_km', 'duration_minutes',
+                'preferred_driver_id', 'kvkk_consent',
+            ]))->map(fn ($v) => is_string($v) ? mb_substr($v, 0, 60) : $v)->toArray(),
+            'has_verification_token' => ! empty($request->input('verification_token')),
+            'has_fingerprint'        => ! empty($request->input('fingerprint')),
+        ]);
+
         $vehicleClassSlugs = VehicleClass::where('is_active', true)->pluck('slug')->toArray();
 
         // Session'da login bir müşteri varsa OTP token ZORUNLU değil.
-        // (Auth session = telefon zaten bu cihazda doğrulanmış.)
+        // Auth session = OTP doğrulamasından gelmiş (müşteri girişinin tek yolu).
+        // phone_verified_at kontrolünü kaldırdık — bazı eski kayıtlarda null olabilir
+        // ama session sahibi olmaları yeterli kanıt.
         $authed = Auth::user();
-        $isAuthedCustomer = $authed && $authed->type === 'customer' && $authed->phone_verified_at;
+        $isAuthedCustomer = $authed && $authed->type === 'customer';
 
-        $validated = $request->validate([
-            'vehicle_class_slug'    => ['required', Rule::in($vehicleClassSlugs)],
-            'pickup_address'        => ['required', 'string', 'max:255'],
-            'pickup_lat'            => ['required', 'numeric'],
-            'pickup_lng'            => ['required', 'numeric'],
-            'dropoff_address'       => ['required', 'string', 'max:255'],
-            'dropoff_lat'           => ['nullable', 'numeric'],
-            'dropoff_lng'           => ['nullable', 'numeric'],
-            'customer_name'         => [$isAuthedCustomer ? 'nullable' : 'required', 'string', 'max:120'],
-            'customer_phone'        => [$isAuthedCustomer ? 'nullable' : 'required', 'string', 'max:20'],
-            'verification_token'    => [$isAuthedCustomer ? 'nullable' : 'required', 'string', 'size:48'],
-            'fingerprint'           => ['nullable', 'string', 'max:64'],
-            'distance_km'           => ['required', 'numeric', 'min:0', 'max:500'],
-            'duration_minutes'      => ['required', 'integer', 'min:1', 'max:600'],
-            'estimated_fare'        => ['nullable', 'numeric', 'min:0'],
-            'preferred_driver_id'   => ['required', 'integer', 'exists:drivers,id'],
-            'fallback_driver_ids'   => ['nullable', 'array', 'max:5'],
-            'fallback_driver_ids.*' => ['integer', 'exists:drivers,id'],
-            'kvkk_consent'          => ['required', 'accepted'],
-        ], [
-            'kvkk_consent.accepted'       => 'KVKK onayını işaretlemen gerekiyor.',
-            'verification_token.required' => 'Telefonunu doğrulaman gerekiyor. SMS kodunu gir.',
-        ]);
+        // Authed customer'a phone_verified_at null geldiyse, transparan olarak şimdi işaretle
+        if ($isAuthedCustomer && ! $authed->phone_verified_at) {
+            $authed->forceFill(['phone_verified_at' => now()])->save();
+        }
+
+        try {
+            $validated = $request->validate([
+                'vehicle_class_slug'    => ['required', Rule::in($vehicleClassSlugs)],
+                'pickup_address'        => ['required', 'string', 'max:255'],
+                'pickup_lat'            => ['required', 'numeric'],
+                'pickup_lng'            => ['required', 'numeric'],
+                'dropoff_address'       => ['required', 'string', 'max:255'],
+                'dropoff_lat'           => ['nullable', 'numeric'],
+                'dropoff_lng'           => ['nullable', 'numeric'],
+                'customer_name'         => [$isAuthedCustomer ? 'nullable' : 'required', 'string', 'max:120'],
+                'customer_phone'        => [$isAuthedCustomer ? 'nullable' : 'required', 'string', 'max:20'],
+                'verification_token'    => [$isAuthedCustomer ? 'nullable' : 'required', 'string', 'size:48'],
+                'fingerprint'           => ['nullable', 'string', 'max:64'],
+                'distance_km'           => ['required', 'numeric', 'min:0', 'max:500'],
+                'duration_minutes'      => ['required', 'integer', 'min:1', 'max:600'],
+                'estimated_fare'        => ['nullable', 'numeric', 'min:0'],
+                'preferred_driver_id'   => ['required', 'integer', 'exists:drivers,id'],
+                'fallback_driver_ids'   => ['nullable', 'array', 'max:5'],
+                'fallback_driver_ids.*' => ['integer', 'exists:drivers,id'],
+                'kvkk_consent'          => ['required', 'accepted'],
+            ], [
+                'kvkk_consent.accepted'       => 'KVKK onayını işaretlemen gerekiyor.',
+                'verification_token.required' => 'Telefonunu doğrulaman gerekiyor. SMS kodunu gir.',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\Log::warning($logKey . ' validation_failed', [
+                'is_authed_customer' => $isAuthedCustomer,
+                'errors'             => $e->errors(),
+            ]);
+            throw $e;
+        }
 
         // Login müşteri: name/phone session'dan
         if ($isAuthedCustomer) {
