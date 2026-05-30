@@ -176,19 +176,19 @@
     let ringOsc = null;
     let ringGain = null;
     let ringInterval = null;
+    let ringVibInterval = null;  // ringInterval bir sayıdır, üzerine property atılamaz
     function startRingtone() {
         stopRingtone();
         try {
             const AC = window.AudioContext || window.webkitAudioContext;
             if (!AC) return;
             ringAudioCtx = new AC();
-            // Klasik ringback: 1sn çalar, 1sn susar
             const playBeep = () => {
                 if (!ringAudioCtx) return;
                 ringOsc = ringAudioCtx.createOscillator();
                 ringGain = ringAudioCtx.createGain();
                 ringOsc.type = 'sine';
-                ringOsc.frequency.value = 440; // A4
+                ringOsc.frequency.value = 440;
                 ringGain.gain.setValueAtTime(0, ringAudioCtx.currentTime);
                 ringGain.gain.linearRampToValueAtTime(0.18, ringAudioCtx.currentTime + 0.05);
                 ringGain.gain.linearRampToValueAtTime(0, ringAudioCtx.currentTime + 0.9);
@@ -198,25 +198,25 @@
             };
             playBeep();
             ringInterval = setInterval(playBeep, 2000);
-            // Mobilde titreşim
+            // Mobilde titreşim — try/catch ile sar, kullanıcı gesture yoksa vibrate fail edebilir
             if (navigator.vibrate) {
-                navigator.vibrate([400, 200, 400, 200, 400]);
-                const vibInterval = setInterval(() => navigator.vibrate([400, 200, 400]), 2000);
-                ringInterval._vibInterval = vibInterval;
+                try {
+                    navigator.vibrate([400, 200, 400, 200, 400]);
+                    ringVibInterval = setInterval(() => {
+                        try { navigator.vibrate([400, 200, 400]); } catch (_) {}
+                    }, 2000);
+                } catch (_) { /* vibrate gesture yok, sessizce yut */ }
             }
         } catch (e) {
             console.warn('[call] ringtone failed', e);
         }
     }
     function stopRingtone() {
-        if (ringInterval) {
-            if (ringInterval._vibInterval) clearInterval(ringInterval._vibInterval);
-            clearInterval(ringInterval);
-            ringInterval = null;
-        }
+        if (ringVibInterval) { clearInterval(ringVibInterval); ringVibInterval = null; }
+        if (ringInterval) { clearInterval(ringInterval); ringInterval = null; }
         if (ringOsc) { try { ringOsc.stop(); } catch(e){} ringOsc = null; }
         if (ringAudioCtx) { try { ringAudioCtx.close(); } catch(e){} ringAudioCtx = null; }
-        if (navigator.vibrate) navigator.vibrate(0);
+        if (navigator.vibrate) { try { navigator.vibrate(0); } catch (_) {} }
     }
 
     // ───── UI rendering ──────────────────────────────────────
@@ -435,17 +435,27 @@
             }
         });
     }
+    // SHA-256 hash — SDP'nin transit sırasında değişip değişmediğini teyit için
+    async function _sdpHash(s) {
+        try {
+            const buf = new TextEncoder().encode(s);
+            const h = await crypto.subtle.digest('SHA-256', buf);
+            return Array.from(new Uint8Array(h)).slice(0, 6).map(b => b.toString(16).padStart(2,'0')).join('');
+        } catch (_) { return '-'; }
+    }
+
     async function makeOffer() {
         const stream = await getMic();
         const peer = buildPc();
         addLocalTracks(peer, stream);
         const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
-        console.log('[call] offer sent');
-        pushSignal('offer', { sdp: peer.localDescription.sdp, type: peer.localDescription.type });
+        const sdp = peer.localDescription.sdp;
+        console.log('[call] offer sent · len:', sdp.length, '· hash:', await _sdpHash(sdp), '· ua:', navigator.userAgent.match(/Chrome|Safari|Firefox|Edge/g)?.join(','));
+        pushSignal('offer', { sdp, type: peer.localDescription.type });
     }
     async function handleRemoteOffer(payload) {
-        console.log('[call] remote offer received');
+        console.log('[call] remote offer received · len:', payload.sdp.length, '· hash:', await _sdpHash(payload.sdp), '· ua:', navigator.userAgent.match(/Chrome|Safari|Firefox|Edge/g)?.join(','));
         const peer = buildPc();
         // KRİTİK SIRA: önce setRemoteDescription (transceiver'lar kurulur), sonra addTrack
         await peer.setRemoteDescription({ type: payload.type, sdp: payload.sdp });
@@ -455,11 +465,13 @@
         await drainIceQueue();
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
-        console.log('[call] answer sent');
-        pushSignal('answer', { sdp: peer.localDescription.sdp, type: peer.localDescription.type });
+        const sdp = peer.localDescription.sdp;
+        console.log('[call] answer sent · len:', sdp.length, '· hash:', await _sdpHash(sdp));
+        pushSignal('answer', { sdp, type: peer.localDescription.type });
     }
     async function handleRemoteAnswer(payload) {
         if (!pc) return;
+        console.log('[call] remote answer received · len:', payload.sdp.length, '· hash:', await _sdpHash(payload.sdp));
         await pc.setRemoteDescription({ type: payload.type, sdp: payload.sdp });
         remoteDescSet = true;
         await drainIceQueue();
