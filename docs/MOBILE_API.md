@@ -23,7 +23,7 @@ FCM_PROJECT_ID=
 
 ## Genel sözleşme
 
-- **Base URL**: `https://ferogo.com.tr/api/v1`
+- **Base URL**: `https://appnew.randevumcepte.com.tr/api/v1`
 - **Auth**: `Authorization: Bearer <token>` (login response'larından gelir)
 - **Cihaz binding**: Her authed istekte `X-Device-Id: <device_uuid>` zorunlu. Token, ilk login'de bu device_id ile bağlanır; başka device_id ile gelirse token iptal edilir ve `401 token_revoked` döner.
 - **Response zarfı**: `{ "ok": true|false, ... }`. Hata: `{ "ok": false, "message": "...", "code"?: "..." }`.
