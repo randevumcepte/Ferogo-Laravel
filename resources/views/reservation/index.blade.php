@@ -113,11 +113,11 @@
     </section>
 
     {{-- Reservation Form --}}
-    <section id="rezervasyon" class="px-6 pt-12 pb-16 -mt-8 relative z-10">
+    <section id="rezervasyon" class="px-4 sm:px-6 pt-12 pb-16 -mt-8 relative z-10">
         <div class="max-w-3xl mx-auto">
-            <div class="text-center mb-10">
-                <h2 class="text-3xl md:text-4xl font-bold mb-3">Rezervasyon Oluştur</h2>
-                <p class="text-zinc-400">Adresleri yazın, fiyat ekranda anında görünsün.</p>
+            <div class="text-center mb-8 sm:mb-10">
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">Rezervasyon Oluştur</h2>
+                <p class="text-sm sm:text-base text-zinc-400">Adresleri yazın, fiyat ekranda anında görünsün.</p>
             </div>
 
             @if($errors->any())
@@ -131,11 +131,11 @@
                 </div>
             @endif
 
-            <form id="reservation-form" method="POST" action="{{ route('reservation.store') }}" class="space-y-6">
+            <form id="reservation-form" method="POST" action="{{ route('reservation.store') }}" class="space-y-4 sm:space-y-6">
                 @csrf
 
                 {{-- Step 1: Şehir + Araç --}}
-                <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 space-y-5">
+                <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 sm:p-6 space-y-5">
                     <div class="flex items-center gap-2 text-brand font-semibold">
                         <span class="w-6 h-6 rounded-full bg-brand text-black flex items-center justify-center text-xs font-bold">1</span>
                         Şehir & Araç Sınıfı
@@ -176,7 +176,7 @@
                 </div>
 
                 {{-- Step 2: Rota --}}
-                <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 space-y-5">
+                <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 sm:p-6 space-y-5">
                     <div class="flex items-center gap-2 text-brand font-semibold">
                         <span class="w-6 h-6 rounded-full bg-brand text-black flex items-center justify-center text-xs font-bold">2</span>
                         Rota
@@ -224,17 +224,17 @@
                     <input type="hidden" id="distance-km" name="distance_km" value="{{ old('distance_km') }}">
                     <input type="hidden" id="duration-minutes" name="duration_minutes" value="{{ old('duration_minutes') }}">
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="min-w-0">
                             <label class="block text-sm font-medium text-zinc-300 mb-2">Tarih & Saat</label>
                             <input type="datetime-local" id="scheduled-at" name="scheduled_at" value="{{ old('scheduled_at', now()->addHours(2)->format('Y-m-d\TH:i')) }}" required
                                 min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}"
-                                class="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand focus:outline-none">
+                                class="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 sm:px-4 py-3 text-white text-sm sm:text-base focus:border-brand focus:outline-none">
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <label class="block text-sm font-medium text-zinc-300 mb-2">Yolcu Sayısı</label>
                             <input type="number" name="passenger_count" value="{{ old('passenger_count', 1) }}" min="1" max="8" required
-                                class="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand focus:outline-none">
+                                class="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 sm:px-4 py-3 text-white text-sm sm:text-base focus:border-brand focus:outline-none">
                         </div>
                     </div>
                 </div>
@@ -242,7 +242,7 @@
                 {{-- Step 3: Ekstralar --}}
                 @if($extras->isNotEmpty())
                 <details class="extras-accordion group bg-zinc-900/50 border border-white/5 rounded-2xl">
-                    <summary class="flex items-center justify-between gap-2 p-6 cursor-pointer list-none select-none">
+                    <summary class="flex items-center justify-between gap-2 p-4 sm:p-6 cursor-pointer list-none select-none">
                         <div class="flex items-center gap-2 text-brand font-semibold">
                             <span class="w-6 h-6 rounded-full bg-brand text-black flex items-center justify-center text-xs font-bold">3</span>
                             Ekstralar <span class="text-xs text-zinc-400 font-normal">(opsiyonel)</span>
@@ -253,9 +253,9 @@
                         </svg>
                     </summary>
 
-                    <div class="px-6 pb-6 space-y-2">
+                    <div class="px-4 sm:px-6 pb-4 sm:pb-6 space-y-2">
                         @foreach($extras as $i => $extra)
-                            <label class="flex items-center justify-between gap-3 p-3 bg-zinc-800/50 rounded-xl cursor-pointer hover:bg-zinc-800 transition">
+                            <label class="flex items-center justify-between gap-2 sm:gap-3 p-3 bg-zinc-800/50 rounded-xl cursor-pointer hover:bg-zinc-800 transition">
                                 <div class="flex items-center gap-3">
                                     <input type="checkbox" class="extra-toggle w-4 h-4 rounded border-white/20 bg-zinc-700"
                                         data-extra-id="{{ $extra->id }}"
@@ -290,7 +290,7 @@
                 @endif
 
                 {{-- Step 4: Müşteri Bilgileri --}}
-                <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 space-y-5">
+                <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 sm:p-6 space-y-5">
                     <div class="flex items-center gap-2 text-brand font-semibold">
                         <span class="w-6 h-6 rounded-full bg-brand text-black flex items-center justify-center text-xs font-bold">4</span>
                         İletişim Bilgileri
@@ -328,34 +328,34 @@
                 </div>
 
                 {{-- Fare Preview --}}
-                <div id="fare-preview" class="bg-gradient-to-br from-brand/10 to-brand/5 border-2 border-brand/30 rounded-2xl p-6 hidden">
+                <div id="fare-preview" class="bg-gradient-to-br from-brand/10 to-brand/5 border-2 border-brand/30 rounded-2xl p-4 sm:p-6 hidden">
                     <div class="flex items-center justify-between mb-4">
                         <div id="fare-tier-badge" class="hidden px-3 py-1 rounded-full bg-brand text-black text-xs font-bold uppercase tracking-wider"></div>
                         <div id="fare-loading" class="hidden text-xs text-zinc-400">Hesaplanıyor...</div>
                     </div>
 
                     {{-- Üç özet kart: Mesafe / Süre / Tahmini Ücret --}}
-                    <div class="grid grid-cols-3 gap-3 mb-4">
-                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3">
-                            <div class="flex items-center gap-1.5 text-xs text-zinc-400 uppercase tracking-wider mb-1">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                                Mesafe
+                    <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-2 sm:p-3 min-w-0">
+                            <div class="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-zinc-400 uppercase tracking-wider mb-1">
+                                <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                <span class="truncate">Mesafe</span>
                             </div>
-                            <div id="card-distance" class="text-lg md:text-xl font-bold text-white">—</div>
+                            <div id="card-distance" class="text-sm sm:text-lg md:text-xl font-bold text-white truncate">—</div>
                         </div>
-                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3">
-                            <div class="flex items-center gap-1.5 text-xs text-zinc-400 uppercase tracking-wider mb-1">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Süre
+                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-2 sm:p-3 min-w-0">
+                            <div class="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-zinc-400 uppercase tracking-wider mb-1">
+                                <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="truncate">Süre</span>
                             </div>
-                            <div id="card-duration" class="text-lg md:text-xl font-bold text-white">—</div>
+                            <div id="card-duration" class="text-sm sm:text-lg md:text-xl font-bold text-white truncate">—</div>
                         </div>
-                        <div class="bg-brand/10 border-2 border-brand/40 rounded-xl p-3">
-                            <div class="flex items-center gap-1.5 text-xs text-brand uppercase tracking-wider mb-1">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Tahmini Ücret
+                        <div class="bg-brand/10 border-2 border-brand/40 rounded-xl p-2 sm:p-3 min-w-0">
+                            <div class="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-brand uppercase tracking-wider mb-1">
+                                <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="truncate">Ücret</span>
                             </div>
-                            <div id="card-fare" class="text-lg md:text-xl font-bold text-brand">—</div>
+                            <div id="card-fare" class="text-sm sm:text-lg md:text-xl font-bold text-brand truncate">—</div>
                         </div>
                     </div>
 
