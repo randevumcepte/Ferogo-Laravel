@@ -49,6 +49,37 @@
     }
     .extras-accordion > summary { list-style: none; }
     .extras-accordion > summary::-webkit-details-marker { display: none; }
+
+    /* iOS Safari datetime-local & number input normalize: diğer text input'larla aynı görünüm */
+    input[type="datetime-local"],
+    input[type="number"],
+    input[type="text"],
+    input[type="tel"] {
+        -webkit-appearance: none;
+        appearance: none;
+        box-sizing: border-box;
+        font-family: inherit;
+        font-size: 16px; /* iOS zoom-on-focus engeli */
+        line-height: 1.5;
+        min-height: 48px;
+    }
+    input[type="datetime-local"] {
+        display: block;
+        width: 100%;
+        text-align: left;
+    }
+    /* iOS datetime-local içindeki placeholder/değer alanını sıfırla */
+    input[type="datetime-local"]::-webkit-date-and-time-value {
+        text-align: left;
+        min-height: 1.5em;
+    }
+    /* number input spinner kaldır (kompakt görünüm) */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type="number"] { -moz-appearance: textfield; }
 </style>
 @endpush
 
