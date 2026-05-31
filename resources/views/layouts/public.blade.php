@@ -48,12 +48,14 @@
     {{-- Navigation — ?embed=1 modunda gizlenir (müşteri paneli içinde iframe için) --}}
     @unless(request()->boolean('embed'))
     <nav class="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-black/50 border-b border-white/5">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
             <a href="{{ route('home') }}" class="flex items-center gap-2">
                 <span class="text-2xl font-extrabold tracking-tight">
                     <span class="text-white">FERO</span><span class="text-brand">GO</span>
                 </span>
             </a>
+
+            {{-- Desktop menü --}}
             <div class="hidden md:flex items-center gap-6 text-sm text-zinc-300">
                 <a href="{{ route('home') }}#hizmetler" class="hover:text-white transition">Hizmetler</a>
                 <a href="{{ route('ride.show') }}" class="hover:text-white transition {{ request()->routeIs('ride.*') ? 'text-white' : '' }}">Yolculuk Yapın</a>
@@ -66,6 +68,40 @@
                 @else
                     <a href="{{ route('customer.login') }}" class="px-3 py-1.5 rounded-xl border border-white/20 hover:border-brand/40 hover:text-white text-xs font-semibold transition">Giriş Yap</a>
                 @endauth
+            </div>
+
+            {{-- Mobil hamburger butonu --}}
+            <button type="button" id="mobile-menu-toggle"
+                class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white transition"
+                aria-label="Menüyü aç" aria-expanded="false" aria-controls="mobile-menu">
+                <svg id="mobile-menu-icon-open" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                <svg id="mobile-menu-icon-close" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        {{-- Mobil açılır menü --}}
+        <div id="mobile-menu" class="md:hidden hidden border-t border-white/5 bg-black/95 backdrop-blur-md">
+            <div class="px-4 py-4 space-y-1">
+                <a href="{{ route('home') }}#hizmetler" class="block px-3 py-3 rounded-xl text-zinc-200 hover:bg-white/5 hover:text-white transition">Hizmetler</a>
+                <a href="{{ route('ride.show') }}" class="block px-3 py-3 rounded-xl text-zinc-200 hover:bg-white/5 hover:text-white transition {{ request()->routeIs('ride.*') ? 'bg-white/5 text-white' : '' }}">Yolculuk Yapın</a>
+                <a href="{{ route('driver.apply') }}" class="block px-3 py-3 rounded-xl text-zinc-200 hover:bg-white/5 hover:text-white transition {{ request()->routeIs('driver.*') ? 'bg-white/5 text-white' : '' }}">Sürücü Olun</a>
+                <a href="tel:+908508401377" class="flex items-center gap-2 px-3 py-3 rounded-xl text-white font-medium hover:bg-white/5 transition">
+                    <svg class="w-4 h-4 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02l-2.21 2.2z"/></svg>
+                    0850 840 13 77
+                </a>
+                <div class="pt-2 mt-2 border-t border-white/5">
+                    @auth
+                        @if (auth()->user()->type === 'customer')
+                            <a href="{{ route('customer.panel') }}" class="block w-full text-center px-4 py-3 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition">Hesabım</a>
+                        @endif
+                    @else
+                        <a href="{{ route('customer.login') }}" class="block w-full text-center px-4 py-3 rounded-xl border border-white/20 hover:border-brand/40 text-white text-sm font-semibold transition">Giriş Yap</a>
+                    @endauth
+                </div>
             </div>
         </div>
     </nav>
@@ -156,6 +192,44 @@
 
             document.getElementById('cookie-accept').addEventListener('click', () => hide('accepted'));
             document.getElementById('cookie-reject').addEventListener('click', () => hide('rejected'));
+        })();
+    </script>
+
+    {{-- Mobil menü toggle --}}
+    <script>
+        (function() {
+            const toggle = document.getElementById('mobile-menu-toggle');
+            const menu = document.getElementById('mobile-menu');
+            const iconOpen = document.getElementById('mobile-menu-icon-open');
+            const iconClose = document.getElementById('mobile-menu-icon-close');
+            if (!toggle || !menu) return;
+
+            function setOpen(open) {
+                menu.classList.toggle('hidden', !open);
+                iconOpen.classList.toggle('hidden', open);
+                iconClose.classList.toggle('hidden', !open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                toggle.setAttribute('aria-label', open ? 'Menüyü kapat' : 'Menüyü aç');
+            }
+
+            toggle.addEventListener('click', () => {
+                setOpen(menu.classList.contains('hidden'));
+            });
+
+            // İçindeki linke tıklandığında kapat
+            menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setOpen(false)));
+
+            // Dışına tıklayınca kapat
+            document.addEventListener('click', (e) => {
+                if (menu.classList.contains('hidden')) return;
+                if (toggle.contains(e.target) || menu.contains(e.target)) return;
+                setOpen(false);
+            });
+
+            // ESC ile kapat
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !menu.classList.contains('hidden')) setOpen(false);
+            });
         })();
     </script>
 
