@@ -667,6 +667,9 @@ class CustomerRideController extends Controller
             'vehicle_year'       => $v?->year_of_manufacture,
             'vehicle_color'      => $v?->color,
             'plate'              => $v?->plate,
+            // Mobil harita marker'ı için sürücünün canlı GPS konumu
+            'current_lat'        => $d->current_lat !== null ? (float) $d->current_lat : null,
+            'current_lng'        => $d->current_lng !== null ? (float) $d->current_lng : null,
         ];
     }
 
