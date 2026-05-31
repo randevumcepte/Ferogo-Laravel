@@ -46,7 +46,7 @@ class RideRequestController extends Controller
         // Tüm müsait sürücüleri çek (bbox YOK — demo aşamasında her şehirden
         // test edilebilsin diye; üretimde driver sayısı çoğalınca bbox ekleriz)
         $candidates = Driver::query()
-            ->with(['user:id,name', 'currentVehicle.vehicleClass'])
+            ->with(['user:id,name,avatar', 'currentVehicle.vehicleClass'])
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
             ->whereNotNull('current_lat')
