@@ -103,7 +103,7 @@
         <div class="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black to-transparent pointer-events-none"></div>
 
         {{-- Content --}}
-        <div class="relative px-6 pt-8 pb-16 sm:pt-16 sm:pb-24 md:py-36">
+        <div class="relative px-6 pt-2 pb-12 sm:pt-8 sm:pb-20 md:py-36">
             <div class="max-w-4xl mx-auto text-center">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold uppercase tracking-wider mb-6 backdrop-blur-sm">
                     <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
