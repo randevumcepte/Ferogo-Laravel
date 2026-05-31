@@ -44,7 +44,7 @@
         .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen flex flex-col relative overflow-hidden">
+<body class="bg-black text-white min-h-screen flex flex-col relative overflow-hidden pb-20 md:pb-0">
 
 {{-- Background atmosphere --}}
 <div class="absolute inset-0 grid-bg opacity-40 pointer-events-none"></div>
@@ -245,5 +245,7 @@
     });
 })();
 </script>
+
+@include('partials.mobile-action-bar')
 </body>
 </html>

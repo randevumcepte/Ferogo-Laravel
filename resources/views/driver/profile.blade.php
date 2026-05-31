@@ -16,7 +16,7 @@
     </script>
     <style>body { font-family: 'Inter', sans-serif; }</style>
 </head>
-<body class="bg-black text-white min-h-screen">
+<body class="bg-black text-white min-h-screen pb-20 md:pb-0">
 
     {{-- Top bar --}}
     <header class="sticky top-0 z-30 bg-black/85 backdrop-blur-md border-b border-white/10">
@@ -582,5 +582,7 @@
         });
     })();
     </script>
+
+    @include('partials.mobile-action-bar')
 </body>
 </html>

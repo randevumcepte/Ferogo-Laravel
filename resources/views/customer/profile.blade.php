@@ -19,7 +19,7 @@
         .glow { box-shadow: 0 0 60px -10px rgba(240,192,64,0.4); }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen">
+<body class="bg-black text-white min-h-screen pb-20 md:pb-0">
 
 @php
     $avatarUrl = $user->avatar
@@ -252,5 +252,6 @@
     })();
 </script>
 
+@include('partials.mobile-action-bar')
 </body>
 </html>

@@ -16,7 +16,7 @@
     </script>
     <style>body{font-family:'Inter',sans-serif}</style>
 </head>
-<body class="bg-black text-white min-h-screen flex items-center justify-center p-6">
+<body class="bg-black text-white min-h-screen flex items-center justify-center p-6 pb-24 md:pb-6">
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <a href="{{ url('/') }}" class="inline-flex items-center gap-2 text-2xl font-extrabold tracking-tight">
@@ -66,5 +66,6 @@
             © {{ date('Y') }} Ferogo · Sürücü Paneli
         </div>
     </div>
+    @include('partials.mobile-action-bar')
 </body>
 </html>
