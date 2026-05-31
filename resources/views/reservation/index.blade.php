@@ -103,7 +103,7 @@
         <div class="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black to-transparent pointer-events-none"></div>
 
         {{-- Content --}}
-        <div class="relative px-6 pt-2 pb-12 sm:pt-8 sm:pb-20 md:py-36">
+        <div class="relative px-6 pt-2 pb-28 sm:pt-8 sm:pb-32 md:pt-36 md:pb-44">
             <div class="max-w-4xl mx-auto text-center">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold uppercase tracking-wider mb-6 backdrop-blur-sm">
                     <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
@@ -128,7 +128,7 @@
                 </div>
 
                 {{-- Trust strip --}}
-                <div class="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs text-zinc-400 uppercase tracking-wider">
+                <div class="mt-8 sm:mt-12 flex flex-wrap items-center justify-center gap-x-6 sm:gap-x-8 gap-y-2 sm:gap-y-3 text-[11px] sm:text-xs text-zinc-400 uppercase tracking-wider">
                     <div class="flex items-center gap-2"><span class="text-brand">★</span> Lisanslı Şoförler</div>
                     <div class="flex items-center gap-2"><span class="text-brand">✓</span> Şeffaf Fiyat</div>
                     <div class="flex items-center gap-2"><span class="text-brand">⏱</span> Uçuş Takibi</div>
