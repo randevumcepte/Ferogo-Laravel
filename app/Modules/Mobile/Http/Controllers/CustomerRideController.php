@@ -1,0 +1,681 @@
+<?php
+
+namespace App\Modules\Mobile\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Modules\Booking\Models\Ride;
+use App\Modules\Booking\Models\RideMessage;
+use App\Modules\Booking\Models\RideRequest;
+use App\Modules\Booking\Services\CustomerTrustService;
+use App\Modules\Booking\Services\NoShowService;
+use App\Modules\Booking\Services\RideRequestService;
+use App\Modules\Driver\Models\Driver;
+use App\Modules\Pricing\Services\FareCalculator;
+use App\Modules\Vehicle\Models\VehicleClass;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\Rule;
+
+/**
+ * Mobil müşteri ride flow.
+ *
+ * Web tarafındaki RideRequestController + ReservationController'ın ilgili metodlarını
+ * Sanctum'lu + mobile-friendly payload ile sunar.
+ *
+ * Auth: Bearer + X-Device-Id. Token ability: customer:* (route grup düzeyinde kontrol).
+ */
+class CustomerRideController extends Controller
+{
+    public function __construct(
+        private RideRequestService $service,
+        private CustomerTrustService $trustService,
+        private NoShowService $noShowService,
+        private FareCalculator $calculator,
+    ) {}
+
+    // ─────────────────────────────────────────────────────────────
+    //  REFERANS LİSTELER + YER ARAMA + FİYAT
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/v1/customer/bootstrap
+     * Uygulama açılır açılmaz lazım olan referans datası (vehicle class'lar vb).
+     */
+    public function bootstrap(): JsonResponse
+    {
+        $classes = VehicleClass::where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'slug', 'name', 'description'])
+            ->map(fn ($c) => [
+                'id'          => $c->id,
+                'slug'        => $c->slug,
+                'name'        => $c->name,
+                'description' => $c->description,
+            ]);
+
+        return response()->json([
+            'ok'             => true,
+            'vehicle_classes'=> $classes,
+            'server_time'    => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * GET /api/v1/customer/places/search?q=...
+     * Nominatim proxy (web'deki ile aynı cache + İzmir viewbox).
+     */
+    public function searchPlaces(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:120'],
+        ]);
+
+        $q = mb_strtolower(trim(preg_replace('/\s+/u', ' ', $validated['q'])));
+        if (mb_strlen($q) < 2) {
+            return response()->json(['ok' => true, 'results' => []]);
+        }
+
+        // Per-user rate limit: 1 dakikada 30 arama
+        $rl = 'places_search:' . $request->user()->id;
+        if (RateLimiter::tooManyAttempts($rl, 30)) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Çok hızlı arıyorsun, bir saniye bekle.',
+                'retry_after' => RateLimiter::availableIn($rl),
+            ], 429);
+        }
+        RateLimiter::hit($rl, 60);
+
+        $cacheKey = 'places:tr-izmir:v1:' . sha1($q);
+        $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
+            try {
+                $response = Http::withHeaders([
+                    'User-Agent'      => 'Ferogo-Mobile/1.0 (+https://ferogo.com.tr)',
+                    'Accept-Language' => 'tr,en',
+                ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
+                    'q'              => $q,
+                    'format'         => 'json',
+                    'addressdetails' => 0,
+                    'limit'          => 6,
+                    'countrycodes'   => 'tr',
+                    'viewbox'        => '26.7,38.6,27.5,38.2',
+                    'bounded'        => 0,
+                ]);
+                if (! $response->ok()) return [];
+                $rows = $response->json();
+                if (! is_array($rows)) return [];
+                return array_map(static fn ($r) => [
+                    'lat'         => (float) ($r['lat'] ?? 0),
+                    'lon'         => (float) ($r['lon'] ?? 0),
+                    'display_name'=> (string) ($r['display_name'] ?? ''),
+                ], array_slice($rows, 0, 6));
+            } catch (\Throwable $e) {
+                report($e);
+                return [];
+            }
+        });
+
+        return response()->json(['ok' => true, 'results' => $results]);
+    }
+
+    /**
+     * POST /api/v1/customer/fare/calculate
+     * Body: { vehicle_class_id, distance_km, duration_minutes, scheduled_at?, extras? }
+     * city_id mobilde gerekmiyor (İzmir default), web parite için body'de optional.
+     */
+    public function calculateFare(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'city_id'          => ['nullable', 'integer', 'exists:cities,id'],
+            'vehicle_class_id' => ['required', 'integer', 'exists:vehicle_classes,id'],
+            'distance_km'      => ['required', 'numeric', 'min:0', 'max:1000'],
+            'duration_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
+            'scheduled_at'     => ['nullable', 'date'],
+            'extras'           => ['nullable', 'array'],
+            'extras.*.extra_id'=> ['integer', 'exists:extras,id'],
+            'extras.*.quantity'=> ['integer', 'min:1', 'max:10'],
+        ]);
+
+        $user = $request->user();
+        $tier = $this->calculator->resolveTierForPhone($user->phone);
+        $scheduled = ! empty($validated['scheduled_at']) ? Carbon::parse($validated['scheduled_at']) : null;
+        $cityId = (int) ($validated['city_id'] ?? \App\Modules\Shared\Models\City::where('is_active', true)
+            ->orderBy('sort_order')->value('id'));
+
+        $fare = $this->calculator->calculate(
+            cityId:           $cityId,
+            vehicleClassId:   (int) $validated['vehicle_class_id'],
+            distanceKm:       (float) $validated['distance_km'],
+            durationMinutes:  (int) $validated['duration_minutes'],
+            extras:           $validated['extras'] ?? [],
+            scheduledAt:      $scheduled,
+            customerTrustTier:$tier,
+        );
+
+        return response()->json(['ok' => true, 'fare' => $fare]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  YAKINDAKİ SÜRÜCÜLER + PROFİL
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/v1/customer/drivers/nearby?lat=...&lng=...&limit=3
+     */
+    public function nearbyDrivers(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'lat'   => ['required', 'numeric', 'between:-90,90'],
+            'lng'   => ['required', 'numeric', 'between:-180,180'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:10'],
+        ]);
+
+        $lat   = (float) $validated['lat'];
+        $lng   = (float) $validated['lng'];
+        $limit = (int) ($validated['limit'] ?? 3);
+
+        $candidates = Driver::query()
+            ->with(['user:id,name,avatar', 'currentVehicle.vehicleClass'])
+            ->where('approval_status', 'approved')
+            ->where('availability_status', 'online')
+            ->whereNotNull('current_lat')
+            ->whereNotNull('current_lng')
+            ->limit(50)
+            ->get();
+
+        $scored = $candidates->map(function (Driver $d) use ($lat, $lng) {
+            $km = $this->haversineKm($lat, $lng, (float) $d->current_lat, (float) $d->current_lng);
+            return array_merge($this->driverShortPayload($d), [
+                'distance_km' => round($km, 2),
+                'eta_minutes' => max(1, (int) round($km * 2.4 + 0.8)),
+            ]);
+        })->sortBy('distance_km')->take($limit)->values();
+
+        $totalOnline = Driver::query()
+            ->where('approval_status', 'approved')
+            ->where('availability_status', 'online')
+            ->count();
+
+        return response()->json([
+            'ok'            => true,
+            'drivers'       => $scored,
+            'total_online'  => $totalOnline,
+        ]);
+    }
+
+    /**
+     * GET /api/v1/customer/drivers/{id}/profile
+     * Web'deki driverProfile metoduyla aynı şekil — mobil payload identical.
+     */
+    public function driverProfile(int $driverId): JsonResponse
+    {
+        $driver = Driver::query()
+            ->with(['user', 'currentVehicle.vehicleClass'])
+            ->where('approval_status', 'approved')
+            ->find($driverId);
+
+        if (! $driver) {
+            return response()->json(['ok' => false, 'message' => 'Sürücü bulunamadı.'], 404);
+        }
+
+        // Web RideRequestController::driverProfile içeriği aynısı — DRY ihlali ama
+        // mobil payload'ı stabil tutmak için bağımsızlaştırılıyor.
+        $user    = $driver->user;
+        $vehicle = $driver->currentVehicle;
+        $vClass  = $vehicle?->vehicleClass;
+
+        $yearsDriving = $driver->license_issued_at
+            ? (int) $driver->license_issued_at->diffInYears(now())
+            : null;
+
+        $expBandLabels = [
+            'under_1' => '1 yıldan az',
+            '1_to_3'  => '1-3 yıl',
+            '3_to_5'  => '3-5 yıl',
+            '5_plus'  => '5+ yıl',
+        ];
+
+        $credentials = [
+            ['key' => 'approved',       'label' => 'Onaylı Sürücü', 'valid' => $driver->approval_status === 'approved'],
+            ['key' => 'license',        'label' => 'Ehliyet',       'valid' => $driver->license_expires_at === null || $driver->license_expires_at->isFuture()],
+            ['key' => 'src',            'label' => 'SRC',           'valid' => $driver->src_certificate_number && ($driver->src_expires_at === null || $driver->src_expires_at->isFuture())],
+            ['key' => 'psychotechnic',  'label' => 'Psikoteknik',   'valid' => $driver->psychotechnic_test_at && $driver->psychotechnic_test_at->isAfter(now()->subYears(5))],
+            ['key' => 'criminal_record','label' => 'Adli Sicil',    'valid' => $driver->criminal_record_at && $driver->criminal_record_at->isAfter(now()->subYears(2))],
+        ];
+
+        $vehiclePayload = null;
+        if ($vehicle) {
+            $features = array_values(array_filter([
+                $vehicle->has_baby_seat    ? ['key' => 'baby_seat',    'label' => 'Bebek koltuğu'] : null,
+                $vehicle->has_child_seat   ? ['key' => 'child_seat',   'label' => 'Çocuk koltuğu'] : null,
+                $vehicle->has_booster_seat ? ['key' => 'booster_seat', 'label' => 'Yükseltici']    : null,
+                $vehicle->pet_friendly     ? ['key' => 'pet_friendly', 'label' => 'Evcil hayvan']  : null,
+            ]));
+
+            $photos    = is_array($vehicle->photos) ? array_values(array_filter($vehicle->photos)) : [];
+            $photoUrls = array_map(fn ($p) => str_starts_with($p, 'http') ? $p : asset('storage/' . ltrim($p, '/')), $photos);
+
+            $vehiclePayload = [
+                'brand'             => $vehicle->brand,
+                'model'             => $vehicle->model,
+                'year'              => $vehicle->year_of_manufacture,
+                'color'             => $vehicle->color,
+                'plate'             => $vehicle->plate,
+                'class_name'        => $vClass?->name,
+                'class_slug'        => $vClass?->slug,
+                'photos'            => $photoUrls,
+                'features'          => $features,
+                'insurance_valid'   => $vehicle->insurance_expires_at === null || $vehicle->insurance_expires_at->isFuture(),
+                'inspection_valid'  => $vehicle->inspection_expires_at === null || $vehicle->inspection_expires_at->isFuture(),
+            ];
+        }
+
+        $fullName  = $user?->name ?? 'Sürücü';
+        $parts     = preg_split('/\s+/', trim($fullName));
+        $shortName = count($parts) > 1
+            ? $parts[0] . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.'
+            : $fullName;
+
+        $avatarUrl = null;
+        if ($user?->avatar) {
+            $avatarUrl = str_starts_with($user->avatar, 'http') ? $user->avatar : asset('storage/' . ltrim($user->avatar, '/'));
+        }
+
+        return response()->json([
+            'ok'     => true,
+            'driver' => [
+                'id'           => $driver->id,
+                'name'         => $fullName,
+                'short_name'   => $shortName,
+                'avatar'       => $avatarUrl,
+                'rating'       => (float) $driver->rating,
+                'total_rides'  => (int) $driver->total_rides,
+                'member_since' => $user?->created_at?->format('Y-m'),
+                'experience'   => [
+                    'band'          => $driver->experience_band,
+                    'label'         => $expBandLabels[$driver->experience_band] ?? '—',
+                    'years_driving' => $yearsDriving,
+                ],
+                'credentials'  => $credentials,
+                'vehicle'      => $vehiclePayload,
+            ],
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  RIDE REQUEST CRUD
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/customer/ride-requests
+     * Mobil müşteri yeni talep yaratır. Bearer authed olduğu için OTP token'a gerek yok.
+     */
+    public function storeRequest(Request $request): JsonResponse
+    {
+        $vehicleClassSlugs = VehicleClass::where('is_active', true)->pluck('slug')->toArray();
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'vehicle_class_slug'    => ['required', Rule::in($vehicleClassSlugs)],
+            'pickup_address'        => ['required', 'string', 'max:255'],
+            'pickup_lat'            => ['required', 'numeric'],
+            'pickup_lng'            => ['required', 'numeric'],
+            'dropoff_address'       => ['required', 'string', 'max:255'],
+            'dropoff_lat'           => ['nullable', 'numeric'],
+            'dropoff_lng'           => ['nullable', 'numeric'],
+            'distance_km'           => ['required', 'numeric', 'min:0', 'max:500'],
+            'duration_minutes'      => ['required', 'integer', 'min:1', 'max:600'],
+            'estimated_fare'        => ['nullable', 'numeric', 'min:0'],
+            'preferred_driver_id'   => ['required', 'integer', 'exists:drivers,id'],
+            'fallback_driver_ids'   => ['nullable', 'array', 'max:5'],
+            'fallback_driver_ids.*' => ['integer', 'exists:drivers,id'],
+            'kvkk_consent'          => ['required', 'accepted'],
+        ], [
+            'kvkk_consent.accepted' => 'KVKK onayını işaretlemen gerekiyor.',
+        ]);
+
+        $deviceId = (string) $request->header('X-Device-Id', '');
+
+        // Trust + ban + rate limit ortak koruması — web ile aynı katmanları çağırıyoruz
+        $trustCheck = $this->trustService->canRequestRide($user->phone, $request->ip(), $deviceId);
+        if (! $trustCheck['ok']) {
+            return response()->json([
+                'ok'          => false,
+                'message'     => $trustCheck['reason'],
+                'retry_after' => $trustCheck['retry_after'] ?? null,
+            ], 429);
+        }
+
+        // Per-phone rate limit: 10 dk / 2 talep
+        $phoneNorm = $this->trustService->normalizePhone($user->phone);
+        $phoneKey  = 'rr_create_phone:' . $phoneNorm;
+        if (RateLimiter::tooManyAttempts($phoneKey, 2)) {
+            return response()->json([
+                'ok'          => false,
+                'message'     => 'Çok hızlı talep gönderiyorsun. Önceki çağrını tamamla.',
+                'retry_after' => RateLimiter::availableIn($phoneKey),
+            ], 429);
+        }
+
+        // Per-IP rate limit: 10 dk / 5 talep
+        $ipKey = 'rr_create_ip:' . $request->ip();
+        if (RateLimiter::tooManyAttempts($ipKey, 5)) {
+            return response()->json([
+                'ok'          => false,
+                'message'     => 'Bu ağdan çok fazla talep. Daha sonra dene.',
+                'retry_after' => RateLimiter::availableIn($ipKey),
+            ], 429);
+        }
+
+        RateLimiter::hit($phoneKey, 600);
+        RateLimiter::hit($ipKey, 600);
+
+        $vehicleClass = VehicleClass::where('slug', $validated['vehicle_class_slug'])->firstOrFail();
+
+        // Aday sürücü listesi: preferred + fallback'lerden online+approved olanlar
+        $candidates = array_unique(array_merge(
+            [(int) $validated['preferred_driver_id']],
+            $validated['fallback_driver_ids'] ?? []
+        ));
+
+        $validCandidates = Driver::query()
+            ->whereIn('id', $candidates)
+            ->where('approval_status', 'approved')
+            ->where('availability_status', 'online')
+            ->pluck('id')
+            ->all();
+
+        $orderedCandidates = array_values(array_filter(
+            $candidates,
+            fn ($id) => in_array($id, $validCandidates, true)
+        ));
+
+        if (empty($orderedCandidates)) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Seçtiğin sürücü şu an müsait değil. Listeyi yenile, başkasını dene.',
+            ], 422);
+        }
+
+        $req = $this->service->create([
+            'customer_name'        => $user->name ?? 'Müşteri',
+            'customer_phone'       => $user->phone,
+            'vehicle_class_id'     => $vehicleClass->id,
+            'pickup_address'       => $validated['pickup_address'],
+            'pickup_lat'           => (float) $validated['pickup_lat'],
+            'pickup_lng'           => (float) $validated['pickup_lng'],
+            'dropoff_address'      => $validated['dropoff_address'],
+            'dropoff_lat'          => isset($validated['dropoff_lat']) ? (float) $validated['dropoff_lat'] : null,
+            'dropoff_lng'          => isset($validated['dropoff_lng']) ? (float) $validated['dropoff_lng'] : null,
+            'distance_km'          => (float) $validated['distance_km'],
+            'duration_minutes'     => (int) $validated['duration_minutes'],
+            'estimated_fare'       => isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null,
+            'candidate_driver_ids' => $orderedCandidates,
+            'phone_verified_at'    => now(),
+            'verification_token'   => null,
+            'client_ip'            => $request->ip(),
+            'client_fingerprint'   => $deviceId,
+            'user_agent'           => substr((string) $request->userAgent(), 0, 500),
+        ]);
+
+        $this->trustService->recordRequestCreated($user->phone, $request->ip(), $deviceId);
+
+        Log::info('[mobile-ride] request_created', [
+            'user_id'   => $user->id,
+            'public_id' => $req->public_id,
+            'candidates'=> $orderedCandidates,
+        ]);
+
+        return response()->json([
+            'ok'        => true,
+            'public_id' => $req->public_id,
+            'status'    => $this->statusPayload($req),
+        ]);
+    }
+
+    /**
+     * GET /api/v1/customer/ride-requests/{publicId}
+     */
+    public function showRequest(string $publicId): JsonResponse
+    {
+        $req = $this->ownedRequest($publicId);
+        $req = $this->service->tickExpiry($req);
+
+        return response()->json([
+            'ok'     => true,
+            'status' => $this->statusPayload($req),
+        ]);
+    }
+
+    /**
+     * POST /api/v1/customer/ride-requests/{publicId}/cancel
+     */
+    public function cancelRequest(string $publicId): JsonResponse
+    {
+        $req = $this->ownedRequest($publicId);
+        $req = $this->service->cancelByCustomer($req);
+
+        return response()->json([
+            'ok'     => true,
+            'status' => $this->statusPayload($req),
+        ]);
+    }
+
+    /**
+     * POST /api/v1/customer/ride-requests/{publicId}/confirm
+     */
+    public function confirmRequest(string $publicId): JsonResponse
+    {
+        $req    = $this->ownedRequest($publicId);
+        $result = $this->noShowService->customerConfirm($req);
+        $status = $result['ok'] ? 200 : 422;
+        return response()->json($result, $status);
+    }
+
+    /**
+     * GET /api/v1/customer/ride-requests/{publicId}/messages?since_id=
+     */
+    public function messages(Request $request, string $publicId): JsonResponse
+    {
+        $req     = $this->ownedRequest($publicId);
+        $sinceId = (int) $request->query('since_id', 0);
+
+        $messages = $req->messages()
+            ->where('id', '>', $sinceId)
+            ->limit(100)
+            ->get(['id', 'sender', 'body', 'created_at'])
+            ->map(fn ($m) => [
+                'id'         => $m->id,
+                'sender'     => $m->sender,
+                'body'       => $m->body,
+                'created_at' => $m->created_at->toIso8601String(),
+            ]);
+
+        return response()->json(['ok' => true, 'messages' => $messages]);
+    }
+
+    /**
+     * POST /api/v1/customer/ride-requests/{publicId}/messages
+     */
+    public function sendMessage(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'body' => ['required', 'string', 'min:1', 'max:1000'],
+        ]);
+
+        $req = $this->ownedRequest($publicId);
+
+        if (! $req->isAccepted()) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Mesajlaşma yolculuk başlayınca aktif olur.',
+            ], 422);
+        }
+
+        // Per-user rate limit: 10 mesaj / dakika (abuse koruması)
+        $rl = 'mobile_msg:' . $request->user()->id;
+        if (RateLimiter::tooManyAttempts($rl, 10)) {
+            return response()->json(['ok' => false, 'message' => 'Çok hızlı yazıyorsun.'], 429);
+        }
+        RateLimiter::hit($rl, 60);
+
+        $msg = RideMessage::create([
+            'ride_request_id' => $req->id,
+            'sender'          => 'customer',
+            'body'            => $validated['body'],
+        ]);
+
+        return response()->json([
+            'ok'      => true,
+            'message' => [
+                'id'         => $msg->id,
+                'sender'     => $msg->sender,
+                'body'       => $msg->body,
+                'created_at' => $msg->created_at->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /api/v1/customer/history?limit=10
+     * Son tamamlanmış/iptal yolculuklar.
+     */
+    public function history(Request $request): JsonResponse
+    {
+        $limit = (int) min(50, max(1, (int) $request->query('limit', 10)));
+
+        $rides = Ride::query()
+            ->with(['driver.user:id,name', 'vehicleClass:id,name,slug'])
+            ->where('customer_user_id', $request->user()->id)
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'ok'    => true,
+            'rides' => $rides->map(fn (Ride $r) => [
+                'public_id'        => $r->public_id,
+                'status'           => $r->status,
+                'pickup_address'   => $r->pickup_address,
+                'dropoff_address'  => $r->dropoff_address,
+                'distance_km'      => (float) $r->distance_km,
+                'duration_minutes' => (int) $r->duration_minutes,
+                'total_fare'       => $r->total_fare ? (float) $r->total_fare : null,
+                'currency'         => $r->currency,
+                'driver_name'      => $r->driver?->user?->name,
+                'vehicle_class'    => $r->vehicleClass?->name,
+                'completed_at'     => $r->completed_at?->toIso8601String(),
+                'created_at'       => $r->created_at->toIso8601String(),
+            ])->values(),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Helpers
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Bu request'i bu kullanıcının olduğunu doğrula.
+     * Aksi halde 404 (varlık sızdırma yok).
+     */
+    private function ownedRequest(string $publicId): RideRequest
+    {
+        $user = request()->user();
+
+        $req = RideRequest::where('public_id', $publicId)->first();
+
+        if (! $req) {
+            abort(404, 'Talep bulunamadı.');
+        }
+
+        // user.phone ile request.customer_phone normalize karşılaştırması
+        $reqPhone  = $this->trustService->normalizePhone((string) $req->customer_phone);
+        $userPhone = $this->trustService->normalizePhone((string) ($user->phone ?? ''));
+
+        if ($reqPhone !== $userPhone) {
+            abort(404, 'Talep bulunamadı.');
+        }
+
+        return $req;
+    }
+
+    private function statusPayload(RideRequest $req): array
+    {
+        $payload = [
+            'status'                => $req->status,
+            'rejection_count'       => (int) $req->rejection_count,
+            'current_index'         => (int) $req->current_candidate_index,
+            'total_candidates'      => count($req->candidate_driver_ids ?? []),
+            'seconds_remaining'     => $req->status === 'pending'
+                ? max(0, (int) round(now()->diffInSeconds($req->offer_expires_at, false)))
+                : 0,
+            'offered_driver'        => null,
+            'accepted_driver'       => null,
+            'ride_public_id'        => $req->ride?->public_id,
+            'arrived_at'            => $req->driver_arrived_at?->toIso8601String(),
+            'customer_confirmed_at' => $req->customer_confirmed_at?->toIso8601String(),
+            'no_show_at'            => $req->no_show_at?->toIso8601String(),
+        ];
+
+        if ($req->offered_driver_id) {
+            $req->loadMissing(['offeredDriver.user:id,name,avatar', 'offeredDriver.currentVehicle.vehicleClass']);
+            $payload['offered_driver'] = $this->driverShortPayload($req->offeredDriver);
+        }
+        if ($req->accepted_driver_id) {
+            $req->loadMissing(['acceptedDriver.user:id,name,avatar', 'acceptedDriver.currentVehicle.vehicleClass']);
+            $payload['accepted_driver'] = $this->driverShortPayload($req->acceptedDriver);
+        }
+
+        return $payload;
+    }
+
+    private function driverShortPayload(?Driver $d): ?array
+    {
+        if (! $d) return null;
+
+        $fullName  = $d->user?->name ?? 'Sürücü';
+        $parts     = preg_split('/\s+/', trim($fullName));
+        $shortName = count($parts) > 1
+            ? $parts[0] . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.'
+            : $fullName;
+
+        $v      = $d->currentVehicle;
+        $vClass = $v?->vehicleClass;
+
+        $avatarUrl = null;
+        if ($d->user?->avatar) {
+            $avatarUrl = str_starts_with($d->user->avatar, 'http')
+                ? $d->user->avatar
+                : asset('storage/' . ltrim($d->user->avatar, '/'));
+        }
+
+        return [
+            'id'                 => $d->id,
+            'name'               => $shortName,
+            'full_name'          => $fullName,
+            'avatar'             => $avatarUrl,
+            'rating'             => (float) $d->rating,
+            'trips'              => (int) $d->total_rides,
+            'vehicle_class'      => $vClass?->name,
+            'vehicle_class_slug' => $vClass?->slug,
+            'vehicle_label'      => $v ? trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) : null,
+            'vehicle_year'       => $v?->year_of_manufacture,
+            'vehicle_color'      => $v?->color,
+            'plate'              => $v?->plate,
+        ];
+    }
+
+    private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthKm = 6371.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+        return 2 * $earthKm * asin(min(1.0, sqrt($a)));
+    }
+}
