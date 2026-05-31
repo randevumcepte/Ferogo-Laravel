@@ -33,10 +33,54 @@ return Application::configure(basePath: dirname(__DIR__))
             'ability' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
             'abilities' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
         ]);
+
+        // Auth fail durumunda /api/* HTML login'e değil JSON 401'e gider.
+        // Authenticate middleware redirectTo() döner ve route('login') ararsa
+        // "Route [login] not defined" patlar — bu callback null dönerse
+        // middleware AuthenticationException atar, biz aşağıda JSON'a çeviririz.
+        $middleware->redirectGuestsTo(function ($request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return null;
+            }
+            return null;
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // JSON istekleri için exception'lar JSON döner (HTML hata sayfası değil)
         $exceptions->shouldRenderJsonWhen(function ($request, $throwable) {
             return $request->is('api/*') || $request->expectsJson();
+        });
+
+        // AuthenticationException → 401 JSON
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => 'Yetkisiz istek. Tekrar giriş yap.',
+                    'code'    => 'unauthenticated',
+                ], 401);
+            }
+        });
+
+        // ValidationException zaten JSON döner default'ta, ama format'ı biz şekillendirelim
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => $e->getMessage(),
+                    'errors'  => $e->errors(),
+                ], 422);
+            }
+        });
+
+        // NotFoundHttpException (404) → JSON
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => 'Kaynak bulunamadı.',
+                    'code'    => 'not_found',
+                ], 404);
+            }
         });
     })->create();
