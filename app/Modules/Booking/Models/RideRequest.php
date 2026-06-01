@@ -46,6 +46,21 @@ class RideRequest extends Model
         'customer_confirmed_at',
         'no_show_at',
         'captcha_passed',
+        // ─── Yeni güvenlik / dispatcher akışı ───
+        'pool_expand_at',
+        'pool_candidate_driver_ids',
+        'pool_rejected_driver_ids',
+        'pool_expanded_at',
+        'reconfirm_required_at',
+        'customer_reconfirmed_at',
+        'customer_reconfirm_declined_at',
+        'boarding_question_at',
+        'boarding_confirmed_at',
+        'started_at',
+        'visual_verify_prompted_at',
+        'visual_verified_at',
+        'visual_verify_failed_at',
+        'completed_at',
     ];
 
     protected $casts = [
@@ -63,6 +78,20 @@ class RideRequest extends Model
         'customer_confirmed_at' => 'datetime',
         'no_show_at'            => 'datetime',
         'captcha_passed'        => 'boolean',
+        'pool_expand_at'                  => 'datetime',
+        'pool_candidate_driver_ids'       => 'array',
+        'pool_rejected_driver_ids'        => 'array',
+        'pool_expanded_at'                => 'datetime',
+        'reconfirm_required_at'           => 'datetime',
+        'customer_reconfirmed_at'         => 'datetime',
+        'customer_reconfirm_declined_at'  => 'datetime',
+        'boarding_question_at'            => 'datetime',
+        'boarding_confirmed_at'           => 'datetime',
+        'started_at'                      => 'datetime',
+        'visual_verify_prompted_at'       => 'datetime',
+        'visual_verified_at'              => 'datetime',
+        'visual_verify_failed_at'         => 'datetime',
+        'completed_at'                    => 'datetime',
     ];
 
     protected static function booted(): void
@@ -116,7 +145,33 @@ class RideRequest extends Model
 
     public function isTerminal(): bool
     {
-        return in_array($this->status, ['accepted', 'exhausted', 'cancelled', 'no_show'], true);
+        return in_array($this->status, [
+            'completed',
+            'exhausted',
+            'cancelled',
+            'no_show',
+            'suspended_by_incident',
+        ], true);
+    }
+
+    public function isAwaitingReconfirm(): bool
+    {
+        return $this->status === 'awaiting_customer_reconfirm';
+    }
+
+    public function isInProgress(): bool
+    {
+        return $this->status === 'in_progress' || ($this->started_at !== null && $this->completed_at === null);
+    }
+
+    public function securityIncidents(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Security\Models\SecurityIncident::class);
+    }
+
+    public function panicAlerts(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Security\Models\PanicAlert::class);
     }
 
     public function offerExpired(): bool

@@ -48,6 +48,13 @@ class Driver extends Model
         'rejection_reason',
         'rating',
         'total_rides',
+        // ─── Güvenlik askıya alma (security suspension) ───
+        'is_suspended',
+        'suspended_at',
+        'suspended_reason',
+        'suspended_by_user_id',
+        'suspended_via_incident_id',
+        'reinstated_at',
     ];
 
     protected $casts = [
@@ -64,6 +71,9 @@ class Driver extends Model
         'last_location_updated_at' => 'datetime',
         'approved_at' => 'datetime',
         'rating' => 'decimal:2',
+        'is_suspended'   => 'boolean',
+        'suspended_at'   => 'datetime',
+        'reinstated_at'  => 'datetime',
     ];
 
     public function tenant(): BelongsTo
@@ -89,5 +99,26 @@ class Driver extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function suspendedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'suspended_by_user_id');
+    }
+
+    public function suspendedViaIncident(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Security\Models\SecurityIncident::class, 'suspended_via_incident_id');
+    }
+
+    /**
+     * Sürücü dispatch'e dahil edilebilir mi?
+     * (Onaylı + online + askıda değil)
+     */
+    public function isDispatchable(): bool
+    {
+        return $this->approval_status === 'approved'
+            && $this->availability_status === 'online'
+            && ! $this->is_suspended;
     }
 }
