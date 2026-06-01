@@ -107,30 +107,53 @@ class DriverPackageController extends Controller
     public function paytrNotification(Request $request): Response
     {
         $post = $request->all();
-        $gateway = GatewayFactory::make();
+        $merchantOid = $post['merchant_oid'] ?? null;
 
+        // Diagnostic: hangi POST geldi, hangi durumda, sebep ne
+        Log::info('PayTR bildirim alındı', [
+            'merchant_oid' => $merchantOid,
+            'status'       => $post['status'] ?? null,
+            'total_amount' => $post['total_amount'] ?? null,
+            'payment_type' => $post['payment_type'] ?? null,
+            'ip'           => $request->ip(),
+        ]);
+
+        $gateway = GatewayFactory::make();
         $result = $gateway->verifyNotification($post);
 
-        $merchantOid = $post['merchant_oid'] ?? null;
         $package = $merchantOid
             ? DriverPackage::where('payment_reference', $merchantOid)->first()
             : null;
 
         if (! $package) {
-            Log::warning('PayTR bildirim: paket bulunamadı', ['merchant_oid' => $merchantOid]);
-            // OK dön — paket bulunamadıysa retry mantıklı değil, hash doğru ise zaten geçerli
+            Log::warning('PayTR bildirim: paket bulunamadı', [
+                'merchant_oid' => $merchantOid,
+                'verify_ok'    => $result->success,
+            ]);
             return response('OK')->header('Content-Type', 'text/plain');
         }
 
         // Idempotent: paket zaten işlenmişse tekrar onaylamayalım
         if (in_array($package->status, ['active', 'failed'], true)) {
+            Log::info('PayTR bildirim: paket zaten işlenmiş', [
+                'merchant_oid' => $merchantOid,
+                'status'       => $package->status,
+            ]);
             return response('OK')->header('Content-Type', 'text/plain');
         }
 
         if ($result->success) {
             $this->packages->markPaidAndActivate($package, $result->reference ?? $merchantOid, $result->raw);
+            Log::info('PayTR bildirim: paket aktive edildi', [
+                'merchant_oid' => $merchantOid,
+                'package_id'   => $package->id,
+            ]);
         } else {
             $this->packages->markFailed($package, $result->errorMessage ?? 'unknown', $result->raw);
+            Log::warning('PayTR bildirim: ödeme başarısız', [
+                'merchant_oid' => $merchantOid,
+                'error'        => $result->errorMessage,
+            ]);
         }
 
         return response('OK')->header('Content-Type', 'text/plain');
