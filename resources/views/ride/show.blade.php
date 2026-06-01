@@ -504,6 +504,10 @@
                             <span class="text-xs text-brand shrink-0" id="qm-driver-rating">★ —</span>
                         </div>
                         <div class="text-xs text-zinc-500 truncate" id="qm-driver-meta">—</div>
+                        <div class="text-[10px] text-zinc-600 mt-0.5 flex items-center gap-1">
+                            <span>🔒</span>
+                            <span>Plaka ve fotoğraflar eşleştirme sonrası açılacaktır</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1898,17 +1902,19 @@
         selectedDropoff = null;
         resetActiveRequest();
 
-        // Header — varsa real driver bilgileriyle göster (daha dürüst)
+        // Header — varsa real driver bilgileriyle göster (PRIVACY: plaka eşleştirme sonrası açılır)
         const display = real || driver;
         const slug = display.vehicle_class_slug || display.vSlug || 'easy';
         const cls  = display.vehicle_class || display.vclass || 'Easy';
-        const plate = display.plate || '—';
+        // PRIVACY: plaka müşteri eşleştirme öncesi GİZLİ
+        // Araç markası + modeli gösterilir, plaka "Eşleştirme sonrası" ibaresiyle değiştirilir
+        const vehicleSummary = (display.vehicle_label || display.vehicle_class || 'Üye Sürücü');
         const rating = Number(display.rating || 0).toFixed(2);
         document.getElementById('qm-driver-icon').textContent = VCLASS_ICONS[slug] || '🚗';
         document.getElementById('qm-driver-name').textContent = display.name;
         document.getElementById('qm-driver-rating').textContent = `★ ${rating}`;
         document.getElementById('qm-driver-badge').innerHTML = classBadge(slug, cls);
-        document.getElementById('qm-driver-meta').textContent = plate;
+        document.getElementById('qm-driver-meta').textContent = vehicleSummary;
 
         // Reset form
         modalForm.reset();

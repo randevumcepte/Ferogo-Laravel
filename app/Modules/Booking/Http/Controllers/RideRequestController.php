@@ -170,7 +170,8 @@ class RideRequestController extends Controller
             ? 'Yeni katılan profesyonel sürücü.'
             : implode(' · ', $bioParts) . '.';
 
-        // ─── Araç ───
+        // ─── Araç (PRIVACY: plaka + gerçek fotoğraflar gizli — Martı dispatcher modeli) ───
+        // Müşteri henüz sürücüyü seçmedi → trafik/sürücü gizliliği için kritik bilgiler kapalı
         $vehiclePayload = null;
         if ($vehicle) {
             $features = [];
@@ -179,24 +180,22 @@ class RideRequestController extends Controller
             if ($vehicle->has_booster_seat) $features[] = ['key' => 'booster_seat', 'label' => 'Yükseltici',   'icon' => '🪑'];
             if ($vehicle->pet_friendly)     $features[] = ['key' => 'pet_friendly', 'label' => 'Evcil hayvan dostu', 'icon' => '🐾'];
 
-            $photos = array_values(array_filter(is_array($vehicle->photos) ? $vehicle->photos : []));
-            $photoUrls = array_map(function ($p) {
-                if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://')) return $p;
-                return asset('storage/' . ltrim($p, '/'));
-            }, $photos);
-
             $vehiclePayload = [
                 'brand'             => $vehicle->brand,
                 'model'             => $vehicle->model,
                 'year'              => $vehicle->year_of_manufacture,
                 'color'             => $vehicle->color,
-                'plate'             => $vehicle->plate,
                 'class_name'        => $vClass?->name,
                 'class_slug'        => $vClass?->slug,
-                'photos'            => $photoUrls,
+                // Temsili sınıf görseli (gerçek araç fotoğrafı değil)
+                'class_icon_url'    => $this->vehiclePhotoUrl($vehicle, $vClass),
                 'features'          => $features,
                 'insurance_valid'   => $vehicle->insurance_expires_at === null || $vehicle->insurance_expires_at->isFuture(),
                 'inspection_valid'  => $vehicle->inspection_expires_at === null || $vehicle->inspection_expires_at->isFuture(),
+                // Privacy bayrakları
+                'plate_hidden'      => true,
+                'photos_hidden'     => true,
+                'privacy_note'      => 'Plaka ve araç fotoğrafları eşleştirme sonrası açılacaktır.',
             ];
         }
 
@@ -206,27 +205,25 @@ class RideRequestController extends Controller
             ? $parts[0] . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.'
             : $fullName;
 
-        $avatarUrl = null;
-        if ($user?->avatar) {
-            $avatarUrl = str_starts_with($user->avatar, 'http')
-                ? $user->avatar
-                : asset('storage/' . ltrim($user->avatar, '/'));
-        }
+        // PRIVACY: gerçek avatar gizli — temsili UI avatar (kişisel kimlik gizliliği)
+        $avatarUrl = $this->avatarInitialsUrl($fullName);
 
         return response()->json([
             'success' => true,
             'driver'  => [
-                'id'           => $driver->id,
-                'name'         => $fullName,
-                'short_name'   => $shortName,
-                'avatar'       => $avatarUrl,
-                'rating'       => (float) $driver->rating,
-                'total_rides'  => (int) $driver->total_rides,
-                'member_since' => $user?->created_at?->format('Y-m'),
-                'experience'   => $experience,
-                'credentials'  => $credentials,
-                'bio'          => $bio,
-                'vehicle'      => $vehiclePayload,
+                'id'             => $driver->id,
+                'name'           => $shortName,           // sadece kısa isim (ad + soyad baş harfi)
+                'short_name'     => $shortName,
+                'avatar'         => $avatarUrl,           // temsili görsel
+                'rating'         => (float) $driver->rating,
+                'total_rides'    => (int) $driver->total_rides,
+                'member_since'   => $user?->created_at?->format('Y-m'),
+                'experience'     => $experience,
+                'credentials'    => $credentials,
+                'bio'            => $bio,
+                'vehicle'        => $vehiclePayload,
+                'privacy_level'  => 'public',
+                'privacy_note'   => 'Eşleştirme sonrası tam profil bilgilerine erişim açılacaktır.',
             ],
         ]);
     }
@@ -565,19 +562,38 @@ class RideRequestController extends Controller
             'no_show_at'            => $req->no_show_at?->toIso8601String(),
         ];
 
+        // Privacy seviyesi: müşteri sürücüyü onayladıktan SONRA tam bilgi açılır
+        // (customer_confirmed_at, accepted, in_progress, driver_arrived vb.)
+        // Henüz onaylamadıysa (pending/offered/awaiting_reconfirm) gizli kalır.
+        $matchedPrivacy = in_array($req->status, ['accepted', 'driver_arriving', 'driver_arrived', 'in_progress', 'completed'], true)
+            || $req->customer_confirmed_at !== null
+            || $req->customer_reconfirmed_at !== null;
+        $privacy = $matchedPrivacy ? 'matched' : 'public';
+
         if ($req->offered_driver_id) {
-            $req->loadMissing(['offeredDriver.user:id,name', 'offeredDriver.currentVehicle.vehicleClass']);
-            $payload['offered_driver'] = $this->driverPayload($req->offeredDriver);
+            $req->loadMissing(['offeredDriver.user:id,name,avatar', 'offeredDriver.currentVehicle.vehicleClass']);
+            $payload['offered_driver'] = $this->driverPayload($req->offeredDriver, $privacy);
         }
         if ($req->accepted_driver_id) {
-            $req->loadMissing(['acceptedDriver.user:id,name', 'acceptedDriver.currentVehicle.vehicleClass']);
-            $payload['accepted_driver'] = $this->driverPayload($req->acceptedDriver);
+            $req->loadMissing(['acceptedDriver.user:id,name,avatar', 'acceptedDriver.currentVehicle.vehicleClass']);
+            $payload['accepted_driver'] = $this->driverPayload($req->acceptedDriver, $privacy);
         }
 
         return $payload;
     }
 
-    private function driverPayload(?Driver $d): ?array
+    /**
+     * Sürücü bilgilerini API'ye uygun formatta döner.
+     *
+     * Gizlilik seviyeleri (Martı TAG dispatcher modeli):
+     *   - 'public'  : Plaka, gerçek araç fotoğrafı ve sürücü gerçek fotoğrafı GİZLİ.
+     *                 Müşteri henüz eşleştirme talep etmemiş (haritada yakın araçlar).
+     *                 Trafik takibine karşı koruma + sürücü gizliliği.
+     *   - 'matched' : Plaka, araç fotoğrafları ve sürücü fotoğrafı AÇIK.
+     *                 Sadece müşteri sürücüyle eşleştirildikten sonra (ride accepted).
+     *                 Sürücü tarafına da kendi bilgileri tam dönen tek seviye.
+     */
+    private function driverPayload(?Driver $d, string $privacy = 'public'): ?array
     {
         if (! $d) return null;
 
@@ -590,13 +606,10 @@ class RideRequestController extends Controller
         $v = $d->currentVehicle;
         $vClass = $v?->vehicleClass;
 
-        $photos = $this->vehiclePhotos($v, $vClass);
-
-        return [
+        // Public payload (eşleştirme öncesi): plaka YOK, gerçek araç fotoğrafı YOK
+        $payload = [
             'id'                  => $d->id,
             'name'                => $shortName,
-            'full_name'           => $fullName,
-            'photo_url'           => $this->driverPhotoUrl($d),
             'rating'              => (float) $d->rating,
             'trips'               => (int) $d->total_rides,
             'vehicle_class'       => $vClass?->name,
@@ -604,11 +617,42 @@ class RideRequestController extends Controller
             'vehicle_label'       => $v ? trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) : null,
             'vehicle_year'        => $v?->year_of_manufacture,
             'vehicle_color'       => $v?->color,
-            'vehicle_photo_url'   => $photos[0] ?? $this->vehiclePhotoUrl($v, $vClass),
-            'vehicle_photos'      => $photos,
-            'plate'               => $v?->plate,
             'experience_band'     => $d->experience_band,
+            // Genel temsili görsel (araç sınıfı bazlı, gerçek araç değil)
+            'vehicle_class_icon'  => $this->vehiclePhotoUrl($v, $vClass),
+            // Sürücü için temsili UI avatar (kişisel fotoğraf değil)
+            'avatar_initials_url' => $this->avatarInitialsUrl($fullName),
+            // Privacy bayrakları (frontend için)
+            'privacy_level'       => 'public',
+            'plate_hidden'        => true,
+            'photos_hidden'       => true,
         ];
+
+        if ($privacy === 'matched') {
+            // Eşleştirme sonrası: tam bilgi aç
+            $photos = $this->vehiclePhotos($v, $vClass);
+            $payload = array_merge($payload, [
+                'full_name'           => $fullName,
+                'photo_url'           => $this->driverPhotoUrl($d),
+                'vehicle_photo_url'   => $photos[0] ?? $this->vehiclePhotoUrl($v, $vClass),
+                'vehicle_photos'      => $photos,
+                'plate'               => $v?->plate,
+                'privacy_level'       => 'matched',
+                'plate_hidden'        => false,
+                'photos_hidden'       => false,
+            ]);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * İsim baş harflerinden temsili avatar (kişisel fotoğraf değil — gizlilik için).
+     */
+    private function avatarInitialsUrl(string $name): string
+    {
+        $encoded = urlencode($name);
+        return "https://ui-avatars.com/api/?name={$encoded}&background=F0C040&color=000&size=256&bold=true&format=svg";
     }
 
     /** Aracın gerçek fotoğraf galerisi varsa onu döner; yoksa sınıf bazlı temsili tek görsel array'i. */
