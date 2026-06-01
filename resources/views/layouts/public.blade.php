@@ -229,9 +229,9 @@
                 </button>
                 <p class="text-[11px] text-zinc-500 text-center leading-relaxed px-2">
                     Bu bildirim her oturumda bir kez gösterilir. Platformu kullanmaya devam ederek
-                    <a href="{{ route('legal.terms') }}" class="text-brand hover:underline">Hizmet Şartları</a>'nı,
-                    <a href="{{ route('legal.kvkk') }}" class="text-brand hover:underline">KVKK Aydınlatma Metni</a>'ni ve
-                    <a href="{{ route('legal.ride-sharing') }}" class="text-brand hover:underline">Paylaşımlı Yolculuk modelini</a>
+                    <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener" class="text-brand hover:underline">Hizmet Şartları</a>'nı,
+                    <a href="{{ route('legal.kvkk') }}" target="_blank" rel="noopener" class="text-brand hover:underline">KVKK Aydınlatma Metni</a>'ni ve
+                    <a href="{{ route('legal.ride-sharing') }}" target="_blank" rel="noopener" class="text-brand hover:underline">Paylaşımlı Yolculuk modelini</a>
                     kabul etmiş sayılırsınız.
                 </p>
             </div>
