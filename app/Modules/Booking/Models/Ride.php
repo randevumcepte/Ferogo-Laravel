@@ -71,6 +71,17 @@ class Ride extends Model
         'customer_review',
         'driver_rating',
         'driver_review',
+        // ─── Rezervasyon dispatcher ───
+        'pool_published_at',
+        'accepted_at',
+        'rejected_driver_ids',
+        'reconfirm_requested_at',
+        'reconfirm_deadline_at',
+        'driver_reconfirmed_at',
+        'imminent_notified_at',
+        'masked_call_unlocked_at',
+        'prepayment_authorized',
+        'prepayment_payment_id',
     ];
 
     protected $casts = [
@@ -96,7 +107,60 @@ class Ride extends Model
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        // ─── Rezervasyon dispatcher ───
+        'pool_published_at' => 'datetime',
+        'accepted_at' => 'datetime',
+        'rejected_driver_ids' => 'array',
+        'reconfirm_requested_at' => 'datetime',
+        'reconfirm_deadline_at' => 'datetime',
+        'driver_reconfirmed_at' => 'datetime',
+        'imminent_notified_at' => 'datetime',
+        'masked_call_unlocked_at' => 'datetime',
+        'prepayment_authorized' => 'boolean',
     ];
+
+    // ─── Rezervasyon status sabitleri ───
+    public const STATUS_RES_POOL          = 'reservation_pending_pool';
+    public const STATUS_RES_ACCEPTED      = 'reservation_accepted';
+    public const STATUS_RES_RECONFIRM_REQ = 'reservation_reconfirm_requested';
+    public const STATUS_RES_CONFIRMED     = 'reservation_confirmed';
+    public const STATUS_RES_IMMINENT      = 'reservation_imminent';
+    public const STATUS_RES_UNMATCHED     = 'reservation_unmatched';
+
+    public const RESERVATION_STATUSES = [
+        self::STATUS_RES_POOL,
+        self::STATUS_RES_ACCEPTED,
+        self::STATUS_RES_RECONFIRM_REQ,
+        self::STATUS_RES_CONFIRMED,
+        self::STATUS_RES_IMMINENT,
+    ];
+
+    /** Bir rezervasyon yaşam döngüsünde mi? */
+    public function isReservation(): bool
+    {
+        return in_array($this->status, self::RESERVATION_STATUSES, true)
+            || $this->status === self::STATUS_RES_UNMATCHED;
+    }
+
+    /** Sürücü-müşteri arası chat açık olsun mu? (kabul edildiyse) */
+    public function chatUnlocked(): bool
+    {
+        return $this->driver_id !== null
+            && in_array($this->status, [
+                self::STATUS_RES_ACCEPTED,
+                self::STATUS_RES_RECONFIRM_REQ,
+                self::STATUS_RES_CONFIRMED,
+                self::STATUS_RES_IMMINENT,
+                'assigned', 'driver_arriving', 'in_progress',
+            ], true);
+    }
+
+    /** Maskeli arama açık mı? (T-2h imminent sonrası) */
+    public function callUnlocked(): bool
+    {
+        return $this->masked_call_unlocked_at !== null
+            && $this->masked_call_unlocked_at->isPast();
+    }
 
     protected static function booted(): void
     {

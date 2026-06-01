@@ -4,6 +4,7 @@ namespace App\Modules\Booking\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Booking\Models\Ride;
+use App\Modules\Booking\Services\ReservationDispatcherService;
 use App\Modules\Booking\Services\ReservationService;
 use App\Modules\Legal\Services\LegalConsentService;
 use App\Modules\Pricing\Models\Extra;
@@ -21,6 +22,7 @@ class ReservationController extends Controller
 {
     public function __construct(
         private ReservationService $service,
+        private ReservationDispatcherService $dispatcher,
         private FareCalculator $calculator,
         private LegalConsentService $consents,
     ) {}
@@ -87,6 +89,10 @@ class ReservationController extends Controller
 
         $ride = $this->service->create($validated);
 
+        // Rezervasyon havuza yayınla (≥2 saat sonrası için)
+        // <2h ise dispatcher pool'a almaz, anlık akışa kalır.
+        $this->dispatcher->publishToPool($ride);
+
         // Hukuki onayları audit log'a yaz (kullanıcı rezervasyon formundan KVKK + Mesafeli Satış kabul etti)
         $this->consents->recordMany(
             request: $request,
@@ -102,7 +108,64 @@ class ReservationController extends Controller
 
         return redirect()
             ->route('reservation.confirmation', $ride->public_id)
-            ->with('success', 'Rezervasyonunuz oluşturuldu! En kısa sürede sizi arayacağız.');
+            ->with('success', 'Rezervasyonunuz oluşturuldu! Sürücü atandığında bildirim alacaksın.');
+    }
+
+    /**
+     * Müşteri kendi rezervasyonunu iptal eder.
+     * Sürücü atanmadıysa serbestçe, atandıysa zaman penceresine göre.
+     */
+    public function cancel(Request $request, string $publicId): JsonResponse
+    {
+        $ride = Ride::where('public_id', $publicId)->firstOrFail();
+
+        $authed = \Illuminate\Support\Facades\Auth::guard('customer')->user();
+        if (! $authed || (int) $ride->customer_user_id !== (int) $authed->id) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Bu rezervasyon sana ait değil.',
+            ], 403);
+        }
+
+        try {
+            $reason = (string) $request->input('reason', '');
+            $this->dispatcher->cancelByCustomer($ride, $reason ?: null);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Rezervasyon iptal edildi.',
+        ]);
+    }
+
+    /**
+     * Müşteri rezervasyon listesi (login'li).
+     */
+    public function myReservations(Request $request)
+    {
+        $authed = \Illuminate\Support\Facades\Auth::guard('customer')->user();
+        if (! $authed) {
+            return redirect()->route('customer.login');
+        }
+
+        $rides = Ride::query()
+            ->where('customer_user_id', $authed->id)
+            ->whereNotNull('scheduled_at')
+            ->whereIn('status', array_merge(
+                Ride::RESERVATION_STATUSES,
+                [Ride::STATUS_RES_UNMATCHED, 'assigned', 'driver_arriving', 'in_progress', 'completed', 'cancelled'],
+            ))
+            ->with(['driver.user', 'vehicleClass', 'city'])
+            ->orderByDesc('scheduled_at')
+            ->limit(50)
+            ->get();
+
+        return view('reservation.my', compact('rides'));
     }
 
     public function confirmation(string $publicId)

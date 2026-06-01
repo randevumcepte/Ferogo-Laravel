@@ -8,6 +8,7 @@ use App\Modules\Booking\Http\Controllers\ReservationController;
 use App\Modules\Booking\Http\Controllers\RideRequestController;
 use App\Modules\Driver\Http\Controllers\DriverApplicationController;
 use App\Modules\Driver\Http\Controllers\DriverPanelController;
+use App\Modules\Driver\Http\Controllers\DriverReservationController;
 use App\Modules\Legal\Http\Controllers\LegalConsentController;
 use App\Modules\Payment\Http\Controllers\DriverPackageController;
 use App\Modules\Security\Http\Controllers\SecurityIncidentController;
@@ -21,6 +22,12 @@ Route::post('/rezervasyon', [ReservationController::class, 'store'])
 
 Route::get('/rezervasyon/{publicId}', [ReservationController::class, 'confirmation'])
     ->name('reservation.confirmation');
+
+// Müşteri rezervasyon listesi + iptal
+Route::get('/rezervasyonlarim', [ReservationController::class, 'myReservations'])
+    ->name('reservation.mine');
+Route::post('/api/reservations/{publicId}/cancel', [ReservationController::class, 'cancel'])
+    ->name('reservation.cancel');
 
 // AJAX: canlı fiyat hesabı
 Route::post('/api/calculate-fare', [ReservationController::class, 'calculateFare'])
@@ -124,6 +131,16 @@ Route::post('/surucu-paneli/api/active/no-show',             [DriverPanelControl
 Route::post('/surucu-paneli/api/active/boarding-question',   [DriverPanelController::class, 'openBoardingQuestion'])->name('driver.api.boarding_question');
 Route::post('/surucu-paneli/api/active/boarding-confirm',    [DriverPanelController::class, 'confirmBoarding'])->name('driver.api.boarding_confirm');
 Route::post('/surucu-paneli/api/active/start-ride',          [DriverPanelController::class, 'startRide'])->name('driver.api.start_ride');
+
+// ─────────────────────────────────────────────────────────
+// REZERVASYON DISPATCHER — sürücü Pazar + Aldıklarım
+// ─────────────────────────────────────────────────────────
+Route::get('/surucu-paneli/rezervasyonlar',                              [DriverReservationController::class, 'page'])->name('driver.reservations.page');
+Route::get('/surucu-paneli/api/reservations/market',                     [DriverReservationController::class, 'market'])->name('driver.reservations.market');
+Route::get('/surucu-paneli/api/reservations/mine',                       [DriverReservationController::class, 'mine'])->name('driver.reservations.mine');
+Route::post('/surucu-paneli/api/reservations/{publicId}/accept',         [DriverReservationController::class, 'accept'])->name('driver.reservations.accept');
+Route::post('/surucu-paneli/api/reservations/{publicId}/confirm',        [DriverReservationController::class, 'confirm'])->name('driver.reservations.confirm');
+Route::post('/surucu-paneli/api/reservations/{publicId}/cancel',         [DriverReservationController::class, 'cancel'])->name('driver.reservations.cancel');
 
 // ─────────────────────────────────────────────────────────
 // FAZ 6 — Güvenlik olayı (security incident) + zorunlu doğrulama fotoğrafları

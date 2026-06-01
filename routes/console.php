@@ -16,3 +16,12 @@ Schedule::command('driver-packages:sweep')
     ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();
+
+/*
+ * Rezervasyon dispatcher — T-24h reconfirm, T-2h imminent, 12h unmatched
+ * tick'leri her dakika çalışır.
+ */
+Schedule::command('reservations:tick --quiet')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();

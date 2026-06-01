@@ -41,6 +41,10 @@
                 : null;
         @endphp
         <div class="flex items-center gap-3 shrink-0">
+            <a href="{{ route('reservation.mine') }}"
+               class="px-3 py-2 rounded-xl text-xs font-semibold text-zinc-200 hover:text-white border border-white/10 hover:border-white/30 transition">
+                Rezervasyonlarım
+            </a>
             <form method="POST" action="{{ route('customer.logout') }}" class="inline">
                 @csrf
                 <button type="submit" class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition">Çıkış</button>
