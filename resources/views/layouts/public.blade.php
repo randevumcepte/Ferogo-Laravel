@@ -153,8 +153,9 @@
          YASAL PLATFORM BİLDİRİMİ — oturum başı 1 kez gösterilir
          Click-wrap consent: kullanıcı "Anladım, devam et" tıklarsa
          hizmet şartlarını + paylaşımlı yolculuk modelini kabul eder.
+         Legal sayfalarında gösterilmez (kullanıcı zaten metni okuyor).
          ───────────────────────────────────────────────────────── --}}
-    @unless(request()->boolean('embed'))
+    @unless(request()->boolean('embed') || request()->routeIs('legal.*'))
     <div id="legal-platform-notice"
          class="fixed inset-0 z-[110] hidden items-center justify-center bg-black/85 backdrop-blur-md px-4 py-6"
          role="dialog" aria-labelledby="legal-notice-title" aria-modal="true">
