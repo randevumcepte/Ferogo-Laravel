@@ -8,6 +8,7 @@ use App\Modules\Booking\Http\Controllers\ReservationController;
 use App\Modules\Booking\Http\Controllers\RideRequestController;
 use App\Modules\Driver\Http\Controllers\DriverApplicationController;
 use App\Modules\Driver\Http\Controllers\DriverPanelController;
+use App\Modules\Legal\Http\Controllers\LegalConsentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
@@ -122,3 +123,7 @@ Route::view('/kvkk-aydinlatma',     'legal.kvkk')->name('legal.kvkk');
 Route::view('/mesafeli-satis',      'legal.distance-sales')->name('legal.distance-sales');
 Route::view('/cerez-politikasi',    'legal.cookies')->name('legal.cookies');
 Route::view('/paylasimli-yolculuk', 'legal.ride-sharing')->name('legal.ride-sharing');
+
+// Hukuki onay audit log endpoint'i (click-wrap consent kaydı)
+Route::post('/api/legal-consent', [LegalConsentController::class, 'store'])
+    ->name('legal.consent.store');

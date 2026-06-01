@@ -4,12 +4,15 @@ namespace App\Modules\Driver\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Driver\Models\DriverApplication;
+use App\Modules\Legal\Services\LegalConsentService;
 use App\Modules\Shared\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class DriverApplicationController extends Controller
 {
+    public function __construct(private LegalConsentService $consents) {}
+
     public function show()
     {
         return view('driver.apply', [
@@ -35,16 +38,34 @@ class DriverApplicationController extends Controller
             'vehicle_info' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'kvkk' => ['accepted'],
+            'terms' => ['accepted'],
+        ], [
+            'kvkk.accepted'  => 'KVKK onayını işaretlemen gerekiyor.',
+            'terms.accepted' => 'Hizmet Şartları ve Paylaşımlı Yolculuk model onayı zorunlu.',
         ]);
 
-        DriverApplication::create([
-            ...$validated,
+        $application = DriverApplication::create([
+            ...collect($validated)->except(['terms'])->all(),
             'has_src' => (bool) ($validated['has_src'] ?? false),
             'has_vehicle' => true,
             'status' => 'pending',
             'source' => 'web',
             'ip_address' => $request->ip(),
         ]);
+
+        // ─── Hukuki onayları audit log'a yaz (mahkeme delili) ───
+        // 4 ayrı kayıt: driver_registration, terms, kvkk, ride_sharing
+        $this->consents->recordMany(
+            request: $request,
+            items: [
+                ['type' => 'driver_registration'],
+                ['type' => 'terms'],
+                ['type' => 'kvkk'],
+                ['type' => 'ride_sharing'],
+            ],
+            acceptedVia: 'driver_registration',
+            extraPayload: ['application_id' => $application->id],
+        );
 
         return redirect()
             ->route('driver.apply')

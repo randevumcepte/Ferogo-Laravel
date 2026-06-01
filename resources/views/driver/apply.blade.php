@@ -170,7 +170,7 @@
                         <div class="grid grid-cols-2 gap-3 pt-5 border-t border-white/5">
                             <div>
                                 <div class="text-xs text-zinc-500 mb-1">Sürücü payı</div>
-                                <div class="text-2xl font-bold text-brand">%85</div>
+                                <div class="text-2xl font-bold text-brand">%100</div>
                             </div>
                             <div>
                                 <div class="text-xs text-zinc-500 mb-1">Ödeme</div>
@@ -218,7 +218,7 @@
                 @foreach([
                     ['200+', 'Aktif sürücü'],
                     ['₺28K', 'Aylık ortalama kazanç'],
-                    ['%85', 'Sürücü payı'],
+                    ['%100', 'Sürücü payı'],
                     ['4.9', 'Sürücü memnuniyeti'],
                 ] as $stat)
                     <div class="bg-black p-8 md:p-10 group hover:bg-zinc-950 transition">
@@ -240,7 +240,7 @@
                     <span class="text-zinc-500">kazanç,</span> esneklik, <span class="text-zinc-500">saygı.</span>
                 </h2>
                 <p class="text-lg text-zinc-400 leading-relaxed">
-                    Sürücü olmak bir mecburiyet değil, bir tercih olmalı. Biz koşulları öyle kuruyoruz ki sen sadece direksiyona ve müşteriye odaklan.
+                    Sürücü olmak bir mecburiyet değil, bir tercih olmalı. Biz koşulları öyle kuruyoruz ki sen sadece direksiyona ve yolcuya odaklan.
                 </p>
             </div>
 
@@ -253,10 +253,10 @@
                         <div class="text-xs uppercase tracking-[0.2em] text-brand mb-4">01 · Kazanç</div>
                         <h3 class="display-font text-3xl md:text-5xl text-white mb-4">Sektörün en yüksek sürücü payı</h3>
                         <p class="text-zinc-400 leading-relaxed mb-6 max-w-md">
-                            Yolcudan tahsil ettiğin katkı payının <strong>tamamı senin</strong>. Ferogo komisyon almaz; sabit dönemsel üyelik bedeli ile platforma erişirsin. Bahşişler tamamen sana aittir.
+                            Yolcunun ödediği katkı payının <strong>tamamı senin</strong>. Ferogo komisyon almaz; sabit dönemsel üyelik bedeli ile platforma erişirsin. Bahşişler tamamen sana aittir.
                         </p>
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="px-3 py-1 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold">%85 pay</span>
+                            <span class="px-3 py-1 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold">%100 pay</span>
                             <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-semibold">Tip senin</span>
                             <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-semibold">Şeffaf bordro</span>
                         </div>
@@ -294,9 +294,9 @@
                 {{-- Small card --}}
                 <div class="bento-card rounded-3xl p-7 border border-white/5">
                     <div class="text-3xl mb-4">👔</div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">05 · Müşteri</div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">05 · Yolcu</div>
                     <h3 class="text-xl font-bold text-white mb-2">Doğrulanmış yolcular</h3>
-                    <p class="text-sm text-zinc-400 leading-relaxed">Kurumsal, havalimanı, VIP. Pazarlık yok, fiyat net, müşteri kibar.</p>
+                    <p class="text-sm text-zinc-400 leading-relaxed">Kurumsal, havalimanı, VIP. Pazarlık yok, katkı payı net, yolcu kibar.</p>
                 </div>
 
                 {{-- Wide card --}}
@@ -362,7 +362,7 @@
                     @foreach([
                         'Adına / kullanımında bakımlı bir araç (son 7 yıl)',
                         'En az 22 yaşında olmak',
-                        'B sınıfı ehliyet (ticari için D / D1)',
+                        'B sınıfı ehliyet (büyük araç için D / D1)',
                         'Geçerli SRC-2 belgesi (yoksa biz yönlendiririz)',
                         'Sabıka kaydı temiz olmak',
                         'En az 2 yıl sürüş deneyimi',

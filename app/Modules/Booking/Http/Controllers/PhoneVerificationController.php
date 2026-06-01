@@ -5,6 +5,7 @@ namespace App\Modules\Booking\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Booking\Services\CustomerTrustService;
 use App\Modules\Booking\Services\PhoneVerificationService;
+use App\Modules\Legal\Services\LegalConsentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,6 +14,7 @@ class PhoneVerificationController extends Controller
     public function __construct(
         private PhoneVerificationService $service,
         private CustomerTrustService $trustService,
+        private LegalConsentService $consents,
     ) {}
 
     /**
@@ -77,6 +79,13 @@ class PhoneVerificationController extends Controller
 
         if ($result['ok']) {
             $request->session()->regenerate();
+            // Bu session'daki anonim consent log'larına telefonu backfill et
+            // → ileride dava olursa "bu telefon bu metni okudu" zinciri kurulur
+            try {
+                $this->consents->identifyByPhone($request, $validated['phone']);
+            } catch (\Throwable $e) {
+                // Sessiz başarısızlık — OTP akışı engellenmesin
+            }
         }
 
         $status = $result['ok'] ? 200 : 422;

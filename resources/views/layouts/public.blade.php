@@ -241,6 +241,7 @@
     <script>
         (function () {
             const KEY = 'ferogo-legal-notice-acked-v1';
+            const CONSENT_URL = @json(route('legal.consent.store'));
             const modal = document.getElementById('legal-platform-notice');
             if (!modal) return;
 
@@ -260,6 +261,50 @@
                 }
             }
 
+            // Cihaz parmak izi (basit canvas-based — daha ileri için fingerprint.js düşünülebilir)
+            function deviceFingerprint() {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    ctx.textBaseline = 'top';
+                    ctx.font = '14px Arial';
+                    ctx.fillText('ferogo-fp', 2, 2);
+                    const data = canvas.toDataURL() + navigator.userAgent + screen.width + 'x' + screen.height;
+                    let h = 0;
+                    for (let i = 0; i < data.length; i++) {
+                        h = ((h << 5) - h) + data.charCodeAt(i);
+                        h |= 0;
+                    }
+                    return 'fp-' + Math.abs(h).toString(16);
+                } catch (_) {
+                    return null;
+                }
+            }
+
+            async function logConsent() {
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+                if (!csrf) return; // CSRF yoksa kayıt zaten reddedilir
+                try {
+                    await fetch(CONSENT_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrf,
+                        },
+                        body: JSON.stringify({
+                            consent_type: 'platform_notice',
+                            accepted_via: 'modal',
+                            fingerprint: deviceFingerprint(),
+                        }),
+                        credentials: 'same-origin',
+                    });
+                } catch (err) {
+                    // Sessiz başarısızlık — kullanıcı engellenmesin
+                    console.warn('[legal-consent] log failed:', err);
+                }
+            }
+
             try {
                 if (!sessionStorage.getItem(KEY)) {
                     setTimeout(show, 350);
@@ -268,7 +313,11 @@
                 setTimeout(show, 350);
             }
 
-            document.getElementById('legal-notice-accept')?.addEventListener('click', () => hide(true));
+            document.getElementById('legal-notice-accept')?.addEventListener('click', () => {
+                hide(true);
+                logConsent(); // fire-and-forget — server-side audit log
+            });
+            // Çarpı tuşu: oturumda tekrar gösterme ama KABUL log'u atma (kullanıcı kabul etmedi)
             document.getElementById('legal-notice-close')?.addEventListener('click', () => hide(true));
         })();
     </script>

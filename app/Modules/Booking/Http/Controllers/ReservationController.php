@@ -5,6 +5,7 @@ namespace App\Modules\Booking\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Services\ReservationService;
+use App\Modules\Legal\Services\LegalConsentService;
 use App\Modules\Pricing\Models\Extra;
 use App\Modules\Pricing\Services\FareCalculator;
 use App\Modules\Shared\Models\City;
@@ -21,6 +22,7 @@ class ReservationController extends Controller
     public function __construct(
         private ReservationService $service,
         private FareCalculator $calculator,
+        private LegalConsentService $consents,
     ) {}
 
     public function index()
@@ -84,6 +86,19 @@ class ReservationController extends Controller
         ]);
 
         $ride = $this->service->create($validated);
+
+        // Hukuki onayları audit log'a yaz (kullanıcı rezervasyon formundan KVKK + Mesafeli Satış kabul etti)
+        $this->consents->recordMany(
+            request: $request,
+            items: [
+                ['type' => 'reservation_kvkk'],
+                ['type' => 'kvkk'],
+                ['type' => 'distance_sales'],
+                ['type' => 'terms'],
+            ],
+            acceptedVia: 'reservation',
+            extraPayload: ['ride_id' => $ride->id, 'ride_public_id' => $ride->public_id],
+        );
 
         return redirect()
             ->route('reservation.confirmation', $ride->public_id)
@@ -161,6 +176,19 @@ class ReservationController extends Controller
             // database/migrations/2026_05_28_200000_add_radar_quick_to_rides_source_enum.php
             'source' => 'web',
         ]);
+
+        // Hukuki onay log'u (hızlı rezervasyon kullanıcısı KVKK + Mesafeli Satış kabul etti)
+        $this->consents->recordMany(
+            request: $request,
+            items: [
+                ['type' => 'reservation_kvkk'],
+                ['type' => 'kvkk'],
+                ['type' => 'distance_sales'],
+                ['type' => 'terms'],
+            ],
+            acceptedVia: 'reservation',
+            extraPayload: ['ride_id' => $ride->id, 'ride_public_id' => $ride->public_id, 'source' => 'quick_request'],
+        );
 
         return response()->json([
             'success' => true,
