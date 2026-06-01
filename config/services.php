@@ -80,16 +80,21 @@ return [
     ],
 
     /*
-     * iyzico — sürücü paket ödemeleri (Martı TAG benzeri abonelik).
-     * enabled=false → "mock" provider: ödeme akışı tam çalışır, gerçek
-     * tahsilat yapılmaz, anlık başarı döner (dev/staging için).
-     * Üretimde IYZICO_API_KEY/SECRET set edilip enabled=true yapılır.
+     * PayTR iFrame API — sürücü paket ödemeleri (Martı TAG benzeri abonelik).
+     * iframe içinde: kart girişi, 3D Secure, saklı kart ve Masterpass otomatik aktif.
+     * enabled=false → MockGateway devreye girer (dev için, fake checkout).
+     *
+     * test_mode=true iken PayTR test kartları ile çalışır, gerçek tahsilat yok.
+     * Canlıya geçerken Ferogo'ya özel mağaza credential'ları + test_mode=false.
      */
-    'iyzico' => [
-        'enabled'    => (bool) env('IYZICO_ENABLED', false),
-        'api_key'    => env('IYZICO_API_KEY'),
-        'secret_key' => env('IYZICO_SECRET_KEY'),
-        'base_url'   => env('IYZICO_BASE_URL', 'https://sandbox-api.iyzipay.com'),
+    'paytr' => [
+        'enabled'         => (bool) env('PAYTR_ENABLED', false),
+        'merchant_id'     => env('PAYTR_MERCHANT_ID'),
+        'merchant_key'    => env('PAYTR_MERCHANT_KEY'),
+        'merchant_salt'   => env('PAYTR_MERCHANT_SALT'),
+        'test_mode'       => (bool) env('PAYTR_TEST_MODE', true),
+        'timeout_limit'   => (int) env('PAYTR_TIMEOUT_LIMIT', 30),  // dakika
+        'max_installment' => (int) env('PAYTR_MAX_INSTALLMENT', 1), // 1 = tek çekim
     ],
 
 ];

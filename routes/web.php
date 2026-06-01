@@ -138,21 +138,19 @@ Route::post('/api/panic', [PanicAlertController::class, 'trigger'])->name('secur
 // SÜRÜCÜ PAKET ABONELİĞİ — Martı TAG modeli (3 saatlik/günlük/haftalık/aylık)
 // Paket aktif değilse radar'a düşmez, iş atanmaz.
 // ─────────────────────────────────────────────────────────
-Route::get('/surucu-paneli/paketler',                        [DriverPackageController::class, 'index'])->name('driver.packages.index');
-Route::post('/surucu-paneli/paketler/satin-al',              [DriverPackageController::class, 'purchase'])->name('driver.packages.purchase');
-Route::post('/surucu-paneli/paketler/hizli-satin-al',        [DriverPackageController::class, 'quickPurchase'])->name('driver.packages.quick_purchase');
-Route::post('/surucu-paneli/kartlar/sil',                    [DriverPackageController::class, 'deleteCard'])->name('driver.cards.delete');
-// callback ve 3ds-callback CSRF muaftır (bootstrap/app.php → validateCsrfTokens except)
-// çünkü iyzico bizim oturumumuzdan gelmeyen sunucu-sunucu POST yapar.
-Route::match(['get', 'post'], '/surucu-paneli/paketler/{package}/callback', [DriverPackageController::class, 'callback'])
-    ->whereNumber('package')
-    ->name('driver.packages.callback');
-Route::match(['get', 'post'], '/surucu-paneli/paketler/{package}/3ds-callback', [DriverPackageController::class, 'threeDsCallback'])
-    ->whereNumber('package')
-    ->name('driver.packages.threeds_callback');
-Route::get('/surucu-paneli/paketler/{package}/mock-checkout', [DriverPackageController::class, 'mockCheckout'])
-    ->whereNumber('package')
-    ->name('driver.packages.mock_checkout');
+Route::get('/surucu-paneli/paketler',                          [DriverPackageController::class, 'index'])->name('driver.packages.index');
+Route::post('/surucu-paneli/paketler/satin-al',                [DriverPackageController::class, 'purchase'])->name('driver.packages.purchase');
+Route::get('/surucu-paneli/paketler/basarili',                 [DriverPackageController::class, 'success'])->name('driver.packages.success');
+Route::get('/surucu-paneli/paketler/{package}/basarisiz',      [DriverPackageController::class, 'failure'])
+    ->whereNumber('package')->name('driver.packages.failure');
+Route::get('/surucu-paneli/paketler/{package}/durum',          [DriverPackageController::class, 'status'])
+    ->whereNumber('package')->name('driver.packages.status');
+Route::get('/surucu-paneli/paketler/{package}/mock-checkout',  [DriverPackageController::class, 'mockCheckout'])
+    ->whereNumber('package')->name('driver.packages.mock_checkout');
+
+// PayTR sunucu-sunucu bildirim (CSRF muaf — bootstrap/app.php'de tanımlı).
+// PayTR bu URL'e POST eder, hash kontrolü ile kimlik doğrulanır.
+Route::post('/api/paytr/bildirim', [DriverPackageController::class, 'paytrNotification'])->name('paytr.notification');
 
 // ─────────────────────────────────────────────────────────
 // YASAL SAYFALAR (Martı dilinde — paylaşımlı yolculuk vurgusu)

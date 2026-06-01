@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Test Ödeme · Ferogo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>body { font-family: system-ui, sans-serif; }</style>
@@ -29,20 +30,33 @@
                 <span>{{ $package->duration_hours >= 24 ? floor($package->duration_hours / 24) . ' gün' : $package->duration_hours . ' saat' }}</span>
             </div>
             <div class="flex justify-between text-xs">
-                <span class="text-zinc-500">Token</span>
-                <span class="text-zinc-400 font-mono">{{ $token }}</span>
+                <span class="text-zinc-500">Merchant OID</span>
+                <span class="text-zinc-400 font-mono">{{ $merchantOid }}</span>
             </div>
         </div>
 
         <p class="text-xs text-zinc-500 leading-relaxed">
-            iyzico entegrasyonu pasif. Gerçek tahsilat yapılmıyor.
-            "Ödemeyi Onayla" butonu, üretimde iyzico sayfasından dönüşle aynı sonucu üretir
-            (paket aktive olur, sürücü radara düşer).
+            PayTR entegrasyonu pasif (PAYTR_ENABLED=false). Gerçek tahsilat yapılmıyor.
+            "Ödemeyi Onayla" butonu, üretimde PayTR bildirim'inden gelen success ile aynı sonucu üretir
+            — paket aktive olur, sürücü radara düşer.
         </p>
+
+        @php
+            $mockSalt = config('services.paytr.merchant_salt') ?: 'MOCK_SALT';
+            $mockKey  = config('services.paytr.merchant_key') ?: 'MOCK_KEY';
+            $status = 'success';
+            $totalAmount = (int) round((float) $package->price * 100);
+            $mockHash = base64_encode(hash_hmac('sha256', $merchantOid . $mockSalt . $status . $totalAmount, $mockKey, true));
+        @endphp
 
         <form method="POST" action="{{ $callback }}" class="space-y-2">
             @csrf
-            <input type="hidden" name="token" value="{{ $token }}">
+            <input type="hidden" name="merchant_oid" value="{{ $merchantOid }}">
+            <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="total_amount" value="{{ $totalAmount }}">
+            <input type="hidden" name="hash" value="{{ $mockHash }}">
+            <input type="hidden" name="payment_type" value="card">
+            <input type="hidden" name="masked_pan" value="406985******1234">
             <button type="submit"
                     class="w-full px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-sm transition">
                 ✓ Ödemeyi Onayla (Test)

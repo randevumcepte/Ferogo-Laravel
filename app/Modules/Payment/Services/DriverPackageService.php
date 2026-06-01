@@ -11,6 +11,8 @@ class DriverPackageService
 {
     /**
      * Sürücü için yeni paket satın alma kaydı oluşturur (pending durumunda).
+     * Ödeme PayTR iframe'inde tamamlanınca PayTR bildirim URL'imize POST eder
+     * → markPaidAndActivate() çağrılır.
      */
     public function createPurchase(Driver $driver, string $type): DriverPackage
     {
@@ -32,17 +34,20 @@ class DriverPackageService
     }
 
     /**
-     * Ödeme onaylandı → paketi aktive et + sürücünün cache alanını güncelle +
-     * iyzico cardUserKey/cardToken bilgisini user'a yaz (saklı kart akışı için).
-     *
-     * Üst üste paket alındıysa süre eklenir.
+     * Ödeme onaylandı → paketi aktive et + sürücünün cache alanını güncelle.
+     * Üst üste paket alındıysa süre eklenir (sürücü ödediği zamanı kaybetmesin).
      */
     public function markPaidAndActivate(DriverPackage $package, string $reference, array $rawMeta = []): DriverPackage
     {
         return DB::transaction(function () use ($package, $reference, $rawMeta) {
-            $driver = $package->driver()->lockForUpdate()->with('user')->first();
+            $driver = $package->driver()->lockForUpdate()->first();
             if (! $driver) {
                 throw new \RuntimeException('Sürücü bulunamadı.');
+            }
+
+            // Idempotent: zaten aktive edilmiş paketi yeniden işlememek için
+            if ($package->status === 'active') {
+                return $package;
             }
 
             $now = now();
@@ -52,14 +57,11 @@ class DriverPackageService
 
             $expiresAt = $startsAt->copy()->addHours($package->duration_hours);
 
-            // iyzico response'unda kart bilgisi varsa user'a yaz + paket kaydına kopyala
-            $cardUserKey = $rawMeta['cardUserKey'] ?? null;
-            $cardToken   = $rawMeta['cardToken'] ?? null;
-            $cardAlias   = $rawMeta['cardAssociation'] ?? null;  // VISA / MASTER_CARD
-            $lastFour    = $rawMeta['lastFourDigits'] ?? null;
-
-            if ($cardUserKey && $driver->user && empty($driver->user->iyzico_card_user_key)) {
-                $driver->user->update(['iyzico_card_user_key' => $cardUserKey]);
+            // PayTR bildirim payload'ı içinde dönen kart bilgisi (varsa kayıt)
+            // payment_type: card / wallet / new_card; test_mode'da hepsi gelmeyebilir
+            $cardLastFour = $rawMeta['masked_pan'] ?? null;
+            if ($cardLastFour && strlen($cardLastFour) >= 4) {
+                $cardLastFour = substr(preg_replace('/\D/', '', $cardLastFour), -4);
             }
 
             $package->update([
@@ -69,11 +71,8 @@ class DriverPackageService
                 'paid_at'            => $now,
                 'payment_reference'  => $reference,
                 'payment_meta'       => $rawMeta,
-                'card_token'         => $cardToken,
-                'card_alias'         => $cardAlias,
-                'card_last_four'     => $lastFour,
-                // 3D HTML payload artık gerekmez, kapla
-                'three_ds_html'      => null,
+                'card_last_four'     => $cardLastFour,
+                'card_alias'         => $rawMeta['payment_type'] ?? null,
             ]);
 
             $driver->update(['package_active_until' => $expiresAt]);
@@ -87,56 +86,7 @@ class DriverPackageService
         $package->update([
             'status'        => 'failed',
             'payment_meta'  => array_merge((array) $package->payment_meta, ['error' => $reason, 'raw' => $rawMeta]),
-            'three_ds_html' => null,
         ]);
-    }
-
-    /**
-     * Saklı kart ile 3D ödeme başlat. Sürücü 3D HTML'i görür, doğrulama sonrası
-     * iyzico bizim callback URL'imize POST eder.
-     *
-     * $urlBuilder: paket oluşturulduktan sonra çağrılır, callback URL'ini döner
-     * (paket id'sini içerebilmesi için lazy build).
-     *
-     * @return array{package: DriverPackage, html_content: string|null, error: string|null}
-     */
-    public function startSavedCardPayment(Driver $driver, string $type, string $cardToken, callable $urlBuilder): array
-    {
-        if (empty($driver->user?->iyzico_card_user_key)) {
-            throw ValidationException::withMessages(['card' => 'Saklı kart bulunamadı. Yeni kart ile ödeme yap.']);
-        }
-
-        $package = $this->createPurchase($driver, $type);
-        $callbackUrl = $urlBuilder($package);
-        $gateway = GatewayFactory::make();
-
-        $result = $gateway->init3dPayment(
-            $package,
-            $driver->user->iyzico_card_user_key,
-            $cardToken,
-            $callbackUrl,
-        );
-
-        if (! $result['success']) {
-            $this->markFailed($package, $result['error'] ?? '3D başlatılamadı', $result['raw'] ?? []);
-            return [
-                'package'      => $package,
-                'html_content' => null,
-                'error'        => $result['error'] ?? '3D başlatılamadı',
-            ];
-        }
-
-        $package->update([
-            'three_ds_html'   => $result['html_content'],
-            'conversation_id' => $result['conversation_id'],
-            'card_token'      => $cardToken,
-        ]);
-
-        return [
-            'package'      => $package,
-            'html_content' => $result['html_content'],
-            'error'        => null,
-        ];
     }
 
     /**

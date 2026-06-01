@@ -20,13 +20,11 @@ class DriverPackage extends Model
         'expires_at',
         'status',
         'payment_provider',
-        'payment_reference',
-        'card_token',
-        'card_alias',
-        'card_last_four',
+        'payment_reference',   // PayTR: merchant_oid
+        'card_alias',          // PayTR: payment_type (card/wallet)
+        'card_last_four',      // PayTR: masked_pan son 4 hane
         'payment_meta',
-        'three_ds_html',
-        'conversation_id',
+        'conversation_id',     // PayTR: get-token response token
         'paid_at',
     ];
 
@@ -37,11 +35,6 @@ class DriverPackage extends Model
         'expires_at'     => 'datetime',
         'paid_at'        => 'datetime',
         'payment_meta'   => 'array',
-    ];
-
-    protected $hidden = [
-        // 3D Secure HTML payload genelde 100KB+ olur, accidentally JSON'a sızmasın
-        'three_ds_html',
     ];
 
     public function driver(): BelongsTo

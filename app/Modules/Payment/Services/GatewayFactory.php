@@ -3,20 +3,22 @@
 namespace App\Modules\Payment\Services;
 
 /**
- * services.iyzico.enabled bayrağına göre doğru gateway'i döner.
- * Tek noktadan provider seçimi — controller bu detayı bilmek zorunda değil.
+ * services.paytr.enabled bayrağına göre PayTR veya Mock döner.
  */
 final class GatewayFactory
 {
     public static function make(): PaymentGateway
     {
-        $cfg = config('services.iyzico', []);
+        $cfg = config('services.paytr', []);
 
-        if (! empty($cfg['enabled']) && ! empty($cfg['api_key']) && ! empty($cfg['secret_key'])) {
-            return new IyzicoGateway(
-                apiKey:    $cfg['api_key'],
-                secretKey: $cfg['secret_key'],
-                baseUrl:   $cfg['base_url'] ?? 'https://sandbox-api.iyzipay.com',
+        if (! empty($cfg['enabled']) && ! empty($cfg['merchant_id']) && ! empty($cfg['merchant_key']) && ! empty($cfg['merchant_salt'])) {
+            return new PayTRGateway(
+                merchantId:    (string) $cfg['merchant_id'],
+                merchantKey:   (string) $cfg['merchant_key'],
+                merchantSalt:  (string) $cfg['merchant_salt'],
+                testMode:      (bool) ($cfg['test_mode'] ?? true),
+                timeoutLimit:  (int) ($cfg['timeout_limit'] ?? 30),
+                maxInstallment:(int) ($cfg['max_installment'] ?? 1),
             );
         }
 

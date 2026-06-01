@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class DriverPackageController extends Controller
@@ -27,7 +28,7 @@ class DriverPackageController extends Controller
     }
 
     /**
-     * GET /surucu-paneli/paketler — paket katalogu + saklı kartlar.
+     * GET /surucu-paneli/paketler — paket katalogu + aktif paket + geçmiş.
      */
     public function index(): View|RedirectResponse
     {
@@ -46,33 +47,19 @@ class DriverPackageController extends Controller
             ->limit(20)
             ->get();
 
-        // iyzico saklı kartlar — sadece IYZICO_ENABLED=true iken anlamlı
-        $savedCards = [];
-        $cardUserKey = $driver->user?->iyzico_card_user_key;
-        if ($cardUserKey) {
-            try {
-                $savedCards = GatewayFactory::make()->listSavedCards($cardUserKey);
-            } catch (\Throwable $e) {
-                // iyzico down ise sayfa açılmasın engellenemez
-                report($e);
-            }
-        }
-
         return view('driver.packages', [
             'driver'        => $driver,
             'catalog'       => $catalog,
             'activePackage' => $activePackage,
             'history'       => $history,
-            'savedCards'    => $savedCards,
         ]);
     }
 
     /**
-     * POST /surucu-paneli/paketler/satin-al — yeni kart ile (Checkout Form).
-     * Sürücüyü iyzico (veya mock) checkout sayfasına yönlendirir.
-     * Saklı kart varsa cardUserKey gönderir → iyzico sayfasında listelenir.
+     * POST /surucu-paneli/paketler/satin-al — paket seç, PayTR token al,
+     * sürücüyü iframe sayfasına yönlendir.
      */
-    public function purchase(Request $request): RedirectResponse
+    public function purchase(Request $request): View|RedirectResponse
     {
         $driver = $this->currentDriver();
         if (! $driver) return redirect()->route('driver.login');
@@ -83,142 +70,125 @@ class DriverPackageController extends Controller
 
         $package = $this->packages->createPurchase($driver, $validated['type']);
 
-        $callbackUrl = route('driver.packages.callback', ['package' => $package->id]);
-        $cardUserKey = $driver->user?->iyzico_card_user_key;
-        $checkout    = GatewayFactory::make()->initCheckout($package, $callbackUrl, $cardUserKey);
+        $checkout = GatewayFactory::make()->initCheckout($package);
 
-        if (empty($checkout['redirect_url'])) {
-            $this->packages->markFailed($package, 'Gateway başlatılamadı', $checkout['raw'] ?? []);
+        if (empty($checkout['iframe_url'])) {
+            $this->packages->markFailed($package, $checkout['error'] ?? 'Token alınamadı', $checkout['raw'] ?? []);
             return redirect()->route('driver.packages.index')
-                ->with('error', 'Ödeme sayfası açılamadı. Lütfen tekrar deneyin.');
+                ->with('error', $checkout['error'] ?: 'Ödeme sayfası açılamadı. Lütfen tekrar deneyin.');
         }
 
         $package->update([
-            'payment_reference' => $checkout['token'] ?? null,
-            'conversation_id'   => $checkout['conversation_id'] ?? null,
+            'payment_reference' => $checkout['merchant_oid'],
+            'conversation_id'   => $checkout['token'],   // PayTR token, idempotency için
             'payment_meta'      => $checkout['raw'] ?? [],
         ]);
 
-        return redirect()->away($checkout['redirect_url']);
-    }
-
-    /**
-     * POST /surucu-paneli/paketler/hizli-satin-al — saklı kart ile tek tıkla ödeme.
-     * 3D Secure HTML döner → 3ds sayfasında iframe içinde render edilir.
-     */
-    public function quickPurchase(Request $request): View|RedirectResponse
-    {
-        $driver = $this->currentDriver();
-        if (! $driver) return redirect()->route('driver.login');
-
-        $validated = $request->validate([
-            'type'       => ['required', 'string', 'in:' . implode(',', array_keys(config('packages.types')))],
-            'card_token' => ['required', 'string', 'max:100'],
-        ]);
-
-        try {
-            $result = $this->packages->startSavedCardPayment(
-                $driver,
-                $validated['type'],
-                $validated['card_token'],
-                fn (DriverPackage $p) => route('driver.packages.threeds_callback', ['package' => $p->id]),
-            );
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->route('driver.packages.index')
-                ->with('error', collect($e->errors())->flatten()->first() ?: 'Hata oluştu.');
+        // Mock provider sürücüyü kendi sayfasına yönlendirir (redirect)
+        if ($checkout['provider'] === 'mock') {
+            return redirect()->away($checkout['iframe_url']);
         }
 
-        if ($result['error'] || empty($result['html_content'])) {
-            return redirect()->route('driver.packages.index')
-                ->with('error', $result['error'] ?: 'Hızlı ödeme başlatılamadı.');
-        }
-
-        // Gerçek callback URL'ini paket id'siyle güncelle (3DS request'inde gönderildi)
-        $package = $result['package'];
-
-        return view('driver.packages_3ds', [
-            'package'     => $package,
-            'htmlContent' => $result['html_content'],
+        // PayTR: iframe view
+        return view('driver.packages_iframe', [
+            'package'   => $package,
+            'iframeUrl' => $checkout['iframe_url'],
         ]);
     }
 
     /**
-     * POST|GET /surucu-paneli/paketler/{package}/callback — Checkout Form sonrası.
+     * POST /api/paytr/bildirim — PayTR sunucu-sunucu bildirim endpoint'i.
+     * GÜVENLİK: Bu route CSRF muaftır + auth gerektirmez (bootstrap/app.php'de tanımlı).
+     * Hash doğrulamayı PayTR kendi salt+key ile yapar, kimliği güvenilir.
+     *
+     * Cevap olarak SADECE "OK" string'i döndürmek ZORUNLU; aksi halde PayTR
+     * bildirimi başarısız sayar ve tekrar dener.
      */
-    public function callback(Request $request, DriverPackage $package): RedirectResponse
+    public function paytrNotification(Request $request): Response
     {
-        $driver = $this->currentDriver();
-        if ($driver && $package->driver_id !== $driver->id) {
-            abort(403);
-        }
-
+        $post = $request->all();
         $gateway = GatewayFactory::make();
-        $result  = $gateway->verifyCallback($request->all());
 
-        if (! $result->success) {
+        $result = $gateway->verifyNotification($post);
+
+        $merchantOid = $post['merchant_oid'] ?? null;
+        $package = $merchantOid
+            ? DriverPackage::where('payment_reference', $merchantOid)->first()
+            : null;
+
+        if (! $package) {
+            Log::warning('PayTR bildirim: paket bulunamadı', ['merchant_oid' => $merchantOid]);
+            // OK dön — paket bulunamadıysa retry mantıklı değil, hash doğru ise zaten geçerli
+            return response('OK')->header('Content-Type', 'text/plain');
+        }
+
+        // Idempotent: paket zaten işlenmişse tekrar onaylamayalım
+        if (in_array($package->status, ['active', 'failed'], true)) {
+            return response('OK')->header('Content-Type', 'text/plain');
+        }
+
+        if ($result->success) {
+            $this->packages->markPaidAndActivate($package, $result->reference ?? $merchantOid, $result->raw);
+        } else {
             $this->packages->markFailed($package, $result->errorMessage ?? 'unknown', $result->raw);
-            return redirect()->route('driver.packages.index')
-                ->with('error', $result->errorMessage ?: 'Ödeme onaylanmadı.');
         }
 
-        $this->packages->markPaidAndActivate($package, $result->reference ?? 'OK', $result->raw);
-
-        return redirect()->route('driver.packages.index')
-            ->with('success', $package->label() . ' paket aktive edildi. İyi yolculuklar!');
+        return response('OK')->header('Content-Type', 'text/plain');
     }
 
     /**
-     * POST /surucu-paneli/paketler/{package}/3ds-callback — saklı kart 3D doğrulamadan dönüş.
-     * iyzico burayı POST'lar; biz `/payment/3dsecure/auth` ile sonucu finalize ederiz.
+     * GET /surucu-paneli/paketler/basarili — PayTR ödeme sonrası UX yönlendirme.
+     * Sürücüye sadece "İşleniyor" mesajı gösterir; gerçek aktivasyon bildirimde olur.
      */
-    public function threeDsCallback(Request $request, DriverPackage $package): View|RedirectResponse
-    {
-        $gateway = GatewayFactory::make();
-        $result  = $gateway->complete3dPayment($request->all());
-
-        if (! $result->success) {
-            $this->packages->markFailed($package, $result->errorMessage ?? '3D doğrulama başarısız', $result->raw);
-            // 3DS iframe içinden geldiğimiz için parent'a yönlendirme yapan ufak HTML
-            return view('driver.packages_3ds_result', [
-                'success' => false,
-                'message' => $result->errorMessage ?: '3D doğrulama başarısız',
-            ]);
-        }
-
-        $this->packages->markPaidAndActivate($package, $result->reference ?? 'OK', $result->raw);
-
-        return view('driver.packages_3ds_result', [
-            'success' => true,
-            'message' => $package->label() . ' paketi aktive edildi.',
-        ]);
-    }
-
-    /**
-     * POST /surucu-paneli/kartlar/sil — iyzico'daki saklı kartı sil.
-     */
-    public function deleteCard(Request $request): RedirectResponse
+    public function success(): View|RedirectResponse
     {
         $driver = $this->currentDriver();
         if (! $driver) return redirect()->route('driver.login');
 
-        $validated = $request->validate([
-            'card_token' => ['required', 'string', 'max:100'],
+        return view('driver.packages_result', [
+            'success'      => true,
+            'title'        => 'Ödeme Alındı',
+            'message'      => 'Ödemen başarılı. Paketin birkaç saniye içinde aktive olacak.',
+            'redirectIn'   => 3,
         ]);
-
-        $cardUserKey = $driver->user?->iyzico_card_user_key;
-        if (! $cardUserKey) {
-            return redirect()->route('driver.packages.index')
-                ->with('error', 'Saklı kart bulunamadı.');
-        }
-
-        $ok = GatewayFactory::make()->deleteSavedCard($cardUserKey, $validated['card_token']);
-
-        return redirect()->route('driver.packages.index')
-            ->with($ok ? 'success' : 'error', $ok ? 'Kart silindi.' : 'Kart silinemedi.');
     }
 
     /**
-     * GET /surucu-paneli/paketler/{package}/mock — mock checkout (IYZICO_ENABLED=false).
+     * GET /surucu-paneli/paketler/{package}/basarisiz
+     */
+    public function failure(DriverPackage $package): View|RedirectResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return redirect()->route('driver.login');
+        if ($package->driver_id !== $driver->id) abort(403);
+
+        return view('driver.packages_result', [
+            'success'    => false,
+            'title'      => 'Ödeme Tamamlanmadı',
+            'message'    => 'Ödeme sürecinde sorun çıktı. Tekrar deneyebilirsin.',
+            'redirectIn' => 4,
+        ]);
+    }
+
+    /**
+     * GET /surucu-paneli/paketler/{package}/durum — sürücü iframe sayfasında
+     * paket durumunu polling ile öğrenir (PayTR bildirim geldikten sonra).
+     */
+    public function status(DriverPackage $package): \Illuminate\Http\JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['ok' => false], 401);
+        if ($package->driver_id !== $driver->id) abort(403);
+
+        return response()->json([
+            'ok'         => true,
+            'status'     => $package->status,
+            'expires_at' => $package->expires_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * GET /surucu-paneli/paketler/{package}/mock — mock checkout (PAYTR_ENABLED=false).
      */
     public function mockCheckout(Request $request, DriverPackage $package): View|RedirectResponse
     {
@@ -229,7 +199,8 @@ class DriverPackageController extends Controller
         return view('driver.packages_mock_checkout', [
             'package'  => $package,
             'token'    => $request->query('token', 'MOCK'),
-            'callback' => route('driver.packages.callback', ['package' => $package->id]),
+            'callback' => route('paytr.notification'),
+            'merchantOid' => $package->payment_reference,
         ]);
     }
 }

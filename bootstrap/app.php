@@ -34,13 +34,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'abilities' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
         ]);
 
-        // iyzico ödeme callback'leri CSRF'siz POST eder — token bizim sahip olmadığımız
-        // bir kullanıcı oturumundan gelir (banka 3D ekranından dönüş). Bu yüzden bu route'lar
-        // CSRF doğrulamasından muaftır. Güvenlik: package id route'ta var, sürücüye bağlı kontrol
-        // ediyoruz ve iyzico cevabını /payment/3dsecure/auth ile sunucu-sunucu doğruluyoruz.
+        // PayTR sunucu-sunucu bildirim endpoint'i CSRF muaftır — bildirim PayTR'dan gelir,
+        // bizim sürücü oturumumuzdan değil. Güvenlik: PayTR kendi merchant_salt+key ile
+        // hash imzalar, biz hash_equals() ile doğruluyoruz (PayTRGateway::verifyNotification).
         $middleware->validateCsrfTokens(except: [
-            'surucu-paneli/paketler/*/callback',
-            'surucu-paneli/paketler/*/3ds-callback',
+            'api/paytr/bildirim',
         ]);
 
         // Auth fail durumunda /api/* HTML login'e değil JSON 401'e gider.
