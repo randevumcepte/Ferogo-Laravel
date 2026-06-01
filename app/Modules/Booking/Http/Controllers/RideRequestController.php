@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Booking\Models\RideMessage;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Booking\Services\CustomerTrustService;
+use App\Modules\Booking\Services\DispatcherService;
 use App\Modules\Booking\Services\NoShowService;
 use App\Modules\Booking\Services\PhoneVerificationService;
 use App\Modules\Booking\Services\RideRequestService;
@@ -24,6 +25,7 @@ class RideRequestController extends Controller
         private CustomerTrustService $trustService,
         private PhoneVerificationService $verificationService,
         private NoShowService $noShowService,
+        private DispatcherService $dispatcher,
     ) {}
 
     /**
@@ -487,6 +489,111 @@ class RideRequestController extends Controller
         $result = $this->noShowService->customerConfirm($req);
         $status = $result['ok'] ? 200 : 422;
         return response()->json($result, $status);
+    }
+
+    /**
+     * POST /api/ride-requests/{publicId}/reconfirm
+     * Müşteri fallback (havuz) sürücüsünü onaylar veya reddeder.
+     * Body: { accept: true|false }
+     */
+    public function reconfirm(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'accept' => ['required', 'boolean'],
+        ]);
+
+        $req = RideRequest::where('public_id', $publicId)->firstOrFail();
+
+        if ($req->status !== 'awaiting_customer_reconfirm') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bu talep şu an reconfirm bekliyor değil.',
+            ], 422);
+        }
+
+        try {
+            $req = $this->dispatcher->customerReconfirm($req, (bool) $validated['accept']);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'İşlem sırasında hata: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'status'  => $req->status,
+            'message' => $validated['accept']
+                ? 'Yeni sürücü onaylandı, yolculuk başlatılıyor.'
+                : 'Yeni sürücü reddedildi, talep iptal edildi.',
+        ]);
+    }
+
+    /**
+     * POST /api/ride-requests/{publicId}/visual-verify
+     * Yolculuk başladıktan sonra müşteri "sürücü/araç fotoğrafı tutuyor mu?" sorusuna cevap verir.
+     * Body: { match: true|false, note?: string }
+     *
+     * - match=true  → visual_verified_at set
+     * - match=false → security incident otomatik açılır (Faz 6'da implement)
+     */
+    public function visualVerify(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'match' => ['required', 'boolean'],
+            'note'  => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $req = RideRequest::where('public_id', $publicId)->firstOrFail();
+
+        if (! in_array($req->status, ['accepted', 'in_progress'], true) || ! $req->started_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Görsel doğrulama yalnızca yolculuk başladıktan sonra yapılabilir.',
+            ], 422);
+        }
+
+        if ($validated['match']) {
+            $req->update(['visual_verified_at' => now()]);
+            RideMessage::create([
+                'ride_request_id' => $req->id,
+                'sender'          => 'system',
+                'body'            => '✓ Müşteri sürücü ve araç görsel doğrulamasını onayladı.',
+            ]);
+            return response()->json([
+                'success' => true,
+                'verified' => true,
+                'message' => 'İyi yolculuklar!',
+            ]);
+        }
+
+        // Eşleşmiyor → security incident aç (Faz 6 detaylı işleyecek)
+        $req->update(['visual_verify_failed_at' => now()]);
+
+        $incident = \App\Modules\Security\Models\SecurityIncident::create([
+            'ride_request_id'   => $req->id,
+            'ride_id'           => $req->ride_id,
+            'driver_id'         => $req->accepted_driver_id,
+            'type'              => \App\Modules\Security\Models\SecurityIncident::TYPE_VISUAL_MISMATCH,
+            'reported_by'       => 'customer',
+            'reporter_note'     => $validated['note'] ?? null,
+            'severity'          => 'high',
+            'lat'               => $req->pickup_lat,
+            'lng'               => $req->pickup_lng,
+        ]);
+
+        RideMessage::create([
+            'ride_request_id' => $req->id,
+            'sender'          => 'system',
+            'body'            => '⚠ Müşteri sürücü/araç eşleşmediğini bildirdi. Çağrı merkezi devreye giriyor.',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'verified' => false,
+            'incident_id' => $incident->public_id,
+            'message' => 'Çağrı merkezi sürücüyle hemen iletişime geçecek. Güvenliğiniz için araçtan inebilirsiniz.',
+        ]);
     }
 
     /**

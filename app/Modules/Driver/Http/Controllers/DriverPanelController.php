@@ -314,14 +314,26 @@ class DriverPanelController extends Controller
             ->first();
 
         // Yeni teklif sadece aktif yolculuk yokken gösterilir (busy iken atla)
+        // İki kaynak: (1) direkt teklif edilenler (pending), (2) havuz teklifleri (pool_expanded)
         $offer = null;
         if (! $activeRequest && $driver->availability_status !== 'busy') {
+            // Önce direkt teklif
             $offer = RideRequest::query()
                 ->where('offered_driver_id', $driver->id)
                 ->where('status', 'pending')
                 ->where('offer_expires_at', '>', now())
                 ->orderBy('created_at')
                 ->first();
+
+            // Direkt yoksa havuz teklifi (pool_expanded ve bu sürücü adaylar listesinde)
+            if (! $offer) {
+                $offer = RideRequest::query()
+                    ->where('status', 'pool_expanded')
+                    ->where('offer_expires_at', '>', now())
+                    ->whereJsonContains('pool_candidate_driver_ids', $driver->id)
+                    ->orderBy('pool_expanded_at')
+                    ->first();
+            }
         }
 
         $lastMessageId = (int) request()->query('since_id', 0);
@@ -407,6 +419,22 @@ class DriverPanelController extends Controller
 
         $req = RideRequest::where('public_id', $publicId)->firstOrFail();
 
+        // Pool expanded ise → DispatcherService::acceptByPoolDriver
+        // (status=pool_expanded, ilk kabul eden alır, müşteri reconfirm akışı başlar)
+        if ($req->status === 'pool_expanded') {
+            $ok = app(\App\Modules\Booking\Services\DispatcherService::class)
+                ->acceptByPoolDriver($req, $driver);
+            if (! $ok) {
+                return response()->json(['ok' => false, 'message' => 'Bu talep artık geçerli değil.'], 409);
+            }
+            return response()->json([
+                'ok' => true,
+                'awaiting_customer_reconfirm' => true,
+                'message' => 'Talep alındı, müşteri onayı bekleniyor.',
+            ]);
+        }
+
+        // Normal akış (status=pending, doğrudan accept)
         try {
             $this->service->accept($req, $driver);
         } catch (\RuntimeException $e) {
@@ -425,8 +453,15 @@ class DriverPanelController extends Controller
         if (! $driver) return response()->json(['ok' => false], 401);
 
         $req = RideRequest::where('public_id', $publicId)->firstOrFail();
-        $this->service->reject($req, $driver);
 
+        // Pool reject → rejected listesine ekle
+        if ($req->status === 'pool_expanded') {
+            app(\App\Modules\Booking\Services\DispatcherService::class)
+                ->rejectByPoolDriver($req, $driver);
+            return response()->json(['ok' => true]);
+        }
+
+        $this->service->reject($req, $driver);
         return response()->json(['ok' => true]);
     }
 

@@ -55,6 +55,10 @@ Route::prefix('api/ride-requests')->name('ride_requests.')->group(function () {
     Route::get('/{publicId}',            [RideRequestController::class, 'show'])->name('show');
     Route::post('/{publicId}/cancel',    [RideRequestController::class, 'cancel'])->name('cancel');
     Route::post('/{publicId}/confirm',   [RideRequestController::class, 'confirm'])->name('confirm');
+    // Faz 3: müşteri havuz fallback sürücüsünü onay/red
+    Route::post('/{publicId}/reconfirm', [RideRequestController::class, 'reconfirm'])->name('reconfirm');
+    // Faz 6: müşteri ride başlangıcında sürücü/araç görsel doğrulaması
+    Route::post('/{publicId}/visual-verify', [RideRequestController::class, 'visualVerify'])->name('visual_verify');
     Route::get('/{publicId}/messages',   [RideRequestController::class, 'messages'])->name('messages');
     Route::post('/{publicId}/messages',  [RideRequestController::class, 'sendMessage'])->name('messages.send');
 

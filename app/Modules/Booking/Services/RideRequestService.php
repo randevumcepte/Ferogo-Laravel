@@ -13,6 +13,9 @@ class RideRequestService
     /** Bir teklifin geçerlilik süresi (sn) — sürücü bu sürede cevap vermezse sıradakine geçer. */
     public const OFFER_TTL_SECONDS = 60;
 
+    /** Seçilen sürücü kabul etmezse havuza yayılma süresi (sn) — Faz 3 dispatcher. */
+    public const POOL_EXPAND_AFTER_SECONDS = 30;
+
     public function __construct(
         private ReservationService $reservationService,
         private CustomerTrustService $trustService,
@@ -71,6 +74,8 @@ class RideRequestService
                 'current_candidate_index' => 0,
                 'offered_driver_id'       => $candidates[0],
                 'offer_expires_at'        => now()->addSeconds(self::OFFER_TTL_SECONDS),
+                // Faz 3: seçilen sürücü 30 sn içinde cevap vermezse havuza yayılır
+                'pool_expand_at'          => now()->addSeconds(self::POOL_EXPAND_AFTER_SECONDS),
             ]);
 
             return $req->fresh();
@@ -114,17 +119,35 @@ class RideRequestService
     public function accept(RideRequest $req, Driver $acceptingDriver): RideRequest
     {
         return DB::transaction(function () use ($req, $acceptingDriver) {
-            // Atomik claim
-            $updated = RideRequest::where('id', $req->id)
-                ->where('status', 'pending')
-                ->where('offered_driver_id', $acceptingDriver->id)
-                ->update([
-                    'status'              => 'accepted',
-                    'accepted_at'         => now(),
-                    'accepted_driver_id'  => $acceptingDriver->id,
-                    'offer_expires_at'    => null,
-                    'updated_at'          => now(),
-                ]);
+            // Atomik claim — direkt seçilen sürücü teklifi VE
+            // müşterinin reconfirm onayı sonrası (havuzdaki sürücüyü accept et) iki durumu kapsar
+            $statusBefore = $req->fresh()->status;
+
+            if ($statusBefore === 'awaiting_customer_reconfirm') {
+                // Reconfirm'de zaten accepted_driver_id set ve müşteri onayladı → direkt accepted'a geç
+                $updated = RideRequest::where('id', $req->id)
+                    ->where('status', 'awaiting_customer_reconfirm')
+                    ->where('accepted_driver_id', $acceptingDriver->id)
+                    ->update([
+                        'status'              => 'accepted',
+                        'accepted_at'         => now(),
+                        'offer_expires_at'    => null,
+                        'updated_at'          => now(),
+                    ]);
+            } else {
+                // Normal akış: pending → accepted (atomik)
+                $updated = RideRequest::where('id', $req->id)
+                    ->where('status', 'pending')
+                    ->where('offered_driver_id', $acceptingDriver->id)
+                    ->update([
+                        'status'              => 'accepted',
+                        'accepted_at'         => now(),
+                        'accepted_driver_id'  => $acceptingDriver->id,
+                        'offer_expires_at'    => null,
+                        'pool_expand_at'      => null,
+                        'updated_at'          => now(),
+                    ]);
+            }
 
             if ($updated === 0) {
                 throw new \RuntimeException('Bu talep artık geçerli değil (başkası aldı ya da süresi doldu).');
