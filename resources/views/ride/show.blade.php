@@ -1422,7 +1422,6 @@
                             <span class="text-[10px] text-brand shrink-0">★ ${d.rating}</span>
                             ${liveDot}
                         </div>
-                        <div class="text-[11px] text-zinc-500 truncate">${d.plate}</div>
                         <div class="flex items-center gap-2 mt-1">
                             <span class="text-[11px] font-bold text-white">${d.km.toFixed(1)} km</span>
                             <span class="text-zinc-700">·</span>
