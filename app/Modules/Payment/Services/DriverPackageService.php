@@ -11,7 +11,6 @@ class DriverPackageService
 {
     /**
      * Sürücü için yeni paket satın alma kaydı oluşturur (pending durumunda).
-     * Ödeme tamamlanınca markPaidAndActivate() çağrılır.
      */
     public function createPurchase(Driver $driver, string $type): DriverPackage
     {
@@ -33,16 +32,15 @@ class DriverPackageService
     }
 
     /**
-     * Ödeme onaylandı → paketi aktive et + sürücünün cache alanını güncelle.
+     * Ödeme onaylandı → paketi aktive et + sürücünün cache alanını güncelle +
+     * iyzico cardUserKey/cardToken bilgisini user'a yaz (saklı kart akışı için).
      *
-     * Önemli mantık: Sürücünün hâlâ aktif başka paketi varsa,
-     * yeni paketin başlangıç zamanı eski paketin bitişine eklenir
-     * (sürücü ödediği zamanı kaybetmesin).
+     * Üst üste paket alındıysa süre eklenir.
      */
     public function markPaidAndActivate(DriverPackage $package, string $reference, array $rawMeta = []): DriverPackage
     {
         return DB::transaction(function () use ($package, $reference, $rawMeta) {
-            $driver = $package->driver()->lockForUpdate()->first();
+            $driver = $package->driver()->lockForUpdate()->with('user')->first();
             if (! $driver) {
                 throw new \RuntimeException('Sürücü bulunamadı.');
             }
@@ -54,6 +52,16 @@ class DriverPackageService
 
             $expiresAt = $startsAt->copy()->addHours($package->duration_hours);
 
+            // iyzico response'unda kart bilgisi varsa user'a yaz + paket kaydına kopyala
+            $cardUserKey = $rawMeta['cardUserKey'] ?? null;
+            $cardToken   = $rawMeta['cardToken'] ?? null;
+            $cardAlias   = $rawMeta['cardAssociation'] ?? null;  // VISA / MASTER_CARD
+            $lastFour    = $rawMeta['lastFourDigits'] ?? null;
+
+            if ($cardUserKey && $driver->user && empty($driver->user->iyzico_card_user_key)) {
+                $driver->user->update(['iyzico_card_user_key' => $cardUserKey]);
+            }
+
             $package->update([
                 'status'             => 'active',
                 'starts_at'          => $startsAt,
@@ -61,6 +69,11 @@ class DriverPackageService
                 'paid_at'            => $now,
                 'payment_reference'  => $reference,
                 'payment_meta'       => $rawMeta,
+                'card_token'         => $cardToken,
+                'card_alias'         => $cardAlias,
+                'card_last_four'     => $lastFour,
+                // 3D HTML payload artık gerekmez, kapla
+                'three_ds_html'      => null,
             ]);
 
             $driver->update(['package_active_until' => $expiresAt]);
@@ -74,12 +87,56 @@ class DriverPackageService
         $package->update([
             'status'        => 'failed',
             'payment_meta'  => array_merge((array) $package->payment_meta, ['error' => $reason, 'raw' => $rawMeta]),
+            'three_ds_html' => null,
         ]);
     }
 
     /**
-     * Süresi dolan paketleri kapat ve sürücüleri offline yap.
-     * Cron her dakika çağırır.
+     * Saklı kart ile 3D ödeme başlat. Sürücü 3D HTML'i görür, doğrulama sonrası
+     * callback'te complete3dPayment() çağrılır.
+     *
+     * @return array{package: DriverPackage, html_content: string|null, error: string|null}
+     */
+    public function startSavedCardPayment(Driver $driver, string $type, string $cardToken, string $callbackUrl): array
+    {
+        if (empty($driver->user?->iyzico_card_user_key)) {
+            throw ValidationException::withMessages(['card' => 'Saklı kart bulunamadı. Yeni kart ile ödeme yap.']);
+        }
+
+        $package = $this->createPurchase($driver, $type);
+        $gateway = GatewayFactory::make();
+
+        $result = $gateway->init3dPayment(
+            $package,
+            $driver->user->iyzico_card_user_key,
+            $cardToken,
+            $callbackUrl,
+        );
+
+        if (! $result['success']) {
+            $this->markFailed($package, $result['error'] ?? '3D başlatılamadı', $result['raw'] ?? []);
+            return [
+                'package'      => $package,
+                'html_content' => null,
+                'error'        => $result['error'] ?? '3D başlatılamadı',
+            ];
+        }
+
+        $package->update([
+            'three_ds_html'   => $result['html_content'],
+            'conversation_id' => $result['conversation_id'],
+            'card_token'      => $cardToken,
+        ]);
+
+        return [
+            'package'      => $package,
+            'html_content' => $result['html_content'],
+            'error'        => null,
+        ];
+    }
+
+    /**
+     * Süresi dolan paketleri kapat ve sürücüleri offline yap. Cron her dakika çağırır.
      *
      * @return array{packages_expired:int, drivers_offlined:int}
      */
@@ -92,7 +149,6 @@ class DriverPackageService
             ->where('expires_at', '<=', $now)
             ->update(['status' => 'expired']);
 
-        // Sürücülerin cache alanı temizlensin
         $offlinedCount = 0;
         Driver::query()
             ->whereNotNull('package_active_until')

@@ -195,8 +195,15 @@
                                 class="px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-xs font-semibold text-red-300 transition disabled:bg-white/[0.03] disabled:text-zinc-500 disabled:border-white/10 disabled:cursor-not-allowed">
                             <span id="active-no-show-label">Müşteri gelmedi</span>
                         </button>
-                        <button id="active-complete"
-                                class="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-300 transition">
+                        {{-- Faz 5: tuzak soru — "Müşteri araca bindi mi?" yalnızca vardı + henüz sorulmamışsa --}}
+                        <button id="active-boarding-question" class="hidden px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs font-semibold text-amber-300 transition">
+                            Müşteri araca bindi mi?
+                        </button>
+                        {{-- Faz 5: YOLCULUĞU BAŞLAT — boarding_confirmed_at sonrası, started_at yokken --}}
+                        <button id="active-start-ride" class="hidden px-4 py-2 rounded-xl bg-brand hover:bg-brand-600 text-black text-sm font-bold uppercase tracking-wide transition shadow-lg shadow-brand/30">
+                            ▶ Yolculuğu Başlat
+                        </button>
+                        <button id="active-complete" class="hidden px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-semibold text-emerald-300 transition">
                             Tamamlandı
                         </button>
                     </div>
@@ -278,6 +285,9 @@
         const DONE_URL    = '{{ route('driver.api.complete') }}';
         const ARRIVED_URL = '{{ route('driver.api.arrived') }}';
         const NOSHOW_URL  = '{{ route('driver.api.no_show') }}';
+        const BOARDING_QUESTION_URL = '{{ route('driver.api.boarding_question') }}';
+        const BOARDING_CONFIRM_URL  = '{{ route('driver.api.boarding_confirm') }}';
+        const START_RIDE_URL        = '{{ route('driver.api.start_ride') }}';
         const POLL_MS     = 2500;
 
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -529,6 +539,83 @@
             }
         }
 
+        /**
+         * Faz 5 — Tuzak soru + Yolculuğu Başlat akışı UI render.
+         *
+         * Durumlar (state machine):
+         *   1. arrived_at YOK → tüm butonlar gizli
+         *   2. arrived_at VAR, boarding_question_at YOK → "Müşteri araca bindi mi?" butonu görünür
+         *   3. boarding_question_at VAR, boarding_confirmed_at YOK → tuzak modal otomatik açılır
+         *   4. boarding_confirmed_at VAR, started_at YOK → "▶ YOLCULUĞU BAŞLAT" sarı butonu görünür
+         *   5. started_at VAR → "Tamamlandı" butonu görünür
+         */
+        function renderBoardingStartState(a) {
+            const boardingBtn  = $('active-boarding-question');
+            const startBtn     = $('active-start-ride');
+            const completeBtn  = $('active-complete');
+
+            const arrived         = !!a.arrived_at;
+            const questionOpened  = !!a.boarding_question_at;
+            const boardingDone    = !!a.boarding_confirmed_at;
+            const started         = !!a.started_at;
+
+            // 1. Henüz vardı değil
+            if (!arrived) {
+                boardingBtn.classList.add('hidden');
+                startBtn.classList.add('hidden');
+                completeBtn.classList.add('hidden');
+                return;
+            }
+
+            // 5. Yolculuk başladı → sadece "Tamamlandı"
+            if (started) {
+                boardingBtn.classList.add('hidden');
+                startBtn.classList.add('hidden');
+                completeBtn.classList.remove('hidden');
+                return;
+            }
+
+            // 4. Boarding onaylı, başlatma bekliyor → "▶ YOLCULUĞU BAŞLAT"
+            if (boardingDone) {
+                boardingBtn.classList.add('hidden');
+                startBtn.classList.remove('hidden');
+                completeBtn.classList.add('hidden');
+                return;
+            }
+
+            // 3. Tuzak soru açıldı ama cevap yok → modal otomatik aç
+            if (questionOpened) {
+                boardingBtn.classList.add('hidden');
+                startBtn.classList.add('hidden');
+                completeBtn.classList.add('hidden');
+                if (!boardingModalShownFor || boardingModalShownFor !== a.public_id) {
+                    boardingModalShownFor = a.public_id;
+                    openBoardingTrapModal();
+                }
+                return;
+            }
+
+            // 2. Vardı + tuzak henüz açılmadı → "Müşteri araca bindi mi?" butonu
+            boardingBtn.classList.remove('hidden');
+            startBtn.classList.add('hidden');
+            completeBtn.classList.add('hidden');
+        }
+
+        let boardingModalShownFor = null;
+
+        function openBoardingTrapModal() {
+            const modal = $('boarding-trap-modal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        function closeBoardingTrapModal() {
+            const modal = $('boarding-trap-modal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
         function renderActive(a, messages) {
             // Yolculuk değiştiyse chat ve sayaçları sıfırla
             if (currentActiveId !== a.public_id) {
@@ -544,6 +631,7 @@
 
             renderTrustBadge(a);
             renderNoShowState(a);
+            renderBoardingStartState(a);
 
             // Mesaj append
             const chat = $('chat-list');
@@ -649,6 +737,57 @@
             } catch (_) { alert('Mesaj gönderilemedi.'); }
         });
 
+        // ===== Faz 5 — Tuzak soru & Ride start =====
+
+        // "Müşteri araca bindi mi?" butonu → tuzak soruyu açar (sadece sorgu zamanını işaretler)
+        $('active-boarding-question').addEventListener('click', async () => {
+            try {
+                const res = await fetch(BOARDING_QUESTION_URL, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                });
+                if (res.ok) pollNow();
+            } catch (_) {}
+        });
+
+        // Tuzak modal "EVET" — boarding_confirmed_at set edilir, "Yolculuğu Başlat" butonu görünür
+        document.addEventListener('click', async (e) => {
+            const target = e.target.closest('#boarding-trap-yes');
+            if (!target) return;
+            target.disabled = true;
+            try {
+                const res = await fetch(BOARDING_CONFIRM_URL, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                });
+                if (res.ok) {
+                    closeBoardingTrapModal();
+                    pollNow();
+                }
+            } catch (_) {} finally { target.disabled = false; }
+        });
+        // Tuzak modal "HAYIR" — sadece modal'ı kapat (sürücü tekrar deneyebilir)
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#boarding-trap-no')) {
+                closeBoardingTrapModal();
+                boardingModalShownFor = null;
+            }
+        });
+
+        // YOLCULUĞU BAŞLAT — sarı buton
+        $('active-start-ride').addEventListener('click', async () => {
+            if (!confirm('Müşteri araçta ve yola çıkmaya hazır mı? Yolculuğu başlatıyorum.')) return;
+            $('active-start-ride').disabled = true;
+            try {
+                const res = await fetch(START_RIDE_URL, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                });
+                if (res.ok) pollNow();
+                else alert('Başlatılamadı, sayfayı yenile.');
+            } catch (_) {} finally { $('active-start-ride').disabled = false; }
+        });
+
         // Complete
         $('active-complete').addEventListener('click', async () => {
             if (!confirm('Yolculuğu tamamlandı olarak işaretle?')) return;
@@ -727,5 +866,42 @@
 
     @include('partials.call-widget')
     @include('partials.mobile-action-bar')
+
+    {{-- Faz 5: Tuzak soru modal'ı — "Müşteri araca bindi mi?" --}}
+    <div id="boarding-trap-modal"
+         class="fixed inset-0 z-[120] hidden items-center justify-center bg-black/85 backdrop-blur-md px-4 py-6"
+         role="dialog" aria-modal="true">
+        <div class="w-full max-w-md rounded-3xl bg-zinc-900 border border-amber-500/40 shadow-2xl shadow-amber-500/20">
+            <div class="px-6 pt-6 pb-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[11px] uppercase tracking-[0.2em] font-bold mb-3">
+                    <span class="text-base">🚪</span> Onay Bekleniyor
+                </div>
+                <h2 class="text-2xl font-bold text-white leading-tight">
+                    Müşteri araca bindi mi?
+                </h2>
+                <p class="text-sm text-zinc-400 mt-2 leading-relaxed">
+                    Müşterinin gerçekten araçta olduğundan emin ol. Onayını alır almaz
+                    <strong class="text-amber-300">"Yolculuğu Başlat"</strong> butonu görünür.
+                </p>
+            </div>
+
+            <div class="px-6 py-4 bg-black/30 border-y border-white/5 text-[12px] text-zinc-500 leading-relaxed">
+                <strong class="text-zinc-300">⚠ Uyarı:</strong> Bu butona basmak yolculuğu BAŞLATMAZ.
+                Yalnızca müşterinin araçta olduğunu kayıt altına alır. Yolculuk fiilen başlatıldığında
+                müşteriye görsel doğrulama ekranı gönderilir.
+            </div>
+
+            <div class="px-6 py-5 flex flex-col gap-3">
+                <button type="button" id="boarding-trap-yes"
+                        class="w-full px-5 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold transition flex items-center justify-center gap-2">
+                    <span>✓</span> EVET, müşteri araçta
+                </button>
+                <button type="button" id="boarding-trap-no"
+                        class="w-full px-5 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-sm font-medium transition">
+                    Henüz binmedi (kapat)
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

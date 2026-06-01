@@ -118,6 +118,10 @@ Route::post('/surucu-paneli/api/active/message',             [DriverPanelControl
 Route::post('/surucu-paneli/api/active/complete',            [DriverPanelController::class, 'completeRide'])->name('driver.api.complete');
 Route::post('/surucu-paneli/api/active/arrived',             [DriverPanelController::class, 'markArrived'])->name('driver.api.arrived');
 Route::post('/surucu-paneli/api/active/no-show',             [DriverPanelController::class, 'reportNoShow'])->name('driver.api.no_show');
+// Faz 5: tuzak soru + ride start akışı
+Route::post('/surucu-paneli/api/active/boarding-question',   [DriverPanelController::class, 'openBoardingQuestion'])->name('driver.api.boarding_question');
+Route::post('/surucu-paneli/api/active/boarding-confirm',    [DriverPanelController::class, 'confirmBoarding'])->name('driver.api.boarding_confirm');
+Route::post('/surucu-paneli/api/active/start-ride',          [DriverPanelController::class, 'startRide'])->name('driver.api.start_ride');
 
 // ─────────────────────────────────────────────────────────
 // SÜRÜCÜ PAKET ABONELİĞİ — Martı TAG modeli (3 saatlik/günlük/haftalık/aylık)

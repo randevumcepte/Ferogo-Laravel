@@ -521,6 +521,7 @@ class DriverPanelController extends Controller
                 'completed_at' => now(),
             ]);
         }
+        $req->update(['completed_at' => now()]);
         $driver->update(['availability_status' => 'online']);
         $driver->increment('total_rides');
 
@@ -534,6 +535,124 @@ class DriverPanelController extends Controller
         ]);
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Faz 5 — TUZAK SORU
+     * POST /surucu-paneli/api/active/boarding-question
+     * Sürücü kapıya geldikten sonra "Müşteri araca bindi mi?" sorusunu açar.
+     * Bu endpoint sadece soru zamanını işaretler — yanıt /boarding-confirm ile gelir.
+     */
+    public function openBoardingQuestion(): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['ok' => false], 401);
+
+        $req = RideRequest::query()
+            ->where('accepted_driver_id', $driver->id)
+            ->where('status', 'accepted')
+            ->latest('accepted_at')
+            ->firstOrFail();
+
+        if (! $req->driver_arrived_at) {
+            return response()->json(['ok' => false, 'message' => 'Önce "Vardım" butonuna bas.'], 422);
+        }
+
+        if (! $req->boarding_question_at) {
+            $req->update(['boarding_question_at' => now()]);
+        }
+
+        return response()->json(['ok' => true, 'question_at' => $req->boarding_question_at?->toIso8601String()]);
+    }
+
+    /**
+     * Faz 5 — TUZAK CEVABI
+     * POST /surucu-paneli/api/active/boarding-confirm
+     * Sürücü "EVET, müşteri araca bindi" der.
+     * Bu butona basınca sadece tarih işaretlenir — yolculuk ASLA bu noktada
+     * başlatılmaz. Sonraki adım "Yolculuğu Başlat" butonudur.
+     */
+    public function confirmBoarding(): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['ok' => false], 401);
+
+        $req = RideRequest::query()
+            ->where('accepted_driver_id', $driver->id)
+            ->where('status', 'accepted')
+            ->latest('accepted_at')
+            ->firstOrFail();
+
+        if (! $req->boarding_question_at) {
+            return response()->json(['ok' => false, 'message' => 'Tuzak soru henüz açılmadı.'], 422);
+        }
+
+        if (! $req->boarding_confirmed_at) {
+            $req->update(['boarding_confirmed_at' => now()]);
+            RideMessage::create([
+                'ride_request_id' => $req->id,
+                'sender'          => 'system',
+                'body'            => 'Sürücü, müşterinin araca bindiğini bildirdi. Yolculuk başlatma onayı bekleniyor.',
+            ]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'boarding_confirmed_at' => $req->boarding_confirmed_at->toIso8601String(),
+            'message' => 'Şimdi YOLCULUĞU BAŞLAT butonuna basabilirsin.',
+        ]);
+    }
+
+    /**
+     * Faz 5 — YOLCULUĞU BAŞLAT (fiili başlatma)
+     * POST /surucu-paneli/api/active/start-ride
+     * Sürücü sarı "YOLCULUĞU BAŞLAT" butonuna basınca:
+     *   - ride_request.started_at set edilir
+     *   - ride.status = 'in_progress', started_at set
+     *   - Müşteri tarafına push: görsel doğrulama modal'ı açılır (Faz 6)
+     */
+    public function startRide(): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['ok' => false], 401);
+
+        $req = RideRequest::query()
+            ->with('ride')
+            ->where('accepted_driver_id', $driver->id)
+            ->where('status', 'accepted')
+            ->latest('accepted_at')
+            ->firstOrFail();
+
+        if (! $req->boarding_confirmed_at) {
+            return response()->json(['ok' => false, 'message' => 'Önce müşterinin araca bindiğini onayla.'], 422);
+        }
+
+        if ($req->started_at) {
+            return response()->json(['ok' => true, 'already_started' => true]);
+        }
+
+        $req->update([
+            'started_at' => now(),
+            'visual_verify_prompted_at' => now(), // müşteri tarafına Faz 6 modal'ı tetiklenir
+        ]);
+
+        if ($req->ride) {
+            $req->ride->update([
+                'status'     => 'in_progress',
+                'started_at' => now(),
+            ]);
+        }
+
+        RideMessage::create([
+            'ride_request_id' => $req->id,
+            'sender'          => 'system',
+            'body'            => '🚗 Yolculuk başladı. İyi yolculuklar!',
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'started_at' => $req->started_at->toIso8601String(),
+        ]);
     }
 
     /**
@@ -646,6 +765,13 @@ class DriverPanelController extends Controller
             'no_show_button_ready'  => $noShowReady,
             'no_show_countdown_sec' => $noShowCountdown,
             'ride_status'           => $req->ride?->status,
+            // Faz 5 — tuzak soru + ride start akışı
+            'boarding_question_at'  => $req->boarding_question_at?->toIso8601String(),
+            'boarding_confirmed_at' => $req->boarding_confirmed_at?->toIso8601String(),
+            'started_at'            => $req->started_at?->toIso8601String(),
+            // Faz 6 — görsel doğrulama
+            'visual_verified_at'    => $req->visual_verified_at?->toIso8601String(),
+            'visual_verify_failed_at' => $req->visual_verify_failed_at?->toIso8601String(),
         ];
     }
 }

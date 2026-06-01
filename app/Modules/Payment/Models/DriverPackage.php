@@ -21,7 +21,12 @@ class DriverPackage extends Model
         'status',
         'payment_provider',
         'payment_reference',
+        'card_token',
+        'card_alias',
+        'card_last_four',
         'payment_meta',
+        'three_ds_html',
+        'conversation_id',
         'paid_at',
     ];
 
@@ -32,6 +37,11 @@ class DriverPackage extends Model
         'expires_at'     => 'datetime',
         'paid_at'        => 'datetime',
         'payment_meta'   => 'array',
+    ];
+
+    protected $hidden = [
+        // 3D Secure HTML payload genelde 100KB+ olur, accidentally JSON'a sızmasın
+        'three_ds_html',
     ];
 
     public function driver(): BelongsTo

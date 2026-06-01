@@ -31,6 +31,8 @@ class User extends Authenticatable implements FilamentUser
         'gender',
         'avatar',
         'status',
+        // iyzico saklı kart anahtarı — ilk paket ödemesinde set olur
+        'iyzico_card_user_key',
     ];
 
     protected $hidden = [
