@@ -27,7 +27,7 @@ return new class extends Migration {
         Schema::table('ride_requests', function (Blueprint $table) {
             // ─── Dispatcher / pool ───
             // Pool genişletme zamanı (T+30): bu vakit gelince cron seferi havuza yayar
-            $table->timestamp('pool_expand_at')->nullable()->after('expires_at')
+            $table->timestamp('pool_expand_at')->nullable()->after('offer_expires_at')
                 ->index()
                 ->comment('Bu zamana kadar sürücü kabul etmezse havuza yayılır');
 
