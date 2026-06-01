@@ -376,7 +376,46 @@ class DriverPanelController extends Controller
             'offer'  => $offer ? $this->offerPayload($offer) : null,
             'active' => $activeRequest ? $this->activeRequestPayload($activeRequest) : null,
             'messages' => $messages,
+            // Faz 6: bu sürücü için açık güvenlik olayı var mı? (forced photo capture tetikleyici)
+            'security_incident' => $this->openIncidentPayload($driver),
         ]);
+    }
+
+    /**
+     * Faz 6 — Sürücüde açık (status=open) bir güvenlik olayı varsa,
+     * "Acil — kimlik doğrulama" modal'ı için detay döner.
+     */
+    private function openIncidentPayload($driver): ?array
+    {
+        $incident = \App\Modules\Security\Models\SecurityIncident::query()
+            ->with('verificationPhotos:id,security_incident_id,type,status')
+            ->where('driver_id', $driver->id)
+            ->whereIn('status', [
+                \App\Modules\Security\Models\SecurityIncident::STATUS_OPEN,
+                \App\Modules\Security\Models\SecurityIncident::STATUS_INVESTIGATING,
+            ])
+            ->latest('created_at')
+            ->first();
+        if (! $incident) return null;
+
+        $required = [
+            \App\Modules\Security\Models\VerificationPhoto::TYPE_SELFIE,
+            \App\Modules\Security\Models\VerificationPhoto::TYPE_VEHICLE,
+            \App\Modules\Security\Models\VerificationPhoto::TYPE_PLATE,
+        ];
+        $uploaded = $incident->verificationPhotos->pluck('type')->unique()->all();
+        $missing  = array_values(array_diff($required, $uploaded));
+
+        return [
+            'public_id'       => $incident->public_id,
+            'type'            => $incident->type,
+            'status'          => $incident->status,
+            'severity'        => $incident->severity,
+            'photos_uploaded' => $uploaded,
+            'photos_missing'  => $missing,
+            'all_uploaded'    => empty($missing),
+            'created_at'      => $incident->created_at->toIso8601String(),
+        ];
     }
 
     /**

@@ -93,17 +93,21 @@ class DriverPackageService
 
     /**
      * Saklı kart ile 3D ödeme başlat. Sürücü 3D HTML'i görür, doğrulama sonrası
-     * callback'te complete3dPayment() çağrılır.
+     * iyzico bizim callback URL'imize POST eder.
+     *
+     * $urlBuilder: paket oluşturulduktan sonra çağrılır, callback URL'ini döner
+     * (paket id'sini içerebilmesi için lazy build).
      *
      * @return array{package: DriverPackage, html_content: string|null, error: string|null}
      */
-    public function startSavedCardPayment(Driver $driver, string $type, string $cardToken, string $callbackUrl): array
+    public function startSavedCardPayment(Driver $driver, string $type, string $cardToken, callable $urlBuilder): array
     {
         if (empty($driver->user?->iyzico_card_user_key)) {
             throw ValidationException::withMessages(['card' => 'Saklı kart bulunamadı. Yeni kart ile ödeme yap.']);
         }
 
         $package = $this->createPurchase($driver, $type);
+        $callbackUrl = $urlBuilder($package);
         $gateway = GatewayFactory::make();
 
         $result = $gateway->init3dPayment(

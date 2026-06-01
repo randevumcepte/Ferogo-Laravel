@@ -813,6 +813,13 @@
                 if (data.driver) renderAvailability(data.driver.availability_status);
                 if (data.package) renderPackageBanner(data.package);
 
+                // Faz 6: aktif güvenlik olayı (security_incident) varsa → zorla foto modal'ı aç
+                if (data.security_incident && data.security_incident.public_id && !data.security_incident.all_uploaded) {
+                    if (typeof window.openSecurityPhotoModal === 'function') {
+                        window.openSecurityPhotoModal(data.security_incident);
+                    }
+                }
+
                 if (data.offer) {
                     renderOffer(data.offer);
                 } else if (data.active) {
@@ -866,6 +873,223 @@
 
     @include('partials.call-widget')
     @include('partials.mobile-action-bar')
+
+    {{-- Faz 6: ZORUNLU KİMLİK DOĞRULAMA modal'ı — security incident açıldığında otomatik açılır.
+         Müşteri "sürücü/araç eşleşmiyor" dedi → çağrı merkezi alarmı + sürücüden 3 foto:
+         (1) selfie (ön kamera + gece beyaz ekran flash)
+         (2) araç dış görünümü (arka kamera)
+         (3) plaka net görünüm (arka kamera)
+         Tüm 3 foto yüklenene kadar bu modal kapanmaz. --}}
+    <div id="security-photo-modal"
+         class="fixed inset-0 z-[150] hidden items-center justify-center bg-red-950/95 backdrop-blur-md px-4 py-6"
+         role="dialog" aria-modal="true">
+        <div class="w-full max-w-md max-h-[95vh] overflow-y-auto rounded-3xl bg-zinc-900 border-2 border-red-500/60 shadow-2xl shadow-red-500/30">
+            <div class="px-6 pt-6 pb-3 bg-red-500/15 border-b border-red-500/30">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/30 border border-red-500/60 text-red-200 text-[11px] uppercase tracking-[0.2em] font-bold mb-3 animate-pulse">
+                    🚨 ACİL — GÜVENLİK DOĞRULAMASI
+                </div>
+                <h2 class="text-2xl font-bold text-white leading-tight">
+                    Kimliğinizi doğrulamanız gerekiyor
+                </h2>
+                <p class="text-sm text-zinc-200 mt-2 leading-relaxed">
+                    Yolcunuz "sürücü/araç eşleşmiyor" bildiriminde bulundu. Çağrı merkezi sizinle
+                    iletişime geçti. Lütfen aşağıdaki <strong>3 fotoğrafı</strong> hemen çekin.
+                </p>
+            </div>
+
+            <div class="px-6 py-4 space-y-3" id="security-photo-steps">
+                {{-- Selfie --}}
+                <div class="photo-step border border-white/10 rounded-2xl p-4" data-photo-type="selfie">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-full bg-red-500/30 border border-red-500/60 text-red-200 text-xs font-bold flex items-center justify-center photo-step-num">1</span>
+                            <span class="text-sm font-semibold text-white">Selfie (Yüzünüz)</span>
+                        </div>
+                        <span class="photo-step-status text-xs text-zinc-500">⏳ Bekleniyor</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-500 mb-3">Yüzünüz net görünmeli. Karanlıksa ekran otomatik beyaz olur.</p>
+                    <button type="button" class="photo-capture-btn w-full px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-sm transition">
+                        📷 Selfie Çek
+                    </button>
+                </div>
+
+                {{-- Vehicle --}}
+                <div class="photo-step border border-white/10 rounded-2xl p-4" data-photo-type="vehicle">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-full bg-red-500/30 border border-red-500/60 text-red-200 text-xs font-bold flex items-center justify-center photo-step-num">2</span>
+                            <span class="text-sm font-semibold text-white">Aracın Dış Fotoğrafı</span>
+                        </div>
+                        <span class="photo-step-status text-xs text-zinc-500">⏳ Bekleniyor</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-500 mb-3">Araç tamamen kareye girmeli — renk + model görünür şekilde.</p>
+                    <button type="button" class="photo-capture-btn w-full px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-sm transition">
+                        📷 Aracı Fotoğrafla
+                    </button>
+                </div>
+
+                {{-- Plate --}}
+                <div class="photo-step border border-white/10 rounded-2xl p-4" data-photo-type="plate">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-full bg-red-500/30 border border-red-500/60 text-red-200 text-xs font-bold flex items-center justify-center photo-step-num">3</span>
+                            <span class="text-sm font-semibold text-white">Plaka (Net)</span>
+                        </div>
+                        <span class="photo-step-status text-xs text-zinc-500">⏳ Bekleniyor</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-500 mb-3">Plaka rakam ve harfleri net okunabilir olmalı.</p>
+                    <button type="button" class="photo-capture-btn w-full px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-sm transition">
+                        📷 Plakayı Fotoğrafla
+                    </button>
+                </div>
+            </div>
+
+            <div class="px-6 pb-6 pt-3 border-t border-white/5">
+                <div id="security-photo-progress" class="text-center text-sm text-zinc-300 mb-3">
+                    <span id="sp-uploaded">0</span> / 3 yüklendi
+                </div>
+                <p class="text-[11px] text-zinc-500 text-center leading-relaxed">
+                    Tüm fotoğraflar yüklenene kadar bu ekran kapanmaz. Yardım için
+                    <a href="tel:+908508401377" class="text-brand hover:underline">0850 840 13 77</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {{-- Gizli kamera input'ları — capture attribute mobil kameraları açar --}}
+    <input type="file" id="sp-capture-selfie"  accept="image/*" capture="user"        class="hidden">
+    <input type="file" id="sp-capture-vehicle" accept="image/*" capture="environment" class="hidden">
+    <input type="file" id="sp-capture-plate"   accept="image/*" capture="environment" class="hidden">
+
+    {{-- Gece flash overlay'i (selfie tetiklendiğinde 1.5sn beyaz ekran) --}}
+    <div id="sp-flash-overlay" class="fixed inset-0 z-[160] hidden bg-white"></div>
+
+    <script>
+    (function () {
+        const modal = document.getElementById('security-photo-modal');
+        if (!modal) return;
+        const inputs = {
+            selfie:  document.getElementById('sp-capture-selfie'),
+            vehicle: document.getElementById('sp-capture-vehicle'),
+            plate:   document.getElementById('sp-capture-plate'),
+        };
+        const flash = document.getElementById('sp-flash-overlay');
+        let currentIncidentPublicId = null;
+        const uploaded = new Set();
+        let modalShownForIncident = null;
+
+        // Cron-state poller incident bildirdiğinde modal'ı aç
+        window.openSecurityPhotoModal = function (incident) {
+            if (!incident || !incident.public_id) return;
+            if (modalShownForIncident === incident.public_id && incident.all_uploaded) return;
+            currentIncidentPublicId = incident.public_id;
+            modalShownForIncident = incident.public_id;
+
+            // Mevcut uploaded'ları sync et
+            uploaded.clear();
+            (incident.photos_uploaded || []).forEach(t => uploaded.add(t));
+            redrawProgress();
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+
+            // Eğer hepsi yüklendi (operator inceliyor) → modal'ı sadece bilgilendirme amaçlı tut
+            if (incident.all_uploaded) {
+                // İsteğe bağlı: bilgi mesajı göster, kapat
+            }
+        };
+
+        function redrawProgress() {
+            document.getElementById('sp-uploaded').textContent = uploaded.size;
+            document.querySelectorAll('.photo-step').forEach(step => {
+                const type = step.dataset.photoType;
+                const status = step.querySelector('.photo-step-status');
+                const btn = step.querySelector('.photo-capture-btn');
+                if (uploaded.has(type)) {
+                    status.textContent = '✓ Yüklendi';
+                    status.className = 'photo-step-status text-xs text-emerald-300 font-bold';
+                    btn.classList.add('opacity-50', 'pointer-events-none');
+                    btn.textContent = '✓ Tamamlandı';
+                } else {
+                    status.textContent = '⏳ Bekleniyor';
+                    status.className = 'photo-step-status text-xs text-zinc-500';
+                }
+            });
+            // Tüm 3'ü yüklendiyse modal'ı kapatabiliriz (operator inceleyecek)
+            if (uploaded.size >= 3) {
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    document.body.style.overflow = '';
+                    alert('✓ 3 fotoğraf yüklendi. Çağrı merkezi inceliyor.');
+                }, 400);
+            }
+        }
+
+        async function captureFlow(type) {
+            // Gece selfie ise önce beyaz ekran flash
+            if (type === 'selfie') {
+                flash.classList.remove('hidden');
+                await new Promise(r => setTimeout(r, 1200));
+                flash.classList.add('hidden');
+            }
+            inputs[type].click();
+        }
+
+        async function uploadPhoto(type, file) {
+            if (!currentIncidentPublicId) return;
+            const fd = new FormData();
+            fd.append('photo', file);
+            fd.append('type', type);
+            fd.append('flash_used', type === 'selfie' ? '1' : '0');
+            fd.append('front_camera', type === 'selfie' ? '1' : '0');
+            if (navigator.geolocation) {
+                try {
+                    const pos = await new Promise((res, rej) => {
+                        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 });
+                    });
+                    fd.append('captured_lat', pos.coords.latitude);
+                    fd.append('captured_lng', pos.coords.longitude);
+                } catch (_) {}
+            }
+            try {
+                const csrf = document.querySelector('meta[name="csrf-token"]').content;
+                const res = await fetch(`{{ url('/api/security-incidents') }}/${encodeURIComponent(currentIncidentPublicId)}/photo`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                    body: fd,
+                });
+                const data = await res.json();
+                if (data.success) {
+                    uploaded.add(type);
+                    redrawProgress();
+                } else {
+                    alert('Foto yüklenemedi: ' + (data.message || 'Bilinmeyen hata'));
+                }
+            } catch (err) {
+                alert('Bağlantı hatası. Tekrar deneyin.');
+            }
+        }
+
+        // Button click → kamera aç
+        document.querySelectorAll('.photo-capture-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const step = btn.closest('.photo-step');
+                captureFlow(step.dataset.photoType);
+            });
+        });
+
+        // File seçildi → upload
+        Object.entries(inputs).forEach(([type, input]) => {
+            input.addEventListener('change', (e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadPhoto(type, file);
+                e.target.value = ''; // sıfırla, aynı dosya tekrar seçilebilsin
+            });
+        });
+    })();
+    </script>
 
     {{-- Faz 5: Tuzak soru modal'ı — "Müşteri araca bindi mi?" --}}
     <div id="boarding-trap-modal"

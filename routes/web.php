@@ -10,6 +10,7 @@ use App\Modules\Driver\Http\Controllers\DriverApplicationController;
 use App\Modules\Driver\Http\Controllers\DriverPanelController;
 use App\Modules\Legal\Http\Controllers\LegalConsentController;
 use App\Modules\Payment\Http\Controllers\DriverPackageController;
+use App\Modules\Security\Http\Controllers\SecurityIncidentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
@@ -124,14 +125,27 @@ Route::post('/surucu-paneli/api/active/boarding-confirm',    [DriverPanelControl
 Route::post('/surucu-paneli/api/active/start-ride',          [DriverPanelController::class, 'startRide'])->name('driver.api.start_ride');
 
 // ─────────────────────────────────────────────────────────
+// FAZ 6 — Güvenlik olayı (security incident) + zorunlu doğrulama fotoğrafları
+// ─────────────────────────────────────────────────────────
+Route::get('/api/security-incidents/{publicId}',         [SecurityIncidentController::class, 'show'])->name('security.incident.show');
+Route::post('/api/security-incidents/{publicId}/photo',  [SecurityIncidentController::class, 'uploadPhoto'])->name('security.incident.upload_photo');
+
+// ─────────────────────────────────────────────────────────
 // SÜRÜCÜ PAKET ABONELİĞİ — Martı TAG modeli (3 saatlik/günlük/haftalık/aylık)
 // Paket aktif değilse radar'a düşmez, iş atanmaz.
 // ─────────────────────────────────────────────────────────
-Route::get('/surucu-paneli/paketler',                       [DriverPackageController::class, 'index'])->name('driver.packages.index');
-Route::post('/surucu-paneli/paketler/satin-al',             [DriverPackageController::class, 'purchase'])->name('driver.packages.purchase');
+Route::get('/surucu-paneli/paketler',                        [DriverPackageController::class, 'index'])->name('driver.packages.index');
+Route::post('/surucu-paneli/paketler/satin-al',              [DriverPackageController::class, 'purchase'])->name('driver.packages.purchase');
+Route::post('/surucu-paneli/paketler/hizli-satin-al',        [DriverPackageController::class, 'quickPurchase'])->name('driver.packages.quick_purchase');
+Route::post('/surucu-paneli/kartlar/sil',                    [DriverPackageController::class, 'deleteCard'])->name('driver.cards.delete');
+// callback ve 3ds-callback CSRF muaftır (bootstrap/app.php → validateCsrfTokens except)
+// çünkü iyzico bizim oturumumuzdan gelmeyen sunucu-sunucu POST yapar.
 Route::match(['get', 'post'], '/surucu-paneli/paketler/{package}/callback', [DriverPackageController::class, 'callback'])
     ->whereNumber('package')
     ->name('driver.packages.callback');
+Route::match(['get', 'post'], '/surucu-paneli/paketler/{package}/3ds-callback', [DriverPackageController::class, 'threeDsCallback'])
+    ->whereNumber('package')
+    ->name('driver.packages.threeds_callback');
 Route::get('/surucu-paneli/paketler/{package}/mock-checkout', [DriverPackageController::class, 'mockCheckout'])
     ->whereNumber('package')
     ->name('driver.packages.mock_checkout');

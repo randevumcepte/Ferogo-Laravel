@@ -816,6 +816,46 @@
                 </div>
             </div>
 
+            {{-- Faz 6 — Görsel doğrulama stage'i (yolculuk başladıktan sonra) --}}
+            <div id="quick-modal-visual-verify" class="hidden">
+                <div class="px-6 pt-6 pb-4 bg-gradient-to-br from-brand/15 via-brand/5 to-transparent border-b border-white/5">
+                    <div class="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-brand font-bold mb-2">
+                        <span>🛡</span> Güvenlik Doğrulaması
+                    </div>
+                    <h2 class="text-xl font-bold text-white mb-1">Bindiğiniz araç bu mu?</h2>
+                    <p class="text-xs text-zinc-400">Aşağıdaki sürücü ve araç bilgilerini araçtakiyle karşılaştırın.</p>
+                </div>
+                <div class="px-6 py-5 space-y-4">
+                    <div class="bg-zinc-900/60 border border-brand/30 rounded-2xl p-4">
+                        <div class="flex items-center gap-3">
+                            <img id="vv-driver-photo" src="" alt="" class="w-16 h-16 rounded-xl object-cover bg-zinc-800 border border-white/10">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-base font-bold text-white truncate" id="vv-driver-name">—</div>
+                                <div class="text-[11px] text-zinc-400 truncate" id="vv-driver-vehicle">—</div>
+                                <div class="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-brand/15 border border-brand/30">
+                                    <span class="text-[11px] font-mono font-bold text-brand tracking-wider" id="vv-driver-plate">— —</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="vv-vehicle-photos" class="mt-3 grid grid-cols-3 gap-2"></div>
+                    </div>
+                </div>
+                <div class="px-6 pb-6 pt-2 space-y-3 border-t border-white/5">
+                    <button type="button" id="vv-confirm-yes"
+                            class="w-full px-5 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition flex items-center justify-center gap-2">
+                        <span>✓</span> EVET — Sürücü ve araç doğru
+                    </button>
+                    <button type="button" id="vv-confirm-no"
+                            class="w-full px-5 py-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 font-bold text-sm transition">
+                        ⚠ HAYIR — Eşleşmiyor, ÇAĞRI MERKEZİNİ ÇAĞIR
+                    </button>
+                    <p class="text-[11px] text-zinc-500 text-center leading-relaxed">
+                        HAYIR derseniz çağrı merkezi sürücüye anında ulaşır, kimliği fotoğraflı olarak doğrular.
+                        Güvenliğiniz için araçtan inmenizi öneririz.
+                    </p>
+                </div>
+            </div>
+
             {{-- Accepted state: sürücü kabul etti, aktif yolculuk + chat --}}
             <div id="quick-modal-accepted" class="hidden">
                 <div class="px-6 pt-6 pb-4 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border-b border-white/5">
@@ -1706,6 +1746,7 @@
     const modalOtp = document.getElementById('quick-modal-otp');
     const modalWaiting = document.getElementById('quick-modal-waiting');
     const modalReconfirm = document.getElementById('quick-modal-reconfirm');
+    const modalVisualVerify = document.getElementById('quick-modal-visual-verify');
     const modalAccepted = document.getElementById('quick-modal-accepted');
     const modalTerminal = document.getElementById('quick-modal-terminal');
     const qmOtpCode = document.getElementById('qm-otp-code');
@@ -1752,6 +1793,7 @@
         modalOtp.classList.toggle('hidden', name !== 'otp');
         modalWaiting.classList.toggle('hidden', name !== 'waiting');
         modalReconfirm.classList.toggle('hidden', name !== 'reconfirm');
+        modalVisualVerify.classList.toggle('hidden', name !== 'visual-verify');
         modalAccepted.classList.toggle('hidden', name !== 'accepted');
         modalTerminal.classList.toggle('hidden', name !== 'terminal');
         // Driver-profile stage'inde header'ı gizle — kendi hero'su var
@@ -2400,6 +2442,13 @@
         } catch (_) {}
     }
     function applyStatus(s) {
+        // Faz 6 — Yolculuk başladıysa (started_at) ve henüz görsel doğrulama yapılmadıysa
+        // ride/show modal'ı zaten kapalıysa müşteri paneline yönlenmiş olabilir,
+        // ama hızlı seç modal'ı hala açıksa görsel doğrulama modal'ı tetiklenir.
+        if (s.started_at && !s.visual_verified_at && !s.visual_verify_failed_at) {
+            openVisualVerifyModal(s);
+            return;
+        }
         if (s.status === 'pool_expanded') {
             // Havuza yayıldı — kullanıcıya "sürücü aranıyor (yakındakilere talep gitti)" göster
             const total = (s.pool_candidate_driver_ids?.length || 0);
@@ -2489,6 +2538,70 @@
             closeQuickModal();
         }
     }
+
+    // ===== FAZ 6 — Görsel doğrulama modal'ı (yolculuk başladıktan sonra) =====
+    let visualVerifyShownFor = null;
+    function openVisualVerifyModal(s) {
+        if (visualVerifyShownFor === activeRequestId) return; // tek sefer
+        visualVerifyShownFor = activeRequestId;
+
+        const drv = s.accepted_driver || {};
+        document.getElementById('vv-driver-photo').src =
+            drv.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(drv.name || 'Sürücü')}&background=F0C040&color=000&size=128&bold=true`;
+        document.getElementById('vv-driver-name').textContent = drv.name || 'Üye Sürücü';
+        document.getElementById('vv-driver-vehicle').textContent =
+            [drv.vehicle_class, drv.vehicle_label].filter(Boolean).join(' · ') || '—';
+        document.getElementById('vv-driver-plate').textContent = drv.plate || '— — —';
+
+        const photosWrap = document.getElementById('vv-vehicle-photos');
+        photosWrap.innerHTML = '';
+        const photos = drv.vehicle_photos || (drv.vehicle_photo_url ? [drv.vehicle_photo_url] : []);
+        photos.slice(0, 3).forEach(url => {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Araç';
+            img.className = 'w-full h-20 object-cover rounded-lg bg-zinc-800 border border-white/10';
+            photosWrap.appendChild(img);
+        });
+
+        showStage('visual-verify');
+    }
+    async function sendVisualVerify(match) {
+        if (!activeRequestId) return;
+        const yesBtn = document.getElementById('vv-confirm-yes');
+        const noBtn  = document.getElementById('vv-confirm-no');
+        [yesBtn, noBtn].forEach(b => b.disabled = true);
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const res = await fetch(`{{ url('/api/ride-requests') }}/${encodeURIComponent(activeRequestId)}/visual-verify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ match }),
+            });
+            const data = await res.json();
+            if (match) {
+                alert('✓ Doğrulandı. İyi yolculuklar!');
+                showStage('accepted');
+            } else {
+                alert('⚠ Çağrı merkezi sürücüyle iletişime geçti. Güvenliğiniz için araçtan inebilirsiniz.');
+                showStage('accepted');
+            }
+        } catch (err) {
+            alert('Bağlantı hatası, lütfen tekrar dene.');
+        } finally {
+            [yesBtn, noBtn].forEach(b => b.disabled = false);
+        }
+    }
+    document.getElementById('vv-confirm-yes')?.addEventListener('click', () => sendVisualVerify(true));
+    document.getElementById('vv-confirm-no')?.addEventListener('click', () => {
+        if (confirm('⚠ Sürücü/araç eşleşmiyor diyorsunuz. Çağrı merkezi sürücüyü arayacak. Devam ediyorum.')) {
+            sendVisualVerify(false);
+        }
+    });
 
     // ===== RECONFIRM (Faz 4) — müşteri havuz fallback sürücüsünü onaylar/reddeder =====
     async function sendReconfirm(accept) {
