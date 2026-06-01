@@ -874,6 +874,56 @@
     @include('partials.call-widget')
     @include('partials.mobile-action-bar')
 
+    {{-- Faz 7: ACİL YARDIM butonu — sürücü güvenliği için sağ alt köşede sabit (sadece aktif yolculukta görünür) --}}
+    <button type="button" id="driver-panic-btn"
+            class="hidden fixed bottom-24 right-4 z-[100] w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-2xl shadow-red-500/50 border-2 border-white/20 flex items-center justify-center text-2xl font-bold animate-pulse"
+            aria-label="Acil yardım">
+        🚨
+    </button>
+    <script>
+    (function () {
+        const btn = document.getElementById('driver-panic-btn');
+        if (!btn) return;
+        // Aktif yolculuk yokken bile gösterelim (sürücü güvenliği her an gerekli olabilir)
+        btn.classList.remove('hidden');
+
+        btn.addEventListener('click', async () => {
+            if (!confirm('🚨 ACİL YARDIM — çağrı merkezi sizinle hemen iletişime geçecek. Devam edilsin mi?')) return;
+            btn.disabled = true;
+            try {
+                let lat = null, lng = null, acc = null;
+                if (navigator.geolocation) {
+                    try {
+                        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 4000 }));
+                        lat = pos.coords.latitude; lng = pos.coords.longitude; acc = pos.coords.accuracy;
+                    } catch (_) {}
+                }
+                const csrf = document.querySelector('meta[name="csrf-token"]').content;
+                const ridePublicId = (window.currentActiveId || null);
+                const res = await fetch('{{ url('/api/panic') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        triggered_by_type: 'driver',
+                        ride_request_public_id: ridePublicId,
+                        lat, lng, location_accuracy_m: acc,
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('🚨 Çağrı merkezi alarmı alındı. ' + (data.call ? 'Aramak için: ' + data.call : '') + '\nGüvenliğiniz için aracın dışına çıkın ve görünür bir noktaya geçin.');
+                } else {
+                    alert(data.message || 'İstek alınamadı, lütfen direkt arayın: 0850 840 13 77');
+                }
+            } catch (err) {
+                alert('İstek gönderilemedi, lütfen direkt arayın: 0850 840 13 77');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    })();
+    </script>
+
     {{-- Faz 6: ZORUNLU KİMLİK DOĞRULAMA modal'ı — security incident açıldığında otomatik açılır.
          Müşteri "sürücü/araç eşleşmiyor" dedi → çağrı merkezi alarmı + sürücüden 3 foto:
          (1) selfie (ön kamera + gece beyaz ekran flash)

@@ -11,6 +11,7 @@ use App\Modules\Driver\Http\Controllers\DriverPanelController;
 use App\Modules\Legal\Http\Controllers\LegalConsentController;
 use App\Modules\Payment\Http\Controllers\DriverPackageController;
 use App\Modules\Security\Http\Controllers\SecurityIncidentController;
+use App\Modules\Security\Http\Controllers\PanicAlertController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
@@ -129,6 +130,9 @@ Route::post('/surucu-paneli/api/active/start-ride',          [DriverPanelControl
 // ─────────────────────────────────────────────────────────
 Route::get('/api/security-incidents/{publicId}',         [SecurityIncidentController::class, 'show'])->name('security.incident.show');
 Route::post('/api/security-incidents/{publicId}/photo',  [SecurityIncidentController::class, 'uploadPhoto'])->name('security.incident.upload_photo');
+
+// Faz 7 — Acil yardım (panic) butonu (her iki taraf)
+Route::post('/api/panic', [PanicAlertController::class, 'trigger'])->name('security.panic.trigger');
 
 // ─────────────────────────────────────────────────────────
 // SÜRÜCÜ PAKET ABONELİĞİ — Martı TAG modeli (3 saatlik/günlük/haftalık/aylık)
