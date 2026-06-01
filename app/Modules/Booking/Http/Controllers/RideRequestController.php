@@ -660,14 +660,33 @@ class RideRequestController extends Controller
      */
     private function statusPayload(RideRequest $req): array
     {
+        // Saniye sayacı — pending/pool_expanded/awaiting_customer_reconfirm üçü de timer kullanır
+        $secondsRemaining = 0;
+        if (in_array($req->status, ['pending', 'pool_expanded', 'awaiting_customer_reconfirm'], true) && $req->offer_expires_at) {
+            $secondsRemaining = max(0, (int) round(now()->diffInSeconds($req->offer_expires_at, false)));
+        }
+
         $payload = [
             'status'                => $req->status,
             'rejection_count'       => (int) $req->rejection_count,
             'current_index'         => (int) $req->current_candidate_index,
             'total_candidates'      => count($req->candidate_driver_ids ?? []),
-            'seconds_remaining'     => $req->status === 'pending'
-                ? max(0, (int) round(now()->diffInSeconds($req->offer_expires_at, false)))
-                : 0,
+            'seconds_remaining'     => $secondsRemaining,
+            // Faz 3 — dispatcher
+            'pool_expanded_at'      => $req->pool_expanded_at?->toIso8601String(),
+            'pool_candidate_driver_ids' => $req->pool_candidate_driver_ids ?? [],
+            'pool_rejected_driver_ids'  => $req->pool_rejected_driver_ids ?? [],
+            'reconfirm_required_at' => $req->reconfirm_required_at?->toIso8601String(),
+            'customer_reconfirmed_at' => $req->customer_reconfirmed_at?->toIso8601String(),
+            // Faz 5 — boarding & ride start
+            'boarding_question_at'  => $req->boarding_question_at?->toIso8601String(),
+            'boarding_confirmed_at' => $req->boarding_confirmed_at?->toIso8601String(),
+            'started_at'            => $req->started_at?->toIso8601String(),
+            // Faz 6 — visual verification
+            'visual_verify_prompted_at' => $req->visual_verify_prompted_at?->toIso8601String(),
+            'visual_verified_at'    => $req->visual_verified_at?->toIso8601String(),
+            'visual_verify_failed_at' => $req->visual_verify_failed_at?->toIso8601String(),
+            'completed_at'          => $req->completed_at?->toIso8601String(),
             'offered_driver'        => null,
             'accepted_driver'       => null,
             'ride_public_id'        => $req->ride?->public_id,

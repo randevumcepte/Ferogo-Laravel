@@ -770,6 +770,52 @@
                 </button>
             </div>
 
+            {{-- RECONFIRM stage: havuzdan ilk kabul eden başka sürücü, müşteri onayı bekliyor (Faz 3-4) --}}
+            <div id="quick-modal-reconfirm" class="hidden px-6 py-8 text-center">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] uppercase tracking-[0.2em] font-bold mb-5">
+                    <span>🔄</span> Yeni Sürücü Bulundu
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Sizin için başka bir araç bulduk</h3>
+                <p class="text-sm text-zinc-400 mb-6">
+                    Seçtiğiniz üye sürücü cevap vermedi. Yakındaki başka bir üye sürücü talebinizi aldı.
+                    Bu sürücüyle devam etmek ister misiniz?
+                </p>
+
+                <div class="bg-zinc-900/60 border border-brand/30 rounded-2xl p-4 mb-6 text-left">
+                    <div class="flex items-center gap-3">
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-brand/40 flex items-center justify-center text-2xl shrink-0" id="qm-reconfirm-icon">🚗</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-base font-bold text-white truncate" id="qm-reconfirm-name">—</div>
+                            <div class="text-[11px] text-zinc-400 truncate" id="qm-reconfirm-vehicle">—</div>
+                            <div class="flex items-center gap-2 mt-1 text-xs">
+                                <span class="text-brand font-bold" id="qm-reconfirm-rating">★ —</span>
+                                <span class="text-zinc-600">·</span>
+                                <span class="text-zinc-400" id="qm-reconfirm-trips">— yolculuk</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-white/5 text-[10px] text-zinc-500 leading-relaxed flex items-start gap-1.5">
+                        <span>🔒</span>
+                        <span>Plaka ve araç fotoğrafları onayınızdan sonra açılacaktır.</span>
+                    </div>
+                </div>
+
+                <div class="text-[11px] text-zinc-500 mb-4">
+                    Karar süresi: <span id="qm-reconfirm-countdown" class="text-amber-300 font-bold tabular-nums">60</span> sn
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" id="qm-reconfirm-decline"
+                            class="flex-1 px-5 py-3 rounded-2xl bg-white/5 hover:bg-red-500/15 border border-white/10 hover:border-red-500/40 text-zinc-300 hover:text-red-300 font-medium text-sm transition">
+                        Reddet
+                    </button>
+                    <button type="button" id="qm-reconfirm-accept"
+                            class="flex-1 px-5 py-3 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition shadow-lg shadow-brand/30">
+                        ✓ Onayla
+                    </button>
+                </div>
+            </div>
+
             {{-- Accepted state: sürücü kabul etti, aktif yolculuk + chat --}}
             <div id="quick-modal-accepted" class="hidden">
                 <div class="px-6 pt-6 pb-4 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border-b border-white/5">
@@ -1659,6 +1705,7 @@
     const modalForm = document.getElementById('quick-modal-form');
     const modalOtp = document.getElementById('quick-modal-otp');
     const modalWaiting = document.getElementById('quick-modal-waiting');
+    const modalReconfirm = document.getElementById('quick-modal-reconfirm');
     const modalAccepted = document.getElementById('quick-modal-accepted');
     const modalTerminal = document.getElementById('quick-modal-terminal');
     const qmOtpCode = document.getElementById('qm-otp-code');
@@ -1704,6 +1751,7 @@
         modalForm.classList.toggle('hidden', name !== 'form');
         modalOtp.classList.toggle('hidden', name !== 'otp');
         modalWaiting.classList.toggle('hidden', name !== 'waiting');
+        modalReconfirm.classList.toggle('hidden', name !== 'reconfirm');
         modalAccepted.classList.toggle('hidden', name !== 'accepted');
         modalTerminal.classList.toggle('hidden', name !== 'terminal');
         // Driver-profile stage'inde header'ı gizle — kendi hero'su var
@@ -2352,6 +2400,49 @@
         } catch (_) {}
     }
     function applyStatus(s) {
+        if (s.status === 'pool_expanded') {
+            // Havuza yayıldı — kullanıcıya "sürücü aranıyor (yakındakilere talep gitti)" göster
+            const total = (s.pool_candidate_driver_ids?.length || 0);
+            document.getElementById('qm-waiting-driver').textContent =
+                total > 0 ? `${total} yakın sürücü` : 'Yakındaki sürücüler';
+            document.getElementById('qm-waiting-progress').textContent = 'Havuz · paralel sorgu';
+
+            if (waitingCountdownHandle) clearInterval(waitingCountdownHandle);
+            let remaining = Math.max(0, s.seconds_remaining || 0);
+            document.getElementById('qm-waiting-countdown').textContent = remaining;
+            waitingCountdownHandle = setInterval(() => {
+                remaining = Math.max(0, remaining - 1);
+                document.getElementById('qm-waiting-countdown').textContent = remaining;
+                if (remaining <= 0) clearInterval(waitingCountdownHandle);
+            }, 1000);
+
+            showStage('waiting');
+            return;
+        }
+        if (s.status === 'awaiting_customer_reconfirm') {
+            // Havuzdan biri kabul etti, müşteri onayı bekleniyor (Faz 3-4)
+            const drv = s.accepted_driver || {};
+            document.getElementById('qm-reconfirm-icon').textContent =
+                ({ easy:'🚗', platinum:'👔', vip:'♛' }[drv.vehicle_class_slug] || '🚗');
+            document.getElementById('qm-reconfirm-name').textContent = drv.name || 'Üye Sürücü';
+            document.getElementById('qm-reconfirm-vehicle').textContent =
+                [drv.vehicle_class, drv.vehicle_label].filter(Boolean).join(' · ') || drv.vehicle_class || '—';
+            document.getElementById('qm-reconfirm-rating').textContent = `★ ${Number(drv.rating || 0).toFixed(2)}`;
+            document.getElementById('qm-reconfirm-trips').textContent = `${drv.trips || 0} yolculuk`;
+
+            // Countdown
+            if (waitingCountdownHandle) clearInterval(waitingCountdownHandle);
+            let remaining = Math.max(0, s.seconds_remaining || 60);
+            document.getElementById('qm-reconfirm-countdown').textContent = remaining;
+            waitingCountdownHandle = setInterval(() => {
+                remaining = Math.max(0, remaining - 1);
+                document.getElementById('qm-reconfirm-countdown').textContent = remaining;
+                if (remaining <= 0) clearInterval(waitingCountdownHandle);
+            }, 1000);
+
+            showStage('reconfirm');
+            return;
+        }
         if (s.status === 'pending') {
             // Waiting render
             const drv = s.offered_driver || {};
@@ -2398,6 +2489,37 @@
             closeQuickModal();
         }
     }
+
+    // ===== RECONFIRM (Faz 4) — müşteri havuz fallback sürücüsünü onaylar/reddeder =====
+    async function sendReconfirm(accept) {
+        if (!activeRequestId) return;
+        const buttons = document.querySelectorAll('#qm-reconfirm-accept, #qm-reconfirm-decline');
+        buttons.forEach(b => b.disabled = true);
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const res = await fetch(`{{ url('/api/ride-requests') }}/${encodeURIComponent(activeRequestId)}/reconfirm`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ accept }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                console.warn('[reconfirm] failed', data);
+            }
+            // Polling otomatik bir sonraki durumu yakalayacak
+            pollStatusOnce();
+        } catch (err) {
+            console.error('[reconfirm] error', err);
+        } finally {
+            buttons.forEach(b => b.disabled = false);
+        }
+    }
+    document.getElementById('qm-reconfirm-accept')?.addEventListener('click', () => sendReconfirm(true));
+    document.getElementById('qm-reconfirm-decline')?.addEventListener('click', () => sendReconfirm(false));
 
     // ===== CONFIRM — müşteri "sürücüyü gördüm" basar (bot/sabotaj koruması) =====
     qmConfirmBtn.addEventListener('click', async () => {
