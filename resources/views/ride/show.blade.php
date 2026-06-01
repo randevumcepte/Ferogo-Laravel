@@ -971,7 +971,7 @@
             <div class="max-w-3xl mb-16">
                 <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Neden Ferogo</div>
                 <h2 class="display-font text-4xl md:text-6xl text-white mb-6">
-                    Taksiden farkı:<br>
+                    Bizim sözümüz:<br>
                     <span class="text-zinc-500">net,</span> güvenli, <span class="text-zinc-500">profesyonel.</span>
                 </h2>
                 <p class="text-lg text-zinc-400 leading-relaxed">
