@@ -1082,13 +1082,111 @@
         }
 
         async function captureFlow(type) {
-            // Gece selfie ise önce beyaz ekran flash
+            // Gece selfie ise önce beyaz ekran flash (kameranın ortamı aydınlatması için)
             if (type === 'selfie') {
                 flash.classList.remove('hidden');
                 await new Promise(r => setTimeout(r, 1200));
                 flash.classList.add('hidden');
             }
+
+            // 1. ÖNCE getUserMedia dene — desktop webcam VE mobile kamera için
+            //    aynı şekilde çalışır. HTML capture attribute mobile'a özel,
+            //    masaüstü Chrome/Safari'de IGNORE edilir.
+            if (navigator.mediaDevices?.getUserMedia) {
+                try {
+                    const facingMode = type === 'selfie' ? 'user' : { ideal: 'environment' };
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode,
+                            width:  { ideal: 1920 },
+                            height: { ideal: 1080 },
+                        },
+                        audio: false,
+                    });
+                    await openCameraCaptureUI(type, stream);
+                    return;
+                } catch (err) {
+                    console.warn('[capture] getUserMedia failed, fallback to file picker:', err);
+                    // İzin reddi, cihaz yok veya HTTP (HTTPS şart) — file input'a düş
+                }
+            }
+
+            // 2. Fallback: HTML file input (eski tarayıcılar, izin reddi, HTTPS yok)
             inputs[type].click();
+        }
+
+        /**
+         * Webcam/kamera preview modal'ı aç → "ÇEK" butonuyla canvas snapshot al →
+         * Blob → File → uploadPhoto.
+         */
+        function openCameraCaptureUI(type, stream) {
+            return new Promise((resolve) => {
+                const labels = {
+                    selfie:  ['🤳 Selfie Çek', 'Yüzünüz net görünür şekilde durun, ardından ÇEK butonuna basın.'],
+                    vehicle: ['🚗 Aracı Fotoğrafla', 'Aracın tamamı ekrana sığsın — renk + model net olmalı.'],
+                    plate:   ['🔖 Plakayı Fotoğrafla', 'Plaka rakam ve harfleri net okunabilir olmalı.'],
+                };
+                const [title, hint] = labels[type] || ['Foto Çek', ''];
+
+                const overlay = document.createElement('div');
+                overlay.id = 'sp-camera-overlay';
+                overlay.className = 'fixed inset-0 z-[170] bg-black/95 flex flex-col items-center justify-center p-4';
+                overlay.innerHTML = `
+                    <div class="w-full max-w-2xl">
+                        <div class="text-center mb-3">
+                            <div class="text-xs uppercase tracking-[0.25em] text-amber-300 font-bold mb-1">${title}</div>
+                            <p class="text-[12px] text-zinc-400 leading-relaxed px-2">${hint}</p>
+                        </div>
+                        <div class="relative rounded-2xl overflow-hidden border border-white/15 bg-zinc-900 shadow-2xl">
+                            <video autoplay playsinline muted class="w-full max-h-[60vh] bg-black"></video>
+                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-center text-[11px] text-zinc-300">
+                                Kamera açık · ÇEK'e basınca anlık görüntü alınır
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-5 justify-center">
+                            <button type="button" class="sp-cam-cancel px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-zinc-200 text-sm font-medium transition">
+                                Vazgeç
+                            </button>
+                            <button type="button" class="sp-cam-snap px-8 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-base transition shadow-lg shadow-amber-500/30">
+                                📷 ÇEK
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+
+                const video = overlay.querySelector('video');
+                video.srcObject = stream;
+
+                const cleanup = () => {
+                    try { stream.getTracks().forEach(t => t.stop()); } catch (_) {}
+                    overlay.remove();
+                };
+
+                overlay.querySelector('.sp-cam-cancel').addEventListener('click', () => {
+                    cleanup();
+                    resolve();
+                });
+
+                overlay.querySelector('.sp-cam-snap').addEventListener('click', async () => {
+                    const w = video.videoWidth  || 1280;
+                    const h = video.videoHeight || 720;
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = w;
+                    canvas.height = h;
+                    canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) {
+                            alert('Fotoğraf alınamadı, tekrar deneyin.');
+                            return;
+                        }
+                        const file = new File([blob], `${type}-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        await uploadPhoto(type, file);
+                        cleanup();
+                        resolve();
+                    }, 'image/jpeg', 0.88);
+                });
+            });
         }
 
         async function uploadPhoto(type, file) {
