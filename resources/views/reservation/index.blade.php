@@ -1,6 +1,7 @@
 @extends('layouts.public')
 
-@section('title', 'Ferogo · İzmir Premium Şoförlü Transfer')
+@section('title', 'Ferogo · İzmir Paylaşımlı Yolculuk Platformu')
+@section('description', 'İzmir\'de bağımsız üye sürücüler ile yolcuları buluşturan paylaşımlı yolculuk platformu. Şeffaf katkı payı, 7/24 platform erişimi.')
 
 @push('head')
 <style>
@@ -107,14 +108,14 @@
             <div class="max-w-4xl mx-auto text-center">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold uppercase tracking-wider mb-6 backdrop-blur-sm">
                     <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
-                    İzmir · 7/24 Premium Hizmet
+                    İzmir · 7/24 Paylaşımlı Yolculuk
                 </div>
                 <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 tracking-tight drop-shadow-2xl">
-                    Şehirde <span class="text-shimmer">premium</span> ulaşımın<br>en kolay yolu
+                    <span class="text-shimmer">Paylaşımlı</span> yolculuğun<br>en kolay yolu
                 </h1>
                 <p class="text-lg md:text-xl text-zinc-200 max-w-2xl mx-auto leading-relaxed mb-10 drop-shadow-lg">
-                    Profesyonel şoförler, bakımlı lüks araçlar, şeffaf fiyat.<br>
-                    Havalimanı, iş toplantısı, şehir içi — her an yanınızda.
+                    Bağımsız üye sürücüler, bakımlı araçlar, şeffaf katkı payı.<br>
+                    Havalimanı, iş toplantısı, şehir içi — kapı önünde eşleştirme.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-3 items-center justify-center">
                     <a href="#rezervasyon" class="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-brand hover:bg-brand-600 text-black font-bold text-lg transition shadow-lg shadow-brand/30 hover:shadow-brand/50 hover:scale-105 duration-200">
@@ -129,10 +130,10 @@
 
                 {{-- Trust strip --}}
                 <div class="mt-8 sm:mt-12 flex flex-wrap items-center justify-center gap-x-6 sm:gap-x-8 gap-y-2 sm:gap-y-3 text-[11px] sm:text-xs text-zinc-400 uppercase tracking-wider">
-                    <div class="flex items-center gap-2"><span class="text-brand">★</span> Lisanslı Şoförler</div>
-                    <div class="flex items-center gap-2"><span class="text-brand">✓</span> Şeffaf Fiyat</div>
+                    <div class="flex items-center gap-2"><span class="text-brand">★</span> Doğrulanmış Üye Sürücüler</div>
+                    <div class="flex items-center gap-2"><span class="text-brand">✓</span> Şeffaf Katkı Payı</div>
                     <div class="flex items-center gap-2"><span class="text-brand">⏱</span> Uçuş Takibi</div>
-                    <div class="flex items-center gap-2"><span class="text-brand">♛</span> Lüks Filo</div>
+                    <div class="flex items-center gap-2"><span class="text-brand">🛡</span> KVKK Korumalı</div>
                 </div>
             </div>
         </div>
@@ -384,7 +385,7 @@
                         <div class="bg-brand/10 border-2 border-brand/40 rounded-xl p-2 sm:p-3 min-w-0">
                             <div class="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-brand uppercase tracking-wider mb-1">
                                 <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span class="truncate">Ücret</span>
+                                <span class="truncate">Katkı Payı</span>
                             </div>
                             <div id="card-fare" class="text-sm sm:text-lg md:text-xl font-bold text-brand truncate">—</div>
                         </div>
@@ -405,7 +406,7 @@
                 </button>
 
                 <p class="text-center text-xs text-zinc-500">
-                    Rezervasyon sonrası tahmini ücret SMS ile gönderilir. Nihai ücret yolculuk sonunda netleşir.
+                    Rezervasyon sonrası tahmini katkı payı SMS ile bildirilir. Nihai tutar yolculuk sonunda netleşir.
                 </p>
             </form>
         </div>
@@ -415,15 +416,15 @@
     <section id="hizmetler" class="px-6 py-16">
         <div class="max-w-6xl mx-auto">
             <div class="text-center mb-10">
-                <h2 class="text-2xl md:text-3xl font-bold mb-2">Her Yolculuk için Çözüm</h2>
-                <p class="text-zinc-400 text-sm">Havalimanından şehir içine, kurumsaldan VIP'e — premium ulaşım.</p>
+                <h2 class="text-2xl md:text-3xl font-bold mb-2">Her Yolculuk için Eşleştirme</h2>
+                <p class="text-zinc-400 text-sm">Havalimanından şehir içine, kurumsaldan premium yolculuğa — bağımsız üye sürücülerle.</p>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 @foreach([
-                    ['✈️', 'Havalimanı Transferi', 'Uçuş takibi dahil zamanında transfer'],
-                    ['💼', 'Kurumsal Seyahat', 'İş toplantıları için önceden rezervasyon'],
-                    ['⭐', 'VIP Transfer', 'Lüks araç filosu, özel anlarınız için'],
-                    ['🏙️', 'Şehir İçi Ulaşım', 'Anlık şoförlü araç hizmeti'],
+                    ['✈️', 'Havalimanı Yolculuğu', 'Uçuş takibi dahil zamanında eşleştirme'],
+                    ['💼', 'Kurumsal Yolculuk', 'İş toplantıları için önceden rezervasyon'],
+                    ['⭐', 'Premium Yolculuk', 'Konforlu araçlarla özel anlarınız için'],
+                    ['🏙️', 'Şehir İçi Yolculuk', 'Anlık paylaşımlı yolculuk eşleştirme'],
                 ] as $service)
                     <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 hover:border-brand/30 transition">
                         <div class="text-3xl mb-3">{{ $service[0] }}</div>

@@ -155,7 +155,7 @@ class RideRequestController extends Controller
         // ─── Otomatik biyografi (mevcut alanlardan dinamik üretim) ───
         $bioParts = [];
         if ($experience['years_driving']) {
-            $bioParts[] = $experience['years_driving'] . ' yıllık profesyonel şoför';
+            $bioParts[] = $experience['years_driving'] . ' yıllık deneyimli üye sürücü';
         } elseif ($experience['label'] !== '—') {
             $bioParts[] = $experience['label'] . ' deneyim';
         }

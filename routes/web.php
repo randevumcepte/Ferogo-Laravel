@@ -112,3 +112,13 @@ Route::post('/surucu-paneli/api/active/message',             [DriverPanelControl
 Route::post('/surucu-paneli/api/active/complete',            [DriverPanelController::class, 'completeRide'])->name('driver.api.complete');
 Route::post('/surucu-paneli/api/active/arrived',             [DriverPanelController::class, 'markArrived'])->name('driver.api.arrived');
 Route::post('/surucu-paneli/api/active/no-show',             [DriverPanelController::class, 'reportNoShow'])->name('driver.api.no_show');
+
+// ─────────────────────────────────────────────────────────
+// YASAL SAYFALAR (Martı dilinde — paylaşımlı yolculuk vurgusu)
+// Click-wrap consent altyapısı + KVKK + mesafeli satış + çerez politikası
+// ─────────────────────────────────────────────────────────
+Route::view('/hizmet-sartlari',     'legal.terms')->name('legal.terms');
+Route::view('/kvkk-aydinlatma',     'legal.kvkk')->name('legal.kvkk');
+Route::view('/mesafeli-satis',      'legal.distance-sales')->name('legal.distance-sales');
+Route::view('/cerez-politikasi',    'legal.cookies')->name('legal.cookies');
+Route::view('/paylasimli-yolculuk', 'legal.ride-sharing')->name('legal.ride-sharing');

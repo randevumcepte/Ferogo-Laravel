@@ -147,7 +147,7 @@
             $rideStatus = $ride?->status;
             $statusBanner = match (true) {
                 $ar && $ar->status === 'pending'                    => ['Sürücüye iletildi, yanıt bekleniyor', 'amber'],
-                $rideStatus === 'driver_arriving'                   => ['Şoför yolda', 'emerald'],
+                $rideStatus === 'driver_arriving'                   => ['Üye sürücü yolda', 'emerald'],
                 $rideStatus === 'in_progress'                       => ['Yolculukta', 'brand'],
                 $rideStatus === 'assigned' || $rideStatus === 'searching' => ['Sürücü atanıyor', 'amber'],
                 default                                             => ['Aktif', 'emerald'],
@@ -182,7 +182,7 @@
                         </div>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="text-[10px] uppercase tracking-[0.25em] text-amber-300 font-bold mb-0.5" id="tracking-label">Şoför Yolda</div>
+                        <div class="text-[10px] uppercase tracking-[0.25em] text-amber-300 font-bold mb-0.5" id="tracking-label">Üye Sürücü Yolda</div>
                         <div class="flex items-baseline gap-2">
                             <span id="tracking-eta" class="text-3xl font-extrabold tabular-nums text-white">—</span>
                             <span class="text-sm text-zinc-400">dk kaldı</span>
@@ -395,10 +395,10 @@
                             'cancelled'        => ['İptal',         'text-zinc-500'],
                             'no_show'          => ['No-Show',       'text-red-300'],
                             'in_progress'      => ['Yolculukta',    'text-brand'],
-                            'driver_arriving'  => ['Şoför Yolda',   'text-brand'],
+                            'driver_arriving'  => ['Üye Sürücü Yolda',   'text-brand'],
                             'assigned'         => ['Atanıyor',      'text-zinc-300'],
                             'pending'          => ['Bekliyor',      'text-zinc-400'],
-                            'searching'        => ['Şoför Aranıyor','text-zinc-400'],
+                            'searching'        => ['Üye Sürücü Aranıyor','text-zinc-400'],
                         ];
                         $sLabel = $statusStyles[$ride->status] ?? [$ride->status, 'text-zinc-400'];
                     @endphp
@@ -514,7 +514,7 @@
             if (labelEl) {
                 labelEl.textContent = t.ride_status === 'in_progress'
                     ? 'Hedefe Doğru'
-                    : (t.ride_status === 'assigned' ? 'Şoför Atanıyor' : 'Şoför Yolda');
+                    : (t.ride_status === 'assigned' ? 'Üye Sürücü Atanıyor' : 'Üye Sürücü Yolda');
             }
 
             serverEta     = t.eta_minutes;

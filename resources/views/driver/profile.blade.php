@@ -156,7 +156,7 @@
                                 'border'   => 'border-white/20',
                                 'icon'     => '🚗',
                                 'tagline'  => 'Ekonomik standart',
-                                'detail'   => 'Standart sedan veya MPV (Passat, Vito, Talisman vb.). Şehir içi ve havalimanı transferleri için ekonomik seçenek. Klimalı, temiz, konforlu.',
+                                'detail'   => 'Standart sedan veya MPV (Passat, Vito, Talisman vb.). Şehir içi ve havalimanı yolculukları için ekonomik seçenek. Klimalı, temiz, konforlu.',
                                 'examples' => 'Volkswagen Passat · Mercedes Vito · Renault Talisman · Skoda Superb',
                             ],
                             'platinum' => [
@@ -164,7 +164,7 @@
                                 'border'   => 'border-zinc-300/40',
                                 'icon'     => '👔',
                                 'tagline'  => 'Lüks sedan · iş seyahati',
-                                'detail'   => 'Üst segment iş sınıfı sedan. İş seyahatleri, VIP misafir karşılama, kurumsal transferler için ideal. Premium konfor + sessiz iç mekan.',
+                                'detail'   => 'Üst segment iş sınıfı sedan. İş yolculukları, VIP misafir karşılama, kurumsal yolculuklar için ideal. Üst konfor + sessiz iç mekan.',
                                 'examples' => 'Mercedes E-Class · Audi A6 · BMW 5 Series',
                             ],
                             'vip' => [
@@ -172,7 +172,7 @@
                                 'border'   => 'border-brand/60',
                                 'icon'     => '👑',
                                 'tagline'  => 'Premium · protokol',
-                                'detail'   => 'En üst sınıf lüks sedan/limuzin. Protokol görevleri, özel etkinlikler, üst düzey misafir ağırlama. Profesyonel takım elbiseli sürücü, premium içecek servisi.',
+                                'detail'   => 'En üst sınıf lüks sedan/limuzin. Protokol görevleri, özel etkinlikler, üst düzey misafir ağırlama. Şık giyimli üye sürücü, üst sınıf içecek servisi.',
                                 'examples' => 'Mercedes S-Class · BMW 7 Series · Audi A8 · Maybach',
                             ],
                         ];

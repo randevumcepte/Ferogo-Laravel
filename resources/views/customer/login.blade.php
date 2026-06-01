@@ -70,7 +70,7 @@
             </span>
             <div class="mt-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.3em] text-zinc-500">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>
-                Premium Şoförlü Transfer
+                Paylaşımlı Yolculuk Platformu
             </div>
         </a>
 

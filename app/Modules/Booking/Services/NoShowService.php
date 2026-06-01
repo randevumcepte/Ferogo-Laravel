@@ -177,7 +177,7 @@ class NoShowService
             return ['ok' => false, 'message' => 'Yolculuk aktif değil.'];
         }
         $req->update(['customer_confirmed_at' => now()]);
-        return ['ok' => true, 'message' => 'Onay alındı. Şoför seni bekliyor.'];
+        return ['ok' => true, 'message' => 'Onay alındı. Üye sürücü seni bekliyor.'];
     }
 
     private function calculateCompensation(RideRequest $req): float

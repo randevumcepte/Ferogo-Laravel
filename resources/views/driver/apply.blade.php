@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
-@section('title', 'Sürücü Olun · Ferogo · Kendi İşinin Patronu Ol')
-@section('description', 'Ferogo premium transfer ağına katıl. Esnek saatler, şeffaf %85 sürücü payı, haftalık ödeme, profesyonel destek. İzmir genelinde sürücü alımı.')
+@section('title', 'Üye Sürücü Olun · Ferogo · Kendi Yolculuğunun Sahibi Ol')
+@section('description', 'Ferogo paylaşımlı yolculuk platformuna üye sürücü olarak katıl. Esnek saatler, katkı payının tamamı senin, üyelik tabanlı şeffaf model. İzmir genelinde üye sürücü kayıtları açık.')
 
 @push('head')
 <style>
@@ -112,7 +112,7 @@
                 </h1>
 
                 <p class="text-lg md:text-xl text-zinc-300 leading-relaxed mb-10 max-w-xl">
-                    İzmir'in en hızlı büyüyen premium transfer ağına katıl. Esnek saatler, şeffaf kazanç, profesyonel destek — kendi işinin patronu sen ol.
+                    İzmir'in en hızlı büyüyen paylaşımlı yolculuk platformuna üye sürücü olarak katıl. Esnek saatler, şeffaf katkı payı, üyelik tabanlı model — kendi yolculuğunun sahibi sen ol.
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -253,7 +253,7 @@
                         <div class="text-xs uppercase tracking-[0.2em] text-brand mb-4">01 · Kazanç</div>
                         <h3 class="display-font text-3xl md:text-5xl text-white mb-4">Sektörün en yüksek sürücü payı</h3>
                         <p class="text-zinc-400 leading-relaxed mb-6 max-w-md">
-                            Her yolculuktan %85 sana, sadece %15 platform komisyonu. Tip'ler tamamen senin. Şeffaf bordro, anlık görüntüleme.
+                            Yolcudan tahsil ettiğin katkı payının <strong>tamamı senin</strong>. Ferogo komisyon almaz; sabit dönemsel üyelik bedeli ile platforma erişirsin. Bahşişler tamamen sana aittir.
                         </p>
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="px-3 py-1 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold">%85 pay</span>
@@ -286,7 +286,7 @@
                         <div>
                             <div class="text-xs uppercase tracking-[0.2em] text-brand mb-2">04 · Güvence</div>
                             <h3 class="text-xl font-bold text-white mb-2">Sigorta, hukuki destek, 7/24 operasyon</h3>
-                            <p class="text-sm text-zinc-400 leading-relaxed">Kazaya, müşteri uyuşmazlığına, teknik soruna karşı arkanda profesyonel ekip ve sigorta var. Yalnız değilsin.</p>
+                            <p class="text-sm text-zinc-400 leading-relaxed">Yolcu uyuşmazlığına, teknik soruna karşı arkanda deneyimli destek ekibi var. Yalnız değilsin.</p>
                         </div>
                     </div>
                 </div>
@@ -295,7 +295,7 @@
                 <div class="bento-card rounded-3xl p-7 border border-white/5">
                     <div class="text-3xl mb-4">👔</div>
                     <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">05 · Müşteri</div>
-                    <h3 class="text-xl font-bold text-white mb-2">Sadece premium müşteri</h3>
+                    <h3 class="text-xl font-bold text-white mb-2">Doğrulanmış yolcular</h3>
                     <p class="text-sm text-zinc-400 leading-relaxed">Kurumsal, havalimanı, VIP. Pazarlık yok, fiyat net, müşteri kibar.</p>
                 </div>
 
@@ -329,7 +329,7 @@
                     @foreach([
                         ['01', 'Başvur', 'Aşağıdaki formu doldur — 2 dakika sürer.', '📝'],
                         ['02', 'Belge yükle', 'Ehliyet, SRC, ruhsat. Hepsi panelden.', '📋'],
-                        ['03', 'Aracını tanıt', 'Kendi premium aracını sisteme ekle, fotoğraf yükle.', '🚗'],
+                        ['03', 'Aracını tanıt', 'Kendi konforlu aracını sisteme ekle, fotoğraf yükle.', '🚗'],
                         ['04', 'Yola çık', 'Onayını al, çevrimiçi ol, ilk yolculuğu kabul et.', '🛣'],
                     ] as $step)
                         <div class="relative text-center">
@@ -354,13 +354,13 @@
                     <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Gereksinimler</div>
                     <h2 class="display-font text-4xl md:text-5xl text-white mb-5">Sende olmalı.</h2>
                     <p class="text-zinc-400 leading-relaxed">
-                        Premium hizmet, profesyonel sürücüyle başlar. Aşağıdaki maddeler senin için zaten varsa, başvurun anında işleme alınır.
+                        Paylaşımlı yolculuk, doğrulanmış üye sürücüyle başlar. Aşağıdaki maddeler senin için zaten varsa, başvurun anında işleme alınır.
                     </p>
                 </div>
 
                 <ul class="space-y-3">
                     @foreach([
-                        'Adına / kullanımında premium sınıf bir araç (son 7 yıl)',
+                        'Adına / kullanımında bakımlı bir araç (son 7 yıl)',
                         'En az 22 yaşında olmak',
                         'B sınıfı ehliyet (ticari için D / D1)',
                         'Geçerli SRC-2 belgesi (yoksa biz yönlendiririz)',
@@ -482,7 +482,7 @@
                     <div>
                         <label class="block text-xs font-medium text-zinc-400 mb-2">Aracın <span class="text-zinc-600">(marka, model, yıl)</span></label>
                         <input type="text" name="vehicle_info" value="{{ old('vehicle_info') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mercedes Vito 2021">
-                        <p class="text-xs text-zinc-500 mt-2">Premium sınıf, sigara içilmeyen, son 7 yıl içinde üretilmiş.</p>
+                        <p class="text-xs text-zinc-500 mt-2">Bakımlı, sigara içilmeyen, son 7 yıl içinde üretilmiş araç.</p>
                     </div>
                 </div>
 
@@ -492,13 +492,40 @@
                     <textarea name="notes" rows="4" maxlength="1000" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 resize-none" placeholder="Bizimle paylaşmak istediğin bir şey varsa...">{{ old('notes') }}</textarea>
                 </div>
 
-                {{-- KVKK --}}
-                <label class="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" name="kvkk" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
-                    <span class="text-sm text-zinc-400 leading-relaxed">
-                        Kişisel verilerimin başvuru değerlendirme amacıyla işlenmesini ve benimle iletişim kurulmasını kabul ediyorum. <a href="#" class="text-brand hover:underline">KVKK Aydınlatma Metni</a>
-                    </span>
-                </label>
+                {{-- Vergi Sorumluluğu Bilgilendirme (Martı dili / Maliye 7.8.2024 kararı uyumu) --}}
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 md:p-5">
+                    <div class="flex items-start gap-3">
+                        <div class="text-xl shrink-0">📋</div>
+                        <div class="text-xs md:text-sm text-zinc-300 leading-relaxed">
+                            <div class="font-semibold text-amber-200 mb-1.5">Vergi Sorumluluğu Bilgilendirmesi</div>
+                            <p>
+                                Ferogo bir <strong>paylaşımlı yolculuk platformudur</strong>; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
+                                Gelir İdaresi Başkanlığı'nın 7 Ağustos 2024 tarihli kararı uyarınca paylaşımlı yolculuk faaliyetinden elde edilen kazanç
+                                <strong>üye sürücünün ticari kazancıdır</strong> ve vergi yükümlülüğü tamamen üye sürücüye aittir.
+                                Ferogo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Onaylar --}}
+                <div class="space-y-3">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="kvkk" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
+                        <span class="text-sm text-zinc-400 leading-relaxed">
+                            Kişisel verilerimin başvuru değerlendirme amacıyla işlenmesini ve benimle iletişim kurulmasını kabul ediyorum.
+                            <a href="{{ route('legal.kvkk') }}" target="_blank" class="text-brand hover:underline">KVKK Aydınlatma Metni</a>
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="terms" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
+                        <span class="text-sm text-zinc-400 leading-relaxed">
+                            <a href="{{ route('legal.terms') }}" target="_blank" class="text-brand hover:underline">Hizmet Şartları</a> ve
+                            <a href="{{ route('legal.ride-sharing') }}" target="_blank" class="text-brand hover:underline">Paylaşımlı Yolculuk modelini</a>
+                            okudum, anladım. Ferogo'nun aracı hizmet sağlayıcı olduğunu, vergi sorumluluğunun bana ait olduğunu kabul ediyorum.
+                        </span>
+                    </label>
+                </div>
 
                 {{-- Submit --}}
                 <button type="submit" class="group w-full inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-lg transition-all shadow-2xl shadow-brand/30 hover:shadow-brand/50">

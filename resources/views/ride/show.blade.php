@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
-@section('title', 'Yolculuk Yapın · Ferogo · Premium Şoförlü Transfer')
-@section('description', 'Şehir içi, havalimanı veya uzun mesafe — profesyonel şoför, lüks araç, şeffaf fiyat. 60 saniyede rezervasyon yap, kapına gelsin.')
+@section('title', 'Yolculuk Yap · Ferogo · Paylaşımlı Yolculuk')
+@section('description', 'Şehir içi, havalimanı veya uzun mesafe — bağımsız üye sürücüler, konforlu araçlar, şeffaf katkı payı. 60 saniyede paylaşımlı yolculuk eşleştirmesi.')
 
 @php
     /** @var \App\Models\User|null $authedCustomer */
@@ -254,7 +254,7 @@
                         Canlı Radar
                     </div>
                     <h2 class="display-font text-4xl md:text-5xl text-white mb-4">
-                        Bölgendeki şoförler<br>
+                        Bölgendeki üye sürücüler<br>
                         <span class="text-zinc-500">şu an</span> hareket halinde.
                     </h2>
                     <p class="text-zinc-400 leading-relaxed">
@@ -319,7 +319,7 @@
                         <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md text-xs text-zinc-300 pointer-events-auto">
                             <span class="text-brand">●</span> Senin konumun
                             <span class="text-zinc-600 mx-1">|</span>
-                            <span class="inline-block w-2.5 h-2.5 rounded bg-brand"></span> Müsait şoför
+                            <span class="inline-block w-2.5 h-2.5 rounded bg-brand"></span> Müsait üye sürücü
                             <span class="text-zinc-600 mx-1">|</span>
                             <span class="inline-block w-2.5 h-2.5 rounded bg-zinc-600"></span> Yolculukta
                         </div>
@@ -329,7 +329,7 @@
                 {{-- Driver rail --}}
                 <div class="lg:col-span-4 flex flex-col gap-3">
                     <div class="flex items-center justify-between px-1">
-                        <div class="text-xs uppercase tracking-[0.25em] text-zinc-500">Yakındaki Şoförler</div>
+                        <div class="text-xs uppercase tracking-[0.25em] text-zinc-500">Yakındaki Üye Sürücüler</div>
                         <div class="text-[10px] text-zinc-600" id="radar-rail-meta">— bulundu</div>
                     </div>
                     <div id="radar-driver-rail" class="space-y-2.5">
@@ -368,7 +368,7 @@
             <div class="lg:col-span-7">
                 <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-zinc-300 mb-8 backdrop-blur-sm">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
-                    Şu an <span class="text-white font-semibold">42 şoför</span> İzmir'de hizmette
+                    Şu an <span class="text-white font-semibold">42 üye sürücü</span> İzmir'de hizmette
                 </div>
 
                 <h1 class="display-font text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-white mb-8">
@@ -380,7 +380,7 @@
                 </h1>
 
                 <p class="text-lg md:text-xl text-zinc-300 leading-relaxed mb-10 max-w-xl">
-                    Şehir içi, havalimanı, iş toplantısı veya uzun mesafe — profesyonel şoför ve premium araç dakikalar içinde kapında. Şeffaf fiyat, pazarlık yok.
+                    Şehir içi, havalimanı, iş toplantısı veya uzun mesafe — bağımsız üye sürücüler ve konforlu araçlar dakikalar içinde kapında. Şeffaf katkı payı, pazarlık yok.
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -412,7 +412,7 @@
                         <div class="flex items-start justify-between mb-6">
                             <div>
                                 <div class="text-xs uppercase tracking-widest text-zinc-400 mb-1">Canlı yolculuk</div>
-                                <div class="text-sm text-zinc-500">Şoför yolda</div>
+                                <div class="text-sm text-zinc-500">Üye sürücü yolda</div>
                             </div>
                             <div class="px-2 py-1 rounded-md bg-emerald-500/15 text-emerald-300 text-xs font-bold flex items-center gap-1">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>
@@ -758,7 +758,7 @@
                 <h3 class="text-xl font-bold text-white mb-1">
                     <span id="qm-waiting-driver">—</span> çağrılıyor
                 </h3>
-                <p class="text-sm text-zinc-400 mb-6">Şoför cevap veriyor… <span id="qm-waiting-countdown" class="text-brand font-bold tabular-nums">60</span> sn</p>
+                <p class="text-sm text-zinc-400 mb-6">Üye sürücü cevap veriyor… <span id="qm-waiting-countdown" class="text-brand font-bold tabular-nums">60</span> sn</p>
 
                 <div class="p-3 rounded-xl bg-white/[0.03] border border-white/10 text-left mb-5">
                     <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Aday sırası</div>
@@ -776,7 +776,7 @@
                 <div class="px-6 pt-6 pb-4 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border-b border-white/5">
                     <div class="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-emerald-300 font-bold mb-2">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>
-                        Şoför Yolda
+                        Üye Sürücü Yolda
                     </div>
                     <div class="flex items-center gap-3">
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-brand/40 flex items-center justify-center text-xl">🚗</div>
@@ -817,7 +817,7 @@
                 <form id="qm-chat-form" class="flex items-center gap-2 px-6 py-3 border-t border-white/5">
                     <input id="qm-chat-input" type="text" maxlength="1000" autocomplete="off" required
                            class="flex-1 bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none"
-                           placeholder="Şoföre mesaj…">
+                           placeholder="Üye sürücüye mesaj…">
                     <button type="submit" class="px-3 py-2 rounded-xl bg-brand hover:bg-brand-600 text-black text-xs font-bold transition">Gönder</button>
                 </form>
 
@@ -881,7 +881,7 @@
         <div class="flex scroll-x whitespace-nowrap text-sm uppercase tracking-[0.3em] text-zinc-600">
             @for($i = 0; $i < 2; $i++)
                 <div class="flex items-center gap-12 px-6">
-                    <span>Havalimanı Transfer</span><span class="text-brand">·</span>
+                    <span>Havalimanı Yolculuğu</span><span class="text-brand">·</span>
                     <span>Şehir İçi</span><span class="text-brand">·</span>
                     <span>Kurumsal</span><span class="text-brand">·</span>
                     <span>VIP</span><span class="text-brand">·</span>
@@ -899,7 +899,7 @@
             <div class="text-center max-w-2xl mx-auto mb-16">
                 <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Süreç</div>
                 <h2 class="display-font text-4xl md:text-6xl text-white mb-5">Üç adım, 60 saniye.</h2>
-                <p class="text-lg text-zinc-400">Telefonunu doğrula, hesabın hazır. Web'den rezervasyon, kapına şoför.</p>
+                <p class="text-lg text-zinc-400">Telefonunu doğrula, hesabın hazır. Web'den rezervasyon, kapına üye sürücü.</p>
             </div>
 
             <div class="relative">
@@ -909,7 +909,7 @@
                     @foreach([
                         ['01', 'Adresini yaz', 'Alış ve bırakış adresini gir, araç sınıfını seç. Fiyat anında ekranda.', '📍'],
                         ['02', 'Telefonunu doğrula', 'SMS ile gelen kodu gir. Hesabın 30 saniyede hazır, ödeme yolculuk sonunda.', '✓'],
-                        ['03', 'Yola çık', 'Şoför ve plaka SMS ile gelir. Kapına gelir, premium yolculuk başlar.', '🛣'],
+                        ['03', 'Yola çık', 'Üye sürücü ve plaka SMS ile gelir. Kapına gelir, paylaşımlı yolculuk başlar.', '🛣'],
                     ] as $step)
                         <div class="relative text-center">
                             <div class="relative inline-flex items-center justify-center w-16 h-16 rounded-full bg-black border-2 border-brand text-2xl mb-5 mx-auto">
@@ -935,7 +935,7 @@
                     <span class="text-zinc-500">doğru</span> araç.
                 </h2>
                 <p class="text-lg text-zinc-400 leading-relaxed">
-                    Tek başına şehir içi mi, ailenle havalimanı transferi mi, ekiple iş seyahati mi — her senaryoya bir sınıf.
+                    Tek başına şehir içi mi, ailenle havalimanı yolculuğu mu, ekiple iş seyahati mi — her senaryoya bir sınıf.
                 </p>
             </div>
 
@@ -943,7 +943,7 @@
                 @foreach([
                     ['Comfort', 'Şehir içi günlük', ['4 kişi', '2 bagaj', 'Sedan'], 'Skoda Superb · VW Passat seviyesi', '💼'],
                     ['Business', 'İş ve havalimanı', ['4 kişi', '3 bagaj', 'Lüks sedan'], 'Mercedes E-Class · BMW 5 seviyesi', '👔'],
-                    ['VIP / Aile', 'Grup ve VIP transfer', ['6-7 kişi', '6 bagaj', 'Minivan'], 'Mercedes Vito · VW Caravelle seviyesi', '♛'],
+                    ['VIP / Aile', 'Grup ve premium yolculuk', ['6-7 kişi', '6 bagaj', 'Minivan'], 'Mercedes Vito · VW Caravelle seviyesi', '♛'],
                 ] as $vc)
                     <div class="bento-card rounded-3xl p-7 border border-white/5 flex flex-col">
                         <div class="text-4xl mb-5">{{ $vc[4] }}</div>
@@ -975,7 +975,7 @@
                     <span class="text-zinc-500">net,</span> güvenli, <span class="text-zinc-500">profesyonel.</span>
                 </h2>
                 <p class="text-lg text-zinc-400 leading-relaxed">
-                    Pazarlık, taksimetre kuşkusu, "uzun yoldan" şüphesi yok. Adresini yazdığın an fiyatı görüyorsun — yolculuk bittiğinde ödüyorsun.
+                    Pazarlık, "uzun yoldan" şüphesi yok. Adresini yazdığın an tahmini katkı payını görüyorsun — yolculuk bittiğinde üye sürücüye ödüyorsun.
                 </p>
             </div>
 
@@ -1003,7 +1003,7 @@
                     <div class="text-3xl mb-4">⏱</div>
                     <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">02 · Uçuş takibi</div>
                     <h3 class="text-xl font-bold text-white mb-2">Uçağın geç kalsa bile</h3>
-                    <p class="text-sm text-zinc-400 leading-relaxed">Havalimanı transferlerinde uçuş takibi yapılır. Şoför, sen indiğinde kapıda olur.</p>
+                    <p class="text-sm text-zinc-400 leading-relaxed">Havalimanı yolculuklarında uçuş takibi yapılır. Üye sürücü, sen indiğinde kapıda olur.</p>
                 </div>
 
                 {{-- Medium card --}}
@@ -1011,7 +1011,7 @@
                     <div class="text-3xl mb-4">💳</div>
                     <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">03 · Önden ödeme yok</div>
                     <h3 class="text-xl font-bold text-white mb-2">Yolculuk sonunda öde</h3>
-                    <p class="text-sm text-zinc-400 leading-relaxed">Kart bilgisi istemeyiz. Yolculuk bitince nakit, kart veya transferle ödersin.</p>
+                    <p class="text-sm text-zinc-400 leading-relaxed">Kart bilgisi istemeyiz. Katkı payı yolculuk bitince üye sürücüye nakit, kart veya banka transferi ile ödenir.</p>
                 </div>
 
                 {{-- Wide card --}}
@@ -1020,8 +1020,8 @@
                         <div class="w-14 h-14 rounded-2xl bg-brand/15 flex items-center justify-center text-2xl shrink-0">🛡</div>
                         <div>
                             <div class="text-xs uppercase tracking-[0.2em] text-brand mb-2">04 · Güvenlik</div>
-                            <h3 class="text-xl font-bold text-white mb-2">Lisanslı şoför, sigortalı yolculuk</h3>
-                            <p class="text-sm text-zinc-400 leading-relaxed">Her şoför kimlik doğrulamasından, sabıka kaydı kontrolünden ve yolcu memnuniyeti değerlendirmesinden geçer. Yolculuk koltuk sigortalıdır.</p>
+                            <h3 class="text-xl font-bold text-white mb-2">Doğrulanmış üye sürücü, güvenli yolculuk</h3>
+                            <p class="text-sm text-zinc-400 leading-relaxed">Her üye sürücü kimlik doğrulamasından, sabıka kaydı kontrolünden ve yolcu memnuniyeti değerlendirmesinden geçer. Yolculuk koltuk sigortalıdır.</p>
                         </div>
                     </div>
                 </div>
@@ -1058,10 +1058,10 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 @foreach([
-                    ['✈️', 'Havalimanı', 'Uçuş takipli kapı önü transfer'],
+                    ['✈️', 'Havalimanı', 'Uçuş takipli kapı önü yolculuk'],
                     ['💼', 'İş Toplantısı', 'Zamanında, temsil eden araç'],
                     ['🎉', 'Düğün & Gece', 'Özel etkinlik, VIP karşılama'],
-                    ['🏙', 'Şehir İçi', 'Hızlı, güvenli, premium hat'],
+                    ['🏙', 'Şehir İçi', 'Hızlı, güvenli, paylaşımlı yolculuk hattı'],
                 ] as $uc)
                     <a href="{{ route('home') }}#rezervasyon" class="bento-card rounded-2xl p-6 border border-white/5 block group">
                         <div class="text-3xl mb-3">{{ $uc[0] }}</div>
@@ -1083,9 +1083,9 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
                 @foreach([
-                    ['Ferda Y.', 'İzmir', 'Sabah 6\'da havalimanına gittim, şoför 5\'te kapıdaydı. Araç temiz, su, şarj — her şey hazır. Bir daha taksi düşünmem.'],
+                    ['Ferda Y.', 'İzmir', 'Sabah 6\'da havalimanına gittim, üye sürücü 5\'te kapıdaydı. Araç temiz, su, şarj — her şey hazır. Çok rahat bir yolculuk oldu.'],
                     ['Selim T.', 'Alsancak', 'Kurumsal misafirlerimizi karşıladık. Fiyat baştan belliydi, makbuz düzgün geldi. Muhasebe ile sorun çıkmadı.'],
-                    ['Aylin K.', 'Karşıyaka', 'Düğün için tutmuştum. Şoför bey çok kibardı, fotoğraf çekme molasında bile bekledi. Çiçek çelenkli karşılama harikaydı.'],
+                    ['Aylin K.', 'Karşıyaka', 'Düğün için ayarlamıştım. Üye sürücü bey çok kibardı, fotoğraf çekme molasında bile bekledi. Çiçek çelenkli karşılama harikaydı.'],
                 ] as $t)
                     <div class="bento-card rounded-3xl p-7 border border-white/5">
                         <div class="flex items-center gap-1 text-brand text-sm mb-4">★★★★★</div>
@@ -1113,12 +1113,12 @@
 
             <div class="space-y-3">
                 @foreach([
-                    ['Önceden ücret alıyor musunuz?', 'Hayır. Hiçbir aşamada kart bilgisi istemiyoruz. Ücret yolculuk bittiğinde nakit, kart veya banka transferi ile ödenir.'],
+                    ['Önceden ücret alıyor musunuz?', 'Hayır. Hiçbir aşamada kart bilgisi istemiyoruz. Katkı payı yolculuk bittiğinde üye sürücüye nakit, kart veya banka transferi ile ödenir.'],
                     ['Fiyat yolda değişir mi?', 'Hayır. Trafik, alternatif rota, kısa ara duraklar dahil — yazılan fiyat ödenen fiyattır. Yolcunun talebiyle yeni durak eklenirse bunu önceden netleştiririz.'],
-                    ['Şoför geç kalırsa?', 'Rezervasyon saatinden 5 dk geç kalan şoför için indirim uygulanır, 15 dk geç kalan rezervasyon için ücretsiz iptal/yenileme hakkın vardır.'],
-                    ['Uçağım geç kalırsa ne olur?', 'Havalimanı transferlerinde uçuş takibi otomatik yapılır. Geç inseniz bile şoför kapıda olur, ek ücret çıkmaz.'],
+                    ['Üye sürücü geç kalırsa?', 'Rezervasyon saatinden 5 dk geç kalan üye sürücü için indirim uygulanır, 15 dk geç kalan rezervasyon için ücretsiz iptal/yenileme hakkın vardır.'],
+                    ['Uçağım geç kalırsa ne olur?', 'Havalimanı yolculuklarında uçuş takibi otomatik yapılır. Geç inseniz bile üye sürücü kapıda olur, ek ücret çıkmaz.'],
                     ['Bagaj sınırı var mı?', 'Her araç sınıfının taşıyabileceği maksimum bagaj kapasitesi belirtilir. Fazla bagaj için araç sınıfını VIP/Aile olarak seçmen yeterli.'],
-                    ['Çocuk koltuğu, evcil hayvan?', 'Bebek/çocuk koltuğu ve evcil hayvan opsiyonu rezervasyonda ekstra olarak işaretlenebilir — şoför hazır gelir.'],
+                    ['Çocuk koltuğu, evcil hayvan?', 'Bebek/çocuk koltuğu ve evcil hayvan opsiyonu rezervasyonda ekstra olarak işaretlenebilir — üye sürücü hazır gelir.'],
                     ['İptal politikası nedir?', 'Yolculuk saatinden 1 saat öncesine kadar ücretsiz iptal. Daha sonra %50, yolculuk saatinde ise tam ücret tahsil edilir.'],
                 ] as $faq)
                     <details class="faq-item bg-white/[0.02] border border-white/5 rounded-2xl hover:border-brand/30 transition group">

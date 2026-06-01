@@ -178,7 +178,7 @@ class RideRequestService
             RideMessage::create([
                 'ride_request_id' => $req->id,
                 'sender'          => 'system',
-                'body'            => 'Şoför yola çıktı. Tahmini varış: ' . max(1, (int) round((float) $req->distance_km * 2.4)) . ' dk.',
+                'body'            => 'Üye sürücü yola çıktı. Tahmini varış: ' . max(1, (int) round((float) $req->distance_km * 2.4)) . ' dk.',
             ]);
 
             return $req->fresh();
