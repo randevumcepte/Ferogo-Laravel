@@ -14,6 +14,16 @@ return [
     // Sürücüye gösterilen paket katalogu
     // duration_hours bittikten sonra paket expire olur.
     'types' => [
+        // GEÇİCİ TEST PAKETİ — sadece SHOW_TEST_PACKAGE=true iken görünür.
+        // PayTR canlı entegrasyonu doğrulandıktan sonra .env'den kapat veya tamamen sil.
+        ...((bool) env('SHOW_TEST_PACKAGE', false) ? ['test_1' => [
+            'label'           => 'TEST (1₺)',
+            'subtitle'        => 'PayTR canlı ödeme doğrulama',
+            'duration_hours'  => 1,
+            'price'           => 1.00,
+            'order'           => 0,
+            'badge'           => 'TEST',
+        ]] : []),
         'hourly_3' => [
             'label'           => '3 Saatlik',
             'subtitle'        => 'Kısa vardiya, dene-gör',
