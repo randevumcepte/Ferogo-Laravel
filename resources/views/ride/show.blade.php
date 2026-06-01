@@ -2229,6 +2229,34 @@
         await requestOtp(pendingPayload.customer_phone);
     });
 
+    // Rate-limit hatasi: qmError'da canli geri sayim + submit butonu disable
+    let qmRateLimitHandle = null;
+    function showQmRateLimit(baseMsg, retryAfter) {
+        if (qmRateLimitHandle) clearInterval(qmRateLimitHandle);
+        let remaining = Math.max(1, parseInt(retryAfter, 10) || 60);
+        const cleanMsg = baseMsg.replace(/\s*\d+\s*dakika.*$/i, '').replace(/\s*[Bb]ekle.*$/, '').trim();
+        function render() {
+            qmError.innerHTML = `${cleanMsg} <span class="text-red-200 font-bold tabular-nums ml-1">${remaining}</span> sn`;
+            qmError.classList.remove('hidden');
+            qmSubmit.disabled = true;
+            qmSubmitText.textContent = `Bekle ${remaining}s`;
+        }
+        render();
+        qmRateLimitHandle = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                clearInterval(qmRateLimitHandle);
+                qmRateLimitHandle = null;
+                qmError.classList.add('hidden');
+                qmSubmit.disabled = false;
+                qmSubmitText.textContent = 'Talebi Gönder';
+                qmSubmitSpinner.classList.add('hidden');
+                return;
+            }
+            render();
+        }, 1000);
+    }
+
     async function requestOtp(phone) {
         qmError.classList.add('hidden');
         qmSubmit.disabled = true;
@@ -2244,8 +2272,12 @@
             });
             const data = await res.json();
             if (!data.ok) {
-                qmError.textContent = data.message || 'Kod gönderilemedi.';
-                qmError.classList.remove('hidden');
+                if (data.retry_after) {
+                    showQmRateLimit(data.message || 'Çok sık kod isteği.', data.retry_after);
+                } else {
+                    qmError.textContent = data.message || 'Kod gönderilemedi.';
+                    qmError.classList.remove('hidden');
+                }
                 return;
             }
 

@@ -166,8 +166,12 @@
             });
             const data = await res.json();
             if (!data.ok) {
-                $('phone-error').textContent = data.message || 'Kod gönderilemedi.';
-                $('phone-error').classList.remove('hidden');
+                if (data.retry_after) {
+                    showRateLimitError(data.message || 'Çok sık kod isteği.', data.retry_after);
+                } else {
+                    $('phone-error').textContent = data.message || 'Kod gönderilemedi.';
+                    $('phone-error').classList.remove('hidden');
+                }
                 return;
             }
             $('code-phone-label').textContent = phone;
@@ -188,6 +192,39 @@
             $('send-otp-text').textContent = 'Kod Gönder';
         }
     });
+
+    // Rate-limit hatasi: "Çok sık kod isteği. Tekrar dene: 47 sn" — saniye-saniye azalan canlı geri sayım
+    let rateLimitHandle = null;
+    function showRateLimitError(baseMsg, retryAfter) {
+        if (rateLimitHandle) clearInterval(rateLimitHandle);
+        let remaining = Math.max(1, parseInt(retryAfter, 10) || 60);
+        const errEl = $('phone-error');
+        const btn   = $('send-otp');
+        const btnTx = $('send-otp-text');
+
+        // Cümle sonundaki ipucu kısımları temizle
+        const cleanMsg = baseMsg.replace(/\s*\d+\s*dakika.*$/i, '').replace(/\s*[Bb]ekle.*$/, '').trim();
+
+        function render() {
+            errEl.innerHTML = `${cleanMsg} <span class="text-red-200 font-bold tabular-nums ml-1">${remaining}</span> sn`;
+            errEl.classList.remove('hidden');
+            btn.disabled = true;
+            btnTx.textContent = `Bekle ${remaining}s`;
+        }
+        render();
+        rateLimitHandle = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                clearInterval(rateLimitHandle);
+                rateLimitHandle = null;
+                errEl.classList.add('hidden');
+                btn.disabled = false;
+                btnTx.textContent = 'Kod Gönder';
+                return;
+            }
+            render();
+        }, 1000);
+    }
 
     function startResendCountdown() {
         let s = 60;
