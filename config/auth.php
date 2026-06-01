@@ -38,7 +38,23 @@ return [
     */
 
     'guards' => [
+        // Default web guard — Filament admin paneli + genel fallback için kullanılır.
         'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        // MÜŞTERİ guard (web tarafı yolcular). Kendi session key'i ('login_customer_xxx')
+        // ile sürücü oturumundan TAMAMEN BAĞIMSIZ — aynı tarayıcıda paralel
+        // müşteri+sürücü oturumu mümkün.
+        'customer' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        // SÜRÜCÜ guard (üye sürücü panel girişi). Kendi session key'i
+        // ('login_driver_xxx') ile müşteri oturumundan TAMAMEN BAĞIMSIZ.
+        'driver' => [
             'driver' => 'session',
             'provider' => 'users',
         ],

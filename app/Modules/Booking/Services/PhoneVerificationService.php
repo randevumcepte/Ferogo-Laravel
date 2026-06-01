@@ -194,8 +194,9 @@ class PhoneVerificationService
 
             $user = $this->findOrCreateCustomer($normalized, $name);
 
-            // Session auth — müşteri panel + sonraki istekler için
-            Auth::login($user, remember: true);
+            // Session auth — MÜŞTERİ guard (sürücü oturumundan tamamen bağımsız).
+            // Aynı tarayıcıda hem müşteri hem sürücü olarak login kalınabilir.
+            Auth::guard('customer')->login($user, remember: true);
 
             return [
                 'ok'      => true,
@@ -275,10 +276,11 @@ class PhoneVerificationService
         }
 
         // Session yoksa veya farklı kullanıcı login ise → bu telefonun User'ını login et
-        if (! Auth::check() || Auth::user()?->phone !== $normalized) {
+        // (MÜŞTERİ guard — sürücü oturumu paralel kalır)
+        if (! Auth::guard('customer')->check() || Auth::guard('customer')->user()?->phone !== $normalized) {
             $user = User::where('phone', $normalized)->first();
             if ($user && $user->status === 'active') {
-                Auth::login($user, remember: true);
+                Auth::guard('customer')->login($user, remember: true);
             }
         }
 

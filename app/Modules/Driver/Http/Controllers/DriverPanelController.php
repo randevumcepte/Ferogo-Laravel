@@ -58,16 +58,21 @@ class DriverPanelController extends Controller
             return back()->withErrors(['email' => 'Hesabın aktif değil.']);
         }
 
-        Auth::login($user, remember: true);
-        $request->session()->regenerate();
+        // SÜRÜCÜ guard — müşteri oturumundan tamamen bağımsız (aynı tarayıcıda
+        // hem yolcu hem üye sürücü olarak login kalmak mümkün).
+        Auth::guard('driver')->login($user, remember: true);
+
+        // ÖNEMLİ: session()->regenerate() KULLANMA — paralel müşteri oturumunu
+        // (login_customer_xxx) yok eder. Sadece CSRF token'ı yenile.
+        $request->session()->regenerateToken();
 
         return redirect()->route('driver.panel');
     }
 
     public function logout(Request $request): RedirectResponse
     {
-        Auth::logout();
-        $request->session()->invalidate();
+        // Sadece sürücü guard'ını sıfırla — müşteri oturumu paralel kalır.
+        Auth::guard('driver')->logout();
         $request->session()->regenerateToken();
         return redirect()->route('driver.login');
     }
@@ -754,7 +759,8 @@ class DriverPanelController extends Controller
 
     private function currentDriver(): ?Driver
     {
-        $user = Auth::user();
+        // SÜRÜCÜ guard'ı kullan — müşteri guard'ından bağımsız.
+        $user = Auth::guard('driver')->user();
         if (! $user || $user->type !== 'driver') return null;
         return Driver::where('user_id', $user->id)->first();
     }

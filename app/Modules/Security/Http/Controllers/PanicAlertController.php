@@ -56,20 +56,23 @@ class PanicAlertController extends Controller
             $rideRequest = RideRequest::where('public_id', $validated['ride_request_public_id'])->first();
         }
 
-        $user = Auth::user();
+        // Hangi taraftan geldiyse o guard'tan user'ı çek (paralel oturumlar destekli)
+        $user = null;
         $driverId = null;
         $phone = null;
 
         if ($validated['triggered_by_type'] === PanicAlert::TRIGGER_DRIVER) {
-            // Sürücü session'ı (driver_id session'da)
-            $driverId = $request->session()->get('driver_id');
-            if ($driverId) {
-                $driver = Driver::find($driverId);
-                $phone = $driver?->user?->phone;
+            $driverUser = Auth::guard('driver')->user();
+            $user = $driverUser;
+            if ($driverUser) {
+                $driver = Driver::where('user_id', $driverUser->id)->first();
+                $driverId = $driver?->id;
+                $phone = $driverUser->phone;
             }
         } else {
-            // Müşteri
-            $phone = $user?->phone ?? $rideRequest?->customer_phone;
+            $customerUser = Auth::guard('customer')->user();
+            $user = $customerUser;
+            $phone = $customerUser?->phone ?? $rideRequest?->customer_phone;
         }
 
         $alert = PanicAlert::create([

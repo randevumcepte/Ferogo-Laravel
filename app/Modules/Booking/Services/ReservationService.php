@@ -119,7 +119,8 @@ class ReservationService
         $phone = $this->normalizePhone($data['customer_phone']);
 
         // Mevcut sessionda login bir müşteri varsa ve telefonu eşleşiyorsa onu kullan.
-        $authed = Auth::user();
+        // MÜŞTERİ guard'ı kullan (sürücü guard'dan bağımsız).
+        $authed = Auth::guard('customer')->user();
         if ($authed && $authed->type === 'customer' && $authed->phone === $phone) {
             return $authed;
         }

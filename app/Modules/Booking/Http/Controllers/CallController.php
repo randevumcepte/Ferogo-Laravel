@@ -235,9 +235,10 @@ class CallController extends Controller
 
     private function resolveRole(RideRequest $req): string
     {
-        $user = Auth::user();
-        if ($user && $user->type === 'driver') {
-            $driver = Driver::where('user_id', $user->id)->first();
+        // Önce SÜRÜCÜ guard'a bak — bu istek sürücü panelinden geliyor mu?
+        $driverUser = Auth::guard('driver')->user();
+        if ($driverUser && $driverUser->type === 'driver') {
+            $driver = Driver::where('user_id', $driverUser->id)->first();
             if ($driver && $driver->id === $req->accepted_driver_id) {
                 return 'driver';
             }

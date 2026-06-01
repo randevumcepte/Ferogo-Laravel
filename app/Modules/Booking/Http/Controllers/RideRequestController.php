@@ -252,13 +252,14 @@ class RideRequestController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        // Debug log — her ride_request POST'unu kayıt al, validation hatasında neyin reddedildiğini görelim
+        // Debug log — her ride_request POST'unu kayıt al
         $logKey = '[RR-STORE ' . substr(uniqid(), -6) . ']';
+        $customerAuthed = Auth::guard('customer')->user();
         \Illuminate\Support\Facades\Log::info($logKey . ' input', [
-            'auth_id'           => Auth::id(),
-            'auth_type'         => Auth::user()?->type,
-            'auth_phone'        => Auth::user()?->phone,
-            'auth_verified_at'  => Auth::user()?->phone_verified_at,
+            'auth_id'           => $customerAuthed?->id,
+            'auth_type'         => $customerAuthed?->type,
+            'auth_phone'        => $customerAuthed?->phone,
+            'auth_verified_at'  => $customerAuthed?->phone_verified_at,
             'fields' => collect($request->only([
                 'vehicle_class_slug', 'customer_name', 'customer_phone',
                 'pickup_address', 'dropoff_address', 'distance_km', 'duration_minutes',
@@ -270,11 +271,9 @@ class RideRequestController extends Controller
 
         $vehicleClassSlugs = VehicleClass::where('is_active', true)->pluck('slug')->toArray();
 
-        // Session'da login bir müşteri varsa OTP token ZORUNLU değil.
-        // Auth session = OTP doğrulamasından gelmiş (müşteri girişinin tek yolu).
-        // phone_verified_at kontrolünü kaldırdık — bazı eski kayıtlarda null olabilir
-        // ama session sahibi olmaları yeterli kanıt.
-        $authed = Auth::user();
+        // MÜŞTERİ guard'ında login varsa OTP token zorunlu değil.
+        // Driver guard'a bakmıyoruz — bu endpoint müşteri akışıdır.
+        $authed = $customerAuthed;
         $isAuthedCustomer = $authed && $authed->type === 'customer';
 
         // Authed customer'a phone_verified_at null geldiyse, transparan olarak şimdi işaretle

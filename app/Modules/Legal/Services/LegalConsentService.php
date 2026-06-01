@@ -43,7 +43,8 @@ class LegalConsentService
         }
 
         return LegalConsent::create([
-            'user_id'             => Auth::id(),
+            // Hangi guard'ta login olunduysa onun ID'sini al (customer öncelikli)
+            'user_id'             => Auth::guard('customer')->id() ?? Auth::guard('driver')->id() ?? Auth::id(),
             'session_id'          => $request->hasSession() ? $request->session()->getId() : null,
             'phone'               => $this->resolvePhone($request),
             'device_fingerprint'  => $request->input('fingerprint') ?: $request->header('X-Device-Fingerprint'),
@@ -134,8 +135,10 @@ class LegalConsentService
 
     protected function resolvePhone(Request $request): ?string
     {
-        // Önce login olmuş kullanıcının telefonu
-        $user = $request->user();
+        // Önce login olmuş kullanıcının telefonu (customer öncelikli, sonra driver)
+        $user = \Illuminate\Support\Facades\Auth::guard('customer')->user()
+            ?? \Illuminate\Support\Facades\Auth::guard('driver')->user()
+            ?? $request->user();
         if ($user && ! empty($user->phone)) {
             return $user->phone;
         }

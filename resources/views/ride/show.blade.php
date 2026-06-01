@@ -5,7 +5,8 @@
 
 @php
     /** @var \App\Models\User|null $authedCustomer */
-    $authedCustomer = auth()->user();
+    // MÜŞTERİ guard'ı kullan (sürücü oturumundan bağımsız)
+    $authedCustomer = auth('customer')->user();
     $authedCustomer = ($authedCustomer && $authedCustomer->type === 'customer') ? $authedCustomer : null;
 
     $authedTrust = null;

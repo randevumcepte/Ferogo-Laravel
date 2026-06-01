@@ -61,8 +61,8 @@
                 <a href="{{ route('ride.show') }}" class="hover:text-white transition {{ request()->routeIs('ride.*') ? 'text-white' : '' }}">Yolculuk Yapın</a>
                 <a href="{{ route('driver.apply') }}" class="hover:text-white transition {{ request()->routeIs('driver.*') ? 'text-white' : '' }}">Üye Sürücü Olun</a>
                 <a href="tel:+908508401377" class="text-white font-medium">0850 840 13 77</a>
-                @auth
-                    @if (auth()->user()->type === 'customer')
+                @auth('customer')
+                    @if (auth('customer')->user()->type === 'customer')
                         <a href="{{ route('customer.panel') }}" class="px-3 py-1.5 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-xs transition">Hesabım</a>
                     @endif
                 @else
@@ -94,8 +94,8 @@
                     0850 840 13 77
                 </a>
                 <div class="pt-2 mt-2 border-t border-white/5">
-                    @auth
-                        @if (auth()->user()->type === 'customer')
+                    @auth('customer')
+                        @if (auth('customer')->user()->type === 'customer')
                             <a href="{{ route('customer.panel') }}" class="block w-full text-center px-4 py-3 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition">Hesabım</a>
                         @endif
                     @else

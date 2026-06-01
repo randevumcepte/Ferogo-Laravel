@@ -22,7 +22,7 @@ class DriverPackageController extends Controller
 
     private function currentDriver(): ?Driver
     {
-        $user = Auth::user();
+        $user = Auth::guard('driver')->user();
         if (! $user || $user->type !== 'driver') return null;
         return Driver::where('user_id', $user->id)->first();
     }

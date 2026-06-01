@@ -104,11 +104,13 @@ class CustomerPanelController extends Controller
 
     /**
      * POST /musteri-cikis
+     *
+     * Sadece MÜŞTERİ guard'ını sıfırla — paralel sürücü oturumuna dokunma.
+     * session()->invalidate() KULLANMA (sürücü session'ını da yok eder).
      */
     public function logout(Request $request): RedirectResponse
     {
-        Auth::logout();
-        $request->session()->invalidate();
+        Auth::guard('customer')->logout();
         $request->session()->regenerateToken();
         return redirect()->route('customer.login');
     }
@@ -295,8 +297,8 @@ class CustomerPanelController extends Controller
             'password'          => bcrypt(\Illuminate\Support\Str::random(60)),
         ]);
 
-        Auth::logout();
-        $request->session()->invalidate();
+        // Sadece müşteri guard'ını sıfırla — sürücü oturumu paralel kalır.
+        Auth::guard('customer')->logout();
         $request->session()->regenerateToken();
 
         return redirect()->route('home')->with('success', 'Hesabın silindi. Yolculuk geçmişi yasal sebeplerle anonim olarak saklanır.');
@@ -378,7 +380,8 @@ class CustomerPanelController extends Controller
 
     private function currentCustomer(): ?User
     {
-        $user = Auth::user();
+        // MÜŞTERİ guard'ı kullan — sürücü guard'ından bağımsız.
+        $user = Auth::guard('customer')->user();
         if (! $user || $user->type !== 'customer') return null;
         return $user;
     }

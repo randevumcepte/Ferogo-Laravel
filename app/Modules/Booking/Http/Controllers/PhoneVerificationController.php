@@ -78,7 +78,11 @@ class PhoneVerificationController extends Controller
         );
 
         if ($result['ok']) {
-            $request->session()->regenerate();
+            // ÖNEMLİ: session()->regenerate() KULLANMA — bu tüm session ID'yi
+            // değiştirir, paralel sürücü oturumu (driver_id) kaybolur.
+            // Sadece CSRF token'ı yenile (session fixation koruması).
+            $request->session()->regenerateToken();
+
             // Bu session'daki anonim consent log'larına telefonu backfill et
             // → ileride dava olursa "bu telefon bu metni okudu" zinciri kurulur
             try {
