@@ -194,7 +194,6 @@
                                     title="Müşteriyi ara">
                                 📞
                             </button>
-                            <a id="active-phone" href="#" class="text-xs text-brand hover:text-brand-600 underline underline-offset-2 shrink-0">—</a>
                         </div>
                         <div id="active-customer-meta" class="text-[11px] text-zinc-500 mt-0.5"></div>
                     </div>
@@ -488,8 +487,6 @@
             activePickupCoords = { lat: a.pickup_lat, lng: a.pickup_lng };
 
             $('active-customer').textContent = a.customer_name;
-            $('active-phone').textContent = a.customer_phone;
-            $('active-phone').href = 'tel:' + a.customer_phone.replace(/\s+/g, '');
             $('active-pickup').textContent = a.pickup_address;
             $('active-dropoff').textContent = a.dropoff_address;
 
