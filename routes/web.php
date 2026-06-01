@@ -9,6 +9,7 @@ use App\Modules\Booking\Http\Controllers\RideRequestController;
 use App\Modules\Driver\Http\Controllers\DriverApplicationController;
 use App\Modules\Driver\Http\Controllers\DriverPanelController;
 use App\Modules\Legal\Http\Controllers\LegalConsentController;
+use App\Modules\Payment\Http\Controllers\DriverPackageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
@@ -113,6 +114,19 @@ Route::post('/surucu-paneli/api/active/message',             [DriverPanelControl
 Route::post('/surucu-paneli/api/active/complete',            [DriverPanelController::class, 'completeRide'])->name('driver.api.complete');
 Route::post('/surucu-paneli/api/active/arrived',             [DriverPanelController::class, 'markArrived'])->name('driver.api.arrived');
 Route::post('/surucu-paneli/api/active/no-show',             [DriverPanelController::class, 'reportNoShow'])->name('driver.api.no_show');
+
+// ─────────────────────────────────────────────────────────
+// SÜRÜCÜ PAKET ABONELİĞİ — Martı TAG modeli (3 saatlik/günlük/haftalık/aylık)
+// Paket aktif değilse radar'a düşmez, iş atanmaz.
+// ─────────────────────────────────────────────────────────
+Route::get('/surucu-paneli/paketler',                       [DriverPackageController::class, 'index'])->name('driver.packages.index');
+Route::post('/surucu-paneli/paketler/satin-al',             [DriverPackageController::class, 'purchase'])->name('driver.packages.purchase');
+Route::match(['get', 'post'], '/surucu-paneli/paketler/{package}/callback', [DriverPackageController::class, 'callback'])
+    ->whereNumber('package')
+    ->name('driver.packages.callback');
+Route::get('/surucu-paneli/paketler/{package}/mock-checkout', [DriverPackageController::class, 'mockCheckout'])
+    ->whereNumber('package')
+    ->name('driver.packages.mock_checkout');
 
 // ─────────────────────────────────────────────────────────
 // YASAL SAYFALAR (Martı dilinde — paylaşımlı yolculuk vurgusu)

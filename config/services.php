@@ -79,4 +79,17 @@ return [
         'commercial' => (bool) env('VOICETELEKOM_COMMERCIAL', false),
     ],
 
+    /*
+     * iyzico — sürücü paket ödemeleri (Martı TAG benzeri abonelik).
+     * enabled=false → "mock" provider: ödeme akışı tam çalışır, gerçek
+     * tahsilat yapılmaz, anlık başarı döner (dev/staging için).
+     * Üretimde IYZICO_API_KEY/SECRET set edilip enabled=true yapılır.
+     */
+    'iyzico' => [
+        'enabled'    => (bool) env('IYZICO_ENABLED', false),
+        'api_key'    => env('IYZICO_API_KEY'),
+        'secret_key' => env('IYZICO_SECRET_KEY'),
+        'base_url'   => env('IYZICO_BASE_URL', 'https://sandbox-api.iyzipay.com'),
+    ],
+
 ];

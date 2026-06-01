@@ -45,10 +45,13 @@ class RideRequestController extends Controller
 
         // Tüm müsait sürücüleri çek (bbox YOK — demo aşamasında her şehirden
         // test edilebilsin diye; üretimde driver sayısı çoğalınca bbox ekleriz)
+        // PAKET KONTROL: aktif paketi olmayan sürücü radar'a düşmez.
         $candidates = Driver::query()
             ->with(['user:id,name,avatar', 'currentVehicle.vehicleClass'])
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
+            ->whereNotNull('package_active_until')
+            ->where('package_active_until', '>', now())
             ->whereNotNull('current_lat')
             ->whereNotNull('current_lng')
             ->limit(50)
@@ -67,6 +70,8 @@ class RideRequestController extends Controller
         $totalOnline = Driver::query()
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
+            ->whereNotNull('package_active_until')
+            ->where('package_active_until', '>', now())
             ->count();
 
         return response()->json([
@@ -387,11 +392,13 @@ class RideRequestController extends Controller
             $validated['fallback_driver_ids'] ?? []
         ));
 
-        // Sadece online + approved + müsait sürücüler aday olabilir
+        // Sadece online + approved + aktif paketli + müsait sürücüler aday olabilir
         $validCandidates = Driver::query()
             ->whereIn('id', $candidates)
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
+            ->whereNotNull('package_active_until')
+            ->where('package_active_until', '>', now())
             ->pluck('id')
             ->all();
 

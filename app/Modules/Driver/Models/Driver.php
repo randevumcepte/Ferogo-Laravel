@@ -48,6 +48,8 @@ class Driver extends Model
         'rejection_reason',
         'rating',
         'total_rides',
+        // ─── Paket aboneliği (Martı TAG benzeri) — dispatch buradan kontrol eder ───
+        'package_active_until',
         // ─── Güvenlik askıya alma (security suspension) ───
         'is_suspended',
         'suspended_at',
@@ -71,6 +73,7 @@ class Driver extends Model
         'last_location_updated_at' => 'datetime',
         'approved_at' => 'datetime',
         'rating' => 'decimal:2',
+        'package_active_until' => 'datetime',
         'is_suspended'   => 'boolean',
         'suspended_at'   => 'datetime',
         'reinstated_at'  => 'datetime',
@@ -111,14 +114,38 @@ class Driver extends Model
         return $this->belongsTo(\App\Modules\Security\Models\SecurityIncident::class, 'suspended_via_incident_id');
     }
 
+    public function packages()
+    {
+        return $this->hasMany(\App\Modules\Payment\Models\DriverPackage::class);
+    }
+
+    public function activePackage()
+    {
+        return $this->hasOne(\App\Modules\Payment\Models\DriverPackage::class)
+            ->where('status', 'active')
+            ->where('expires_at', '>', now())
+            ->latestOfMany('expires_at');
+    }
+
+    /**
+     * Sürücünün aktif paketi var mı? (radar/dispatch için)
+     * package_active_until — driver_packages tablosundan cache'lenmiş alan.
+     */
+    public function hasActivePackage(): bool
+    {
+        return $this->package_active_until !== null
+            && $this->package_active_until->isFuture();
+    }
+
     /**
      * Sürücü dispatch'e dahil edilebilir mi?
-     * (Onaylı + online + askıda değil)
+     * (Onaylı + online + askıda değil + aktif paket var)
      */
     public function isDispatchable(): bool
     {
         return $this->approval_status === 'approved'
             && $this->availability_status === 'online'
-            && ! $this->is_suspended;
+            && ! $this->is_suspended
+            && $this->hasActivePackage();
     }
 }

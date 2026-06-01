@@ -339,6 +339,14 @@ class DriverPanelController extends Controller
                 ])->all();
         }
 
+        // Paket durumu — panel "Paket gerekli" uyarısı için kullanır.
+        // Carbon sürüm farkı yaratmamak için kalan süreyi timestamp'ten hesaplıyoruz.
+        $hasPackage   = $driver->hasActivePackage();
+        $packageUntil = $driver->package_active_until;
+        $remainingMinutes = ($hasPackage && $packageUntil)
+            ? (int) max(0, floor(($packageUntil->getTimestamp() - now()->getTimestamp()) / 60))
+            : 0;
+
         return response()->json([
             'authenticated' => true,
             'driver' => [
@@ -347,6 +355,11 @@ class DriverPanelController extends Controller
                 'availability_status' => $driver->availability_status,
                 'rating'              => (float) $driver->rating,
                 'total_rides'         => (int) $driver->total_rides,
+            ],
+            'package' => [
+                'active'            => $hasPackage,
+                'expires_at'        => $packageUntil?->toIso8601String(),
+                'remaining_minutes' => $remainingMinutes,
             ],
             'offer'  => $offer ? $this->offerPayload($offer) : null,
             'active' => $activeRequest ? $this->activeRequestPayload($activeRequest) : null,
@@ -365,6 +378,16 @@ class DriverPanelController extends Controller
         $validated = $request->validate([
             'status' => ['required', 'in:online,offline'],
         ]);
+
+        // Online olmak için aktif paket şart — Martı modeli.
+        if ($validated['status'] === 'online' && ! $driver->hasActivePackage()) {
+            return response()->json([
+                'ok'      => false,
+                'code'    => 'package_required',
+                'message' => 'Online olmak için aktif paket gerekli. Paketler sayfasından satın al.',
+                'redirect' => route('driver.packages.index'),
+            ], 422);
+        }
 
         // 'busy' zaten aktif yolculuktan otomatik kuruluyor — sürücü el ile değiştiremez
         if ($driver->availability_status !== 'busy') {

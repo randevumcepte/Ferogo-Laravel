@@ -53,6 +53,10 @@
                     <span id="availability-dot" class="w-2 h-2 rounded-full"></span>
                     <span id="availability-label">—</span>
                 </button>
+                <a href="{{ route('driver.packages.index') }}"
+                   class="px-3 py-2 rounded-xl text-xs font-semibold text-brand hover:text-black hover:bg-brand border border-brand/40 hover:border-brand transition">
+                    Paketler
+                </a>
                 <form method="POST" action="{{ route('driver.logout') }}" class="inline">
                     @csrf
                     <button type="submit" class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition">Çıkış</button>
@@ -70,6 +74,23 @@
     </header>
 
     <main class="max-w-5xl mx-auto px-4 py-6 space-y-5">
+
+        {{-- ===== Paket uyarısı (JS açıp kapatır) ===== --}}
+        <section id="package-banner" class="hidden">
+            <a href="{{ route('driver.packages.index') }}"
+               class="block rounded-3xl border-2 border-red-500/40 bg-red-500/[0.08] p-4 hover:bg-red-500/[0.12] transition">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">⚠</div>
+                        <div class="min-w-0">
+                            <div class="font-bold text-red-200" id="package-banner-title">Paket gerekli</div>
+                            <div class="text-xs text-red-300/80 truncate" id="package-banner-subtitle">Online olmak için paket satın al.</div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-red-200 font-semibold shrink-0">Paket Al →</div>
+                </div>
+            </a>
+        </section>
 
         {{-- ===== Driver kimlik özeti ===== --}}
         <section class="rounded-3xl border border-white/10 bg-zinc-950 p-5 flex items-center gap-4">
@@ -346,9 +367,40 @@
                     body: JSON.stringify({ status: next }),
                 });
                 const data = await res.json();
-                if (data.ok) renderAvailability(data.status);
+                if (data.ok) {
+                    renderAvailability(data.status);
+                } else if (data.code === 'package_required') {
+                    // Paket yok → Paketler sayfasına yönlendir
+                    if (confirm(data.message + '\n\nPaketler sayfasına gidilsin mi?')) {
+                        location.href = data.redirect || '{{ route('driver.packages.index') }}';
+                    }
+                }
             } catch (_) {}
         });
+
+        // === PAKET BANNER ===
+        const pkgBanner   = $('package-banner');
+        const pkgTitle    = $('package-banner-title');
+        const pkgSubtitle = $('package-banner-subtitle');
+
+        function renderPackageBanner(pkg) {
+            if (!pkg || !pkg.active) {
+                pkgBanner.classList.remove('hidden');
+                pkgTitle.textContent = 'Paket gerekli';
+                pkgSubtitle.textContent = 'Online olmak ve iş alabilmek için paket satın al.';
+                return;
+            }
+
+            const mins = pkg.remaining_minutes || 0;
+            // 1 saatten az kalmışsa uyarı göster
+            if (mins > 0 && mins < 60) {
+                pkgBanner.classList.remove('hidden');
+                pkgTitle.textContent = 'Paketin bitiyor';
+                pkgSubtitle.textContent = `Yaklaşık ${mins} dakika kaldı. Yeni paket al, kesintisiz devam et.`;
+            } else {
+                pkgBanner.classList.add('hidden');
+            }
+        }
 
         // === RENDER ===
         function showSection(name) {
@@ -620,6 +672,7 @@
                 const data = await res.json();
 
                 if (data.driver) renderAvailability(data.driver.availability_status);
+                if (data.package) renderPackageBanner(data.package);
 
                 if (data.offer) {
                     renderOffer(data.offer);
