@@ -581,14 +581,9 @@
                     <div id="qm-dp-vehicle-wrap" class="hidden px-6 py-5 border-b border-white/5">
                         <div class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-3">Araç</div>
                         <div class="bg-black/30 border border-white/5 rounded-2xl p-4 space-y-3">
-                            <div class="flex items-start justify-between gap-3 flex-wrap">
-                                <div class="min-w-0">
-                                    <div id="qm-dp-vehicle-name" class="text-base font-bold text-white">—</div>
-                                    <div id="qm-dp-vehicle-meta" class="text-xs text-zinc-400">—</div>
-                                </div>
-                                <div class="px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/30 text-brand font-bold text-sm tabular-nums">
-                                    <span id="qm-dp-vehicle-plate">—</span>
-                                </div>
+                            <div class="min-w-0">
+                                <div id="qm-dp-vehicle-name" class="text-base font-bold text-white">—</div>
+                                <div id="qm-dp-vehicle-meta" class="text-xs text-zinc-400">—</div>
                             </div>
                             <div id="qm-dp-vehicle-features" class="flex flex-wrap gap-1.5"></div>
                             <div class="flex flex-wrap gap-3 pt-2 border-t border-white/5 text-[11px]">
@@ -1832,7 +1827,6 @@
             const vmeta = [d.vehicle.class_name, d.vehicle.year, d.vehicle.color].filter(Boolean).join(' · ');
             document.getElementById('qm-dp-vehicle-name').textContent = vname;
             document.getElementById('qm-dp-vehicle-meta').textContent = vmeta || '—';
-            document.getElementById('qm-dp-vehicle-plate').textContent = d.vehicle.plate || '—';
 
             const feats = d.vehicle.features || [];
             document.getElementById('qm-dp-vehicle-features').innerHTML = feats.map(f =>
@@ -1847,9 +1841,12 @@
             inspEl.innerHTML = d.vehicle.inspection_valid ? '<span class="text-emerald-400">●</span> Muayene geçerli' : '<span class="text-amber-400">●</span> Muayene süresi geçmiş';
 
             // Photos grid + lightbox
+            // GEÇİCİ: araç fotoğrafları kullanıcı tarafında gizli — geri açmak için
+            // SHOW_VEHICLE_PHOTOS_IN_PROFILE = true yap.
+            const SHOW_VEHICLE_PHOTOS_IN_PROFILE = false;
             const photos = (d.vehicle.photos || []).filter(Boolean);
             currentPhotos = photos;
-            if (photos.length > 0) {
+            if (SHOW_VEHICLE_PHOTOS_IN_PROFILE && photos.length > 0) {
                 photosWrap.classList.remove('hidden');
                 document.getElementById('qm-dp-photos-count').textContent = photos.length;
                 document.getElementById('qm-dp-photos').innerHTML = photos.map((url, idx) =>
