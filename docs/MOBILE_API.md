@@ -90,7 +90,7 @@ Hata kodları: `account_inactive`, `driver_not_approved`.
 | `GET`  | `/customer/bootstrap` | vehicle_classes vb. referans data |
 | `GET`  | `/customer/places/search?q=` | Nominatim proxy, İzmir viewbox + 60dk cache |
 | `POST` | `/customer/fare/calculate` | Canlı fiyat hesabı |
-| `GET`  | `/customer/drivers/nearby?lat=&lng=&limit=` | Yakındaki onaylı+online sürücüler (her sürücüde `is_favorite`) |
+| `GET`  | `/customer/drivers/nearby?lat=&lng=&limit=` | Yakındaki onaylı+online sürücüler (her sürücüde `is_favorite` + `favorite_count`) |
 | `GET`  | `/customer/drivers/{id}/profile` | Sürücü detay (sertifikalar + araç + `is_favorite`) |
 | `GET`  | `/customer/favorites` | Favori sürücüler + canlı müsaitlik (`is_online`) |
 | `POST` | `/customer/favorites/{driverId}` | Favoriye ekle (idempotent, max 30) |

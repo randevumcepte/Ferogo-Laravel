@@ -9,6 +9,7 @@ use App\Modules\Vehicle\Models\Vehicle;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Driver extends Model
@@ -102,6 +103,20 @@ class Driver extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Bu sürücüyü favorileyen müşteriler. Sosyal kanıt için sayım kaynağı
+     * (radar listesinde "♥ N" rozeti).
+     */
+    public function favoritedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'customer_favorite_drivers',
+            'driver_id',
+            'user_id',
+        );
     }
 
     public function suspendedBy(): BelongsTo

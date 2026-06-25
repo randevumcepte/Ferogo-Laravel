@@ -52,6 +52,7 @@ class RideRequestController extends Controller
         // PAKET KONTROL: aktif paketi olmayan sürücü radar'a düşmez.
         $candidates = Driver::query()
             ->with(['user:id,name,avatar', 'currentVehicle.vehicleClass'])
+            ->withCount('favoritedByUsers as favorite_count')
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
             ->whereNotNull('package_active_until')
@@ -753,6 +754,8 @@ class RideRequestController extends Controller
             'vehicle_year'        => $v?->year_of_manufacture,
             'vehicle_color'       => $v?->color,
             'experience_band'     => $d->experience_band,
+            // Sosyal kanıt: kaç müşteri bu sürücüyü favoriledi (radar "♥ N" rozeti)
+            'favorite_count'      => (int) ($d->favorite_count ?? 0),
             // Genel temsili görsel (araç sınıfı bazlı, gerçek araç değil)
             'vehicle_class_icon'  => $this->vehiclePhotoUrl($v, $vClass),
             // Sürücü için temsili UI avatar (kişisel fotoğraf değil)

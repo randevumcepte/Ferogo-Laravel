@@ -183,6 +183,7 @@ class CustomerRideController extends Controller
 
         $candidates = Driver::query()
             ->with(['user:id,name,avatar', 'currentVehicle.vehicleClass'])
+            ->withCount('favoritedByUsers as favorite_count')
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
             ->whereNotNull('current_lat')
@@ -707,6 +708,7 @@ class CustomerRideController extends Controller
             'avatar'             => $avatarUrl,
             'rating'             => (float) $d->rating,
             'trips'              => (int) $d->total_rides,
+            'favorite_count'     => (int) ($d->favorite_count ?? 0),
             'vehicle_class'      => $vClass?->name,
             'vehicle_class_slug' => $vClass?->slug,
             'vehicle_label'      => $v ? trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) : null,

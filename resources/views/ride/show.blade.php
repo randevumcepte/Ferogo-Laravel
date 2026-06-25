@@ -1446,6 +1446,7 @@
             vSlug: r.vehicle_class_slug,
             vclass: r.vehicle_class || 'Easy',
             rating: Number(r.rating || 0).toFixed(2),
+            favoriteCount: Number(r.favorite_count || 0),
             km: r.distance_km,
             isBusy: false,
             isReal: true,
@@ -1465,6 +1466,7 @@
                 vSlug: d.vSlug,
                 vclass: d.vclass,
                 rating: d.rating,
+                favoriteCount: 0,
                 km,
                 isBusy: d.state === 'busy',
                 isReal: false,
@@ -1490,6 +1492,9 @@
             const statusText = isBusy ? 'Yolculukta' : 'Müsait';
             const statusClass = isBusy ? 'text-zinc-400' : 'text-brand';
             const badge = classBadge(d.vSlug, d.vclass);
+            const favBadge = (d.favoriteCount > 0)
+                ? `<span class="inline-flex items-center gap-0.5 text-[10px] text-rose-300 shrink-0" title="${d.favoriteCount} müşteri favori şoförü olarak işaretledi">♥ ${d.favoriteCount}</span>`
+                : '';
             const liveDot = d.isReal
                 ? `<span class="ml-1 text-[8px] text-emerald-400 font-bold tracking-wider">● CANLI</span>`
                 : '';
@@ -1511,6 +1516,7 @@
                             <div class="text-sm font-semibold text-white truncate max-w-[140px]">${d.name}</div>
                             ${badge}
                             <span class="text-[10px] text-brand shrink-0">★ ${d.rating}</span>
+                            ${favBadge}
                             ${liveDot}
                         </div>
                         <div class="flex items-center gap-2 mt-1">
