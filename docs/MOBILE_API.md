@@ -90,7 +90,7 @@ Hata kodları: `account_inactive`, `driver_not_approved`.
 | `GET`  | `/customer/bootstrap` | vehicle_classes vb. referans data |
 | `GET`  | `/customer/places/search?q=` | Nominatim proxy, İzmir viewbox + 60dk cache |
 | `POST` | `/customer/fare/calculate` | Canlı fiyat hesabı |
-| `GET`  | `/customer/drivers/nearby?lat=&lng=&limit=` | Yakındaki onaylı+online sürücüler (her sürücüde `is_favorite` + `favorite_count`) |
+| `GET`  | `/customer/drivers/nearby?lat=&lng=&limit=` | Yakındaki sürücüler (`is_favorite`, `favorite_count`, `is_female`, `women_only`) |
 | `GET`  | `/customer/drivers/{id}/profile` | Sürücü detay (sertifikalar + araç + `is_favorite`) |
 | `GET`  | `/customer/favorites` | Favori sürücüler + canlı müsaitlik (`is_online`) |
 | `POST` | `/customer/favorites/{driverId}` | Favoriye ekle (idempotent, max 30) |
@@ -146,6 +146,7 @@ ekleme `422` döner. Sürücü o an offline ise talep `422` ("müsait değil") d
 |---|---|---|
 | `GET`  | `/driver/state?since_id=` | Tek endpoint: driver + offer + active + messages |
 | `POST` | `/driver/availability` | `{ status, lat?, lng? }` |
+| `POST` | `/driver/women-only` | `{ enabled }` — "sadece kadın yolcu al" (yalnızca kadın sürücü, 403 değilse) |
 | `POST` | `/driver/location` | `{ lat, lng }` — 5 sn throttle |
 | `POST` | `/driver/offers/{publicId}/accept` | Teklifi kabul et |
 | `POST` | `/driver/offers/{publicId}/reject` | Teklifi reddet |

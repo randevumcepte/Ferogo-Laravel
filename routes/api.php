@@ -73,6 +73,7 @@ Route::middleware(['auth:sanctum', 'device', 'role:driver', 'ability:driver:*'])
 
         // Availability + konum
         Route::post('availability',          [DriverController::class, 'setAvailability']);
+        Route::post('women-only',            [DriverController::class, 'setWomenOnly']);
         Route::middleware('throttle:30,1')->post('location', [DriverController::class, 'updateLocation']);
 
         // Teklifler

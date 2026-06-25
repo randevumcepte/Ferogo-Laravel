@@ -333,6 +333,14 @@
                         <div class="text-xs uppercase tracking-[0.25em] text-zinc-500">Yakındaki Üye Sürücüler</div>
                         <div class="text-[10px] text-zinc-600" id="radar-rail-meta">— bulundu</div>
                     </div>
+                    {{-- Kadın sürücü filtresi --}}
+                    <div class="px-1">
+                        <button type="button" id="women-filter-chip" data-on="0"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border border-rose-400/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 transition">
+                            <span>👩</span> Kadın sürücü
+                            <span id="women-filter-check" class="hidden">✓</span>
+                        </button>
+                    </div>
                     <div id="radar-driver-rail" class="space-y-2.5">
                         {{-- Skeletons --}}
                         @for($i = 0; $i < 4; $i++)
@@ -1294,6 +1302,22 @@
     let drivers = [];
     let tickHandle = null;
     let userCenterGlobal = null;
+    let womenFilterActive = false;
+
+    // Kadın sürücü filtresi chip'i
+    (function () {
+        const chip = document.getElementById('women-filter-chip');
+        if (!chip) return;
+        const check = document.getElementById('women-filter-check');
+        chip.addEventListener('click', () => {
+            womenFilterActive = !womenFilterActive;
+            chip.dataset.on = womenFilterActive ? '1' : '0';
+            chip.classList.toggle('bg-rose-500/30', womenFilterActive);
+            chip.classList.toggle('border-rose-400/70', womenFilterActive);
+            if (check) check.classList.toggle('hidden', !womenFilterActive);
+            if (userCenterGlobal) renderRail(userCenterGlobal);
+        });
+    })();
     let userAddressGlobal = null;
 
     // === Gerçek sürücüler (DB'den, periyodik) — modal flow için
@@ -1455,6 +1479,8 @@
             vclass: r.vehicle_class || 'Easy',
             rating: Number(r.rating || 0).toFixed(2),
             favoriteCount: favoriteDisplayCount(r.favorite_count, r.rating, r.id),
+            isFemale: !!r.is_female,
+            womenOnly: !!r.women_only,
             km: r.distance_km,
             isBusy: false,
             isReal: true,
@@ -1475,6 +1501,8 @@
                 vclass: d.vclass,
                 rating: d.rating,
                 favoriteCount: d.favoriteCount || 0,
+                isFemale: false,
+                womenOnly: false,
                 km,
                 isBusy: d.state === 'busy',
                 isReal: false,
@@ -1483,7 +1511,7 @@
             }));
 
         // Real driver'lar üstte (max 3), mock'larla 5'e tamamla. İsim çakışmalarını ele
-        const cards = [...realCards];
+        let cards = [...realCards];
         const usedNames = new Set(realCards.map(c => c.name.toLowerCase()));
         for (const m of sortedMock) {
             if (cards.length >= 5) break;
@@ -1493,7 +1521,10 @@
             usedNames.add(key);
         }
 
-        railEl.innerHTML = cards.map(d => {
+        // Kadın sürücü filtresi aktifse yalnızca kadın sürücüleri göster
+        if (womenFilterActive) cards = cards.filter(c => c.isFemale);
+
+        railEl.innerHTML = cards.length ? cards.map(d => {
             const mins = Math.max(1, Math.round(d.km * 2.4 + 0.8));
             const isBusy = d.isBusy;
             const dotColor = isBusy ? 'bg-zinc-500' : 'bg-brand';
@@ -1502,6 +1533,9 @@
             const badge = classBadge(d.vSlug, d.vclass);
             const favBadge = (d.favoriteCount > 0)
                 ? `<span class="inline-flex items-center gap-1 text-[11px] font-extrabold text-rose-100 bg-rose-500/25 border border-rose-400/50 rounded-full px-2 py-0.5 shrink-0 shadow-sm shadow-rose-500/20" title="${d.favoriteCount} müşteri favori şoförü olarak işaretledi"><span class="text-rose-300 text-xs leading-none">♥</span> ${d.favoriteCount} favori</span>`
+                : '';
+            const femaleBadge = d.isFemale
+                ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-pink-100 bg-pink-500/20 border border-pink-400/40 rounded-full px-2 py-0.5 shrink-0" title="Kadın sürücü${d.womenOnly ? ' · sadece kadın yolcu alır' : ''}">👩 Kadın</span>`
                 : '';
             const liveDot = d.isReal
                 ? `<span class="ml-1 text-[8px] text-emerald-400 font-bold tracking-wider">● CANLI</span>`
@@ -1524,6 +1558,7 @@
                             <div class="text-sm font-semibold text-white truncate max-w-[140px]">${d.name}</div>
                             ${badge}
                             <span class="text-[10px] text-brand shrink-0">★ ${d.rating}</span>
+                            ${femaleBadge}
                             ${favBadge}
                             ${liveDot}
                         </div>
@@ -1535,7 +1570,7 @@
                     </div>
                     <div class="shrink-0">${selectBtn}</div>
                 </div>`;
-        }).join('');
+        }).join('') : `<div class="text-center py-8 text-xs text-zinc-500">Şu an çevrende kadın sürücü yok. Filtreyi kaldırıp tekrar dene.</div>`;
 
         // Bind: real → openQuickModal(real); mock → openQuickModal(mock) (modal kendi remap eder)
         railEl.querySelectorAll('.quick-select-btn').forEach(btn => {

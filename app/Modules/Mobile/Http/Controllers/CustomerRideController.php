@@ -182,7 +182,7 @@ class CustomerRideController extends Controller
         $limit = (int) ($validated['limit'] ?? 3);
 
         $candidates = Driver::query()
-            ->with(['user:id,name,avatar', 'currentVehicle.vehicleClass'])
+            ->with(['user:id,name,avatar,gender', 'currentVehicle.vehicleClass'])
             ->withCount('favoritedByUsers as favorite_count')
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
@@ -312,6 +312,8 @@ class CustomerRideController extends Controller
                 'vehicle'      => $vehiclePayload,
                 'is_favorite'  => $this->favoriteService->isFavorite(request()->user(), $driver->id),
                 'favorite_count' => (int) ($driver->favorite_count ?? 0),
+                'is_female'    => $user?->gender === 'female',
+                'women_only'   => (bool) $driver->women_passengers_only,
             ],
         ]);
     }
@@ -432,10 +434,15 @@ class CustomerRideController extends Controller
             $validated['fallback_driver_ids'] ?? []
         ));
 
+        // Kadın sürücü güvenliği: "sadece kadın yolcu al" diyen sürücüler yalnızca
+        // kadın müşterilere aday olabilir.
+        $customerIsFemale = $user->gender === 'female';
+
         $validCandidates = Driver::query()
             ->whereIn('id', $candidates)
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
+            ->when(! $customerIsFemale, fn ($q) => $q->where('women_passengers_only', false))
             ->pluck('id')
             ->all();
 
@@ -711,6 +718,8 @@ class CustomerRideController extends Controller
             'rating'             => (float) $d->rating,
             'trips'              => (int) $d->total_rides,
             'favorite_count'     => (int) ($d->favorite_count ?? 0),
+            'is_female'          => $d->user?->gender === 'female',
+            'women_only'         => (bool) $d->women_passengers_only,
             'vehicle_class'      => $vClass?->name,
             'vehicle_class_slug' => $vClass?->slug,
             'vehicle_label'      => $v ? trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) : null,

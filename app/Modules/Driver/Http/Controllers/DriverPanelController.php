@@ -454,6 +454,31 @@ class DriverPanelController extends Controller
     }
 
     /**
+     * POST /surucu-paneli/api/women-only — "Sadece kadın yolcu al" tercihi.
+     * Yalnızca kadın sürücüler kullanabilir (güvenlik özelliği).
+     */
+    public function setWomenOnly(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['ok' => false], 401);
+
+        if ($driver->user?->gender !== 'female') {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Bu özellik yalnızca kadın sürücüler içindir.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $driver->update(['women_passengers_only' => $validated['enabled']]);
+
+        return response()->json(['ok' => true, 'women_only' => (bool) $driver->fresh()->women_passengers_only]);
+    }
+
+    /**
      * POST /surucu-paneli/api/offers/{publicId}/accept
      */
     public function acceptOffer(string $publicId): JsonResponse

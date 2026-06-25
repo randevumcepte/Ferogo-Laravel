@@ -51,7 +51,7 @@ class RideRequestController extends Controller
         // test edilebilsin diye; üretimde driver sayısı çoğalınca bbox ekleriz)
         // PAKET KONTROL: aktif paketi olmayan sürücü radar'a düşmez.
         $candidates = Driver::query()
-            ->with(['user:id,name,avatar', 'currentVehicle.vehicleClass'])
+            ->with(['user:id,name,avatar,gender', 'currentVehicle.vehicleClass'])
             ->withCount('favoritedByUsers as favorite_count')
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
@@ -235,6 +235,8 @@ class RideRequestController extends Controller
                 'vehicle'        => $vehiclePayload,
                 'is_favorite'    => $this->favoriteService->isFavorite(Auth::user(), $driver->id),
                 'favorite_count' => (int) ($driver->favorite_count ?? 0),
+                'is_female'      => $user?->gender === 'female',
+                'women_only'     => (bool) $driver->women_passengers_only,
                 'privacy_level'  => 'public',
                 'privacy_note'   => 'Eşleştirme sonrası tam profil bilgilerine erişim açılacaktır.',
             ],
@@ -400,12 +402,17 @@ class RideRequestController extends Controller
         ));
 
         // Sadece online + approved + aktif paketli + müsait sürücüler aday olabilir
+        // Kadın sürücü güvenliği: "sadece kadın yolcu al" diyen sürücüler yalnızca
+        // kadın müşterilere aday olabilir (misafir/erkek müşteriye gösterilmez).
+        $customerIsFemale = $authed && $authed->gender === 'female';
+
         $validCandidates = Driver::query()
             ->whereIn('id', $candidates)
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
             ->whereNotNull('package_active_until')
             ->where('package_active_until', '>', now())
+            ->when(! $customerIsFemale, fn ($q) => $q->where('women_passengers_only', false))
             ->pluck('id')
             ->all();
 
@@ -758,6 +765,9 @@ class RideRequestController extends Controller
             'experience_band'     => $d->experience_band,
             // Sosyal kanıt: kaç müşteri bu sürücüyü favoriledi (radar "♥ N" rozeti)
             'favorite_count'      => (int) ($d->favorite_count ?? 0),
+            // Kadın sürücü güvenliği
+            'is_female'           => $d->user?->gender === 'female',
+            'women_only'          => (bool) $d->women_passengers_only,
             // Genel temsili görsel (araç sınıfı bazlı, gerçek araç değil)
             'vehicle_class_icon'  => $this->vehiclePhotoUrl($v, $vClass),
             // Sürücü için temsili UI avatar (kişisel fotoğraf değil)

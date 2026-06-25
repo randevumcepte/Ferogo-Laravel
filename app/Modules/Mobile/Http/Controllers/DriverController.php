@@ -79,6 +79,8 @@ class DriverController extends Controller
                 'availability_status' => $driver->availability_status,
                 'rating'              => (float) $driver->rating,
                 'total_rides'         => (int) $driver->total_rides,
+                'is_female'           => $driver->user->gender === 'female',
+                'women_only'          => (bool) $driver->women_passengers_only,
             ],
             'offer'    => $offer ? $this->offerPayload($offer) : null,
             'active'   => $activeRequest ? $this->activeRequestPayload($activeRequest) : null,
@@ -119,6 +121,32 @@ class DriverController extends Controller
         $driver->update($update);
 
         return response()->json(['ok' => true, 'status' => $driver->fresh()->availability_status]);
+    }
+
+    /**
+     * POST /api/v1/driver/women-only
+     * Body: { enabled: bool }
+     * "Sadece kadın yolcu al" tercihi — yalnızca kadın sürücüler.
+     */
+    public function setWomenOnly(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver($request);
+        if (! $driver) return response()->json(['ok' => false], 404);
+
+        if ($driver->user?->gender !== 'female') {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Bu özellik yalnızca kadın sürücüler içindir.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $driver->update(['women_passengers_only' => $validated['enabled']]);
+
+        return response()->json(['ok' => true, 'women_only' => (bool) $driver->fresh()->women_passengers_only]);
     }
 
     /**

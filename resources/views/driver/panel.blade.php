@@ -96,6 +96,26 @@
             </a>
         </section>
 
+        {{-- ===== Kadın sürücü güvenliği: "Sadece kadın yolcu al" (yalnızca kadın sürücüler) ===== --}}
+        @if ($driver->user->gender === 'female')
+        <section class="rounded-3xl border border-rose-400/30 bg-rose-500/[0.06] p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="font-bold text-rose-100 flex items-center gap-2"><span>👩</span> Sadece kadın yolcu al</div>
+                    <div class="text-xs text-rose-200/70 mt-1 leading-relaxed">
+                        Açıkken yalnızca kadın müşterilerin çağrıları sana iletilir. Güvenliğin için.
+                    </div>
+                </div>
+                <button type="button" id="women-only-toggle" role="switch"
+                        data-on="{{ $driver->women_passengers_only ? '1' : '0' }}"
+                        aria-checked="{{ $driver->women_passengers_only ? 'true' : 'false' }}"
+                        class="relative w-14 h-8 rounded-full transition shrink-0 {{ $driver->women_passengers_only ? 'bg-rose-500' : 'bg-zinc-700' }}">
+                    <span id="women-only-knob" class="absolute top-1 w-6 h-6 rounded-full bg-white transition-all {{ $driver->women_passengers_only ? 'left-7' : 'left-1' }}"></span>
+                </button>
+            </div>
+        </section>
+        @endif
+
         {{-- ===== Driver kimlik özeti ===== --}}
         <section class="rounded-3xl border border-white/10 bg-zinc-950 p-5 flex items-center gap-4">
             <a href="{{ route('driver.profile') }}" class="w-14 h-14 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-xl shrink-0 overflow-hidden hover:opacity-90 transition border-2 border-brand/40">
@@ -1279,5 +1299,42 @@
             </div>
         </div>
     </div>
+
+<script>
+(function () {
+    'use strict';
+    const btn = document.getElementById('women-only-toggle');
+    if (!btn) return;
+    const knob = document.getElementById('women-only-knob');
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+    function paint(on) {
+        btn.dataset.on = on ? '1' : '0';
+        btn.setAttribute('aria-checked', on ? 'true' : 'false');
+        btn.classList.toggle('bg-rose-500', on);
+        btn.classList.toggle('bg-zinc-700', !on);
+        knob.classList.toggle('left-7', on);
+        knob.classList.toggle('left-1', !on);
+    }
+
+    btn.addEventListener('click', async () => {
+        if (btn.dataset.busy === '1') return;
+        btn.dataset.busy = '1';
+        const next = btn.dataset.on !== '1';
+        paint(next); // iyimser
+        try {
+            const res = await fetch('{{ route('driver.api.women_only') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: JSON.stringify({ enabled: next }),
+            });
+            const data = await res.json();
+            if (!data.ok) { paint(!next); alert(data.message || 'İşlem başarısız.'); }
+            else { paint(!!data.women_only); }
+        } catch (_) { paint(!next); } finally { btn.dataset.busy = ''; }
+    });
+})();
+</script>
+
 </body>
 </html>
