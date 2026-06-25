@@ -1379,6 +1379,10 @@
         const lng = center[1] + rand(-0.028, 0.028);
         const vc = VEHICLE_CLASSES[idx % VEHICLE_CLASSES.length];
         const busy = Math.random() < 0.25;
+        const ratingNum = 4.6 + Math.random() * 0.39;
+        // Sahte (şimdilik) favori sayısı — puanla orantılı, inandırıcı bir dağılım.
+        // makeDriver bir kez çağrıldığı için bu sayı render'lar arası sabit kalır.
+        const fakeFavorites = Math.max(1, Math.floor((ratingNum - 4.5) * 80 + rand(4, 28)));
         return {
             id: idx,
             name: PASSENGER_NAMES[idx % PASSENGER_NAMES.length],
@@ -1387,7 +1391,8 @@
             vSlug: vc.slug,
             vIcon: vc.icon,
             state: busy ? 'busy' : vc.type,
-            rating: (4.6 + Math.random() * 0.39).toFixed(2),
+            rating: ratingNum.toFixed(2),
+            favoriteCount: fakeFavorites,
             trips: Math.floor(rand(180, 2400)),
             lat, lng,
             heading: rand(0, 360),
@@ -1466,7 +1471,7 @@
                 vSlug: d.vSlug,
                 vclass: d.vclass,
                 rating: d.rating,
-                favoriteCount: 0,
+                favoriteCount: d.favoriteCount || 0,
                 km,
                 isBusy: d.state === 'busy',
                 isReal: false,
@@ -1493,7 +1498,7 @@
             const statusClass = isBusy ? 'text-zinc-400' : 'text-brand';
             const badge = classBadge(d.vSlug, d.vclass);
             const favBadge = (d.favoriteCount > 0)
-                ? `<span class="inline-flex items-center gap-0.5 text-[10px] text-rose-300 shrink-0" title="${d.favoriteCount} müşteri favori şoförü olarak işaretledi">♥ ${d.favoriteCount}</span>`
+                ? `<span class="inline-flex items-center gap-1 text-[11px] font-extrabold text-rose-100 bg-rose-500/25 border border-rose-400/50 rounded-full px-2 py-0.5 shrink-0 shadow-sm shadow-rose-500/20" title="${d.favoriteCount} müşteri favori şoförü olarak işaretledi"><span class="text-rose-300 text-xs leading-none">♥</span> ${d.favoriteCount} favori</span>`
                 : '';
             const liveDot = d.isReal
                 ? `<span class="ml-1 text-[8px] text-emerald-400 font-bold tracking-wider">● CANLI</span>`
