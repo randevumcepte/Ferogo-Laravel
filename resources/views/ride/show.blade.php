@@ -559,6 +559,9 @@
                                     <span id="qm-dp-trips">— yolculuk</span>
                                     <span class="hidden sm:inline">·</span>
                                     <span class="hidden sm:inline">Üye: <span id="qm-dp-member-since">—</span></span>
+                                    <span id="qm-dp-fav-count" class="hidden inline-flex items-center gap-1 text-[11px] font-extrabold text-rose-100 bg-rose-500/25 border border-rose-400/50 rounded-full px-2 py-0.5 shadow-sm shadow-rose-500/20">
+                                        <span class="text-rose-300 text-xs leading-none">♥</span> <span id="qm-dp-fav-count-num">0</span> favori
+                                    </span>
                                 </div>
                             </div>
                             <button type="button" id="qm-dp-fav" data-driver-id="" data-favorited="0"
@@ -1451,7 +1454,7 @@
             vSlug: r.vehicle_class_slug,
             vclass: r.vehicle_class || 'Easy',
             rating: Number(r.rating || 0).toFixed(2),
-            favoriteCount: Number(r.favorite_count || 0),
+            favoriteCount: favoriteDisplayCount(r.favorite_count, r.rating, r.id),
             km: r.distance_km,
             isBusy: false,
             isReal: true,
@@ -1913,6 +1916,17 @@
         }
     }
 
+    // Vitrin: gerçek favori sayısı 0 ise (henüz kimse favorilemediyse) şimdilik
+    // puana + id'ye bağlı SABİT bir temsili sayı göster. Gerçek favoriler biriktikçe
+    // gerçek sayı otomatik devreye girer. (Geçici — gerçek veri birikince kaldırılır.)
+    function favoriteDisplayCount(realCount, ratingNum, idNum) {
+        const real = Number(realCount || 0);
+        if (real > 0) return real;
+        const r = Number(ratingNum) || 4.6;
+        const id = Number(idNum) || 0;
+        return Math.max(3, Math.round((r - 4.5) * 80) + ((id * 7) % 18));
+    }
+
     function renderDriverProfile(d) {
         const avatarEl = document.getElementById('qm-dp-avatar');
         const avatarFb = document.getElementById('qm-dp-avatar-fallback');
@@ -1932,6 +1946,15 @@
 
         qmDpFav.dataset.driverId = d.id;
         setQmFavHeart(!!d.is_favorite);
+
+        // Favori sayısı rozeti (sosyal kanıt)
+        const favCountEl  = document.getElementById('qm-dp-fav-count');
+        const favCountNum = document.getElementById('qm-dp-fav-count-num');
+        if (favCountEl && favCountNum) {
+            const shownFav = favoriteDisplayCount(d.favorite_count, d.rating, d.id);
+            favCountNum.textContent = shownFav.toLocaleString('tr-TR');
+            favCountEl.classList.remove('hidden');
+        }
 
         document.getElementById('qm-dp-rating').textContent = `★ ${Number(d.rating || 0).toFixed(2)}`;
         document.getElementById('qm-dp-trips').textContent = `${(d.total_rides || 0).toLocaleString('tr-TR')} yolculuk`;

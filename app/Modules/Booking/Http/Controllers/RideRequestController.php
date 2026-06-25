@@ -95,6 +95,7 @@ class RideRequestController extends Controller
         /** @var Driver|null $driver */
         $driver = Driver::query()
             ->with(['user', 'currentVehicle.vehicleClass'])
+            ->withCount('favoritedByUsers as favorite_count')
             ->where('approval_status', 'approved')
             ->find($driverId);
 
@@ -233,6 +234,7 @@ class RideRequestController extends Controller
                 'bio'            => $bio,
                 'vehicle'        => $vehiclePayload,
                 'is_favorite'    => $this->favoriteService->isFavorite(Auth::user(), $driver->id),
+                'favorite_count' => (int) ($driver->favorite_count ?? 0),
                 'privacy_level'  => 'public',
                 'privacy_note'   => 'Eşleştirme sonrası tam profil bilgilerine erişim açılacaktır.',
             ],

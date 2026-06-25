@@ -222,6 +222,7 @@ class CustomerRideController extends Controller
     {
         $driver = Driver::query()
             ->with(['user', 'currentVehicle.vehicleClass'])
+            ->withCount('favoritedByUsers as favorite_count')
             ->where('approval_status', 'approved')
             ->find($driverId);
 
@@ -310,6 +311,7 @@ class CustomerRideController extends Controller
                 'credentials'  => $credentials,
                 'vehicle'      => $vehiclePayload,
                 'is_favorite'  => $this->favoriteService->isFavorite(request()->user(), $driver->id),
+                'favorite_count' => (int) ($driver->favorite_count ?? 0),
             ],
         ]);
     }
