@@ -8,6 +8,7 @@ use App\Modules\Booking\Models\CustomerTrust;
 use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Booking\Services\CustomerTrustService;
+use App\Modules\Booking\Services\FavoriteDriverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class CustomerPanelController extends Controller
 {
     public function __construct(
         private CustomerTrustService $trustService,
+        private FavoriteDriverService $favoriteService,
     ) {}
 
     /**
@@ -93,13 +95,35 @@ class CustomerPanelController extends Controller
             ->limit(10)
             ->get();
 
+        // Favori sürücüler ("tekrar onu çağır") + hızlı id seti (kalpleri işaretlemek için)
+        $favoriteDrivers = $this->favoriteService->listForUser($user);
+        $favoriteIds     = $this->favoriteService->favoriteIds($user);
+
         return view('customer.panel', [
-            'user'         => $user,
-            'trust'        => $trust,
-            'activeRide'   => $activeRide,
-            'activeRequest'=> $activeRequest,
-            'recentRides'  => $recentRides,
+            'user'           => $user,
+            'trust'          => $trust,
+            'activeRide'     => $activeRide,
+            'activeRequest'  => $activeRequest,
+            'recentRides'    => $recentRides,
+            'favoriteDrivers'=> $favoriteDrivers,
+            'favoriteIds'    => $favoriteIds,
         ]);
+    }
+
+    /**
+     * POST /musteri-paneli/favori/{driverId} — favori ekle/çıkar (toggle).
+     * JSON döner: { ok, favorited, message }.
+     */
+    public function toggleFavorite(int $driverId): JsonResponse
+    {
+        $user = $this->currentCustomer();
+        if (! $user) {
+            return response()->json(['ok' => false, 'message' => 'Giriş gerekli.'], 401);
+        }
+
+        $result = $this->favoriteService->toggle($user, $driverId);
+
+        return response()->json($result, $result['ok'] ? 200 : 422);
     }
 
     /**

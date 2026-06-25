@@ -561,6 +561,11 @@
                                     <span class="hidden sm:inline">Üye: <span id="qm-dp-member-since">—</span></span>
                                 </div>
                             </div>
+                            <button type="button" id="qm-dp-fav" data-driver-id="" data-favorited="0"
+                                    class="shrink-0 w-11 h-11 rounded-full border border-white/10 bg-white/[0.03] text-zinc-400 hover:text-brand hover:border-brand/40 flex items-center justify-center text-xl transition"
+                                    title="Favori şoför yap">
+                                <span id="qm-dp-fav-icon">♡</span>
+                            </button>
                         </div>
                         <p id="qm-dp-bio" class="text-sm text-zinc-300 mt-4 leading-relaxed">—</p>
                     </div>
@@ -1813,6 +1818,33 @@
     });
     document.getElementById('qm-dp-error-close').addEventListener('click', () => closeQuickModal());
 
+    // ===== Favori şoför kalbi (profil modalı) =====
+    const qmDpFav = document.getElementById('qm-dp-fav');
+    function setQmFavHeart(fav) {
+        qmDpFav.dataset.favorited = fav ? '1' : '0';
+        qmDpFav.title = fav ? 'Favorilerden çıkar' : 'Favori şoför yap';
+        document.getElementById('qm-dp-fav-icon').textContent = fav ? '♥' : '♡';
+        qmDpFav.classList.toggle('text-brand', fav);
+        qmDpFav.classList.toggle('border-brand/40', fav);
+        qmDpFav.classList.toggle('bg-brand/15', fav);
+        qmDpFav.classList.toggle('text-zinc-400', !fav);
+    }
+    qmDpFav.addEventListener('click', async () => {
+        const id = qmDpFav.dataset.driverId;
+        if (!id || qmDpFav.dataset.busy === '1') return;
+        qmDpFav.dataset.busy = '1';
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const res = await fetch(`/musteri-paneli/favori/${id}`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+            });
+            const data = await res.json();
+            if (data.ok) setQmFavHeart(!!data.favorited);
+            else if (data.message) alert(data.message);
+        } catch (_) {} finally { qmDpFav.dataset.busy = ''; }
+    });
+
     // ===== PHOTO LIGHTBOX =====
     let currentPhotos = [];
     let currentLightboxIdx = 0;
@@ -1886,6 +1918,9 @@
         const expBadge = document.getElementById('qm-dp-exp-badge');
         if (expLabel) { expBadge.textContent = expLabel; expBadge.classList.remove('hidden'); }
         else { expBadge.classList.add('hidden'); }
+
+        qmDpFav.dataset.driverId = d.id;
+        setQmFavHeart(!!d.is_favorite);
 
         document.getElementById('qm-dp-rating').textContent = `★ ${Number(d.rating || 0).toFixed(2)}`;
         document.getElementById('qm-dp-trips').textContent = `${(d.total_rides || 0).toLocaleString('tr-TR')} yolculuk`;
@@ -2824,6 +2859,28 @@
                     setInterval(sendHeight, 2000);
                 }
             }
+        } catch (_) {}
+    })();
+
+    // ===== "Tekrar Çağır" deep-link: /yolculuk-yapin?prefer_driver=ID =====
+    // Müşteri panelindeki favori kartından gelince o sürücünün profilini açar.
+    (async function maybeOpenPreferredDriver() {
+        try {
+            const preferId = parseInt(new URLSearchParams(window.location.search).get('prefer_driver'), 10);
+            if (!preferId || preferId < 1) return;
+            if (!FEROGO_AUTH) { openQuickModal({}); return; } // giriş yoksa auth-required göster
+            const res = await fetch(`/api/drivers/${preferId}/profile`, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            if (!res.ok || !data.success) return;
+            const d = data.driver;
+            openQuickModal({
+                id:                 d.id,
+                name:               d.short_name || d.name,
+                rating:             d.rating,
+                plate:              d.vehicle?.plate || '—',
+                vehicle_class:      d.vehicle?.class_name || 'Easy',
+                vehicle_class_slug: d.vehicle?.class_slug || 'easy',
+            });
         } catch (_) {}
     })();
 

@@ -47,6 +47,11 @@ Route::middleware(['auth:sanctum', 'device', 'role:customer', 'ability:customer:
         Route::get('drivers/nearby',           [CustomerRideController::class, 'nearbyDrivers']);
         Route::get('drivers/{id}/profile',     [CustomerRideController::class, 'driverProfile'])->whereNumber('id');
 
+        // Favori sürücüler ("tekrar onu çağır")
+        Route::get('favorites',                 [CustomerRideController::class, 'favorites']);
+        Route::post('favorites/{driverId}',     [CustomerRideController::class, 'addFavorite'])->whereNumber('driverId');
+        Route::delete('favorites/{driverId}',   [CustomerRideController::class, 'removeFavorite'])->whereNumber('driverId');
+
         // Ride request CRUD (talep + polling)
         Route::middleware('throttle:30,1')->post('ride-requests',                          [CustomerRideController::class, 'storeRequest']);
         Route::get('ride-requests/{publicId}',                                             [CustomerRideController::class, 'showRequest']);

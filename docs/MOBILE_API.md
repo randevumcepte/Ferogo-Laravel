@@ -90,8 +90,11 @@ Hata kodları: `account_inactive`, `driver_not_approved`.
 | `GET`  | `/customer/bootstrap` | vehicle_classes vb. referans data |
 | `GET`  | `/customer/places/search?q=` | Nominatim proxy, İzmir viewbox + 60dk cache |
 | `POST` | `/customer/fare/calculate` | Canlı fiyat hesabı |
-| `GET`  | `/customer/drivers/nearby?lat=&lng=&limit=` | Yakındaki onaylı+online sürücüler |
-| `GET`  | `/customer/drivers/{id}/profile` | Sürücü detay (sertifikalar + araç) |
+| `GET`  | `/customer/drivers/nearby?lat=&lng=&limit=` | Yakındaki onaylı+online sürücüler (her sürücüde `is_favorite`) |
+| `GET`  | `/customer/drivers/{id}/profile` | Sürücü detay (sertifikalar + araç + `is_favorite`) |
+| `GET`  | `/customer/favorites` | Favori sürücüler + canlı müsaitlik (`is_online`) |
+| `POST` | `/customer/favorites/{driverId}` | Favoriye ekle (idempotent, max 30) |
+| `DELETE` | `/customer/favorites/{driverId}` | Favoriden çıkar (idempotent) |
 | `POST` | `/customer/ride-requests` | Yeni talep yarat |
 | `GET`  | `/customer/ride-requests/{publicId}` | Durum polling (her 2 sn) |
 | `POST` | `/customer/ride-requests/{publicId}/cancel` | İptal |
@@ -120,6 +123,22 @@ POST /customer/ride-requests
 ```
 
 Hata: `429` (rate limit), `422` (sürücü müsait değil/KVKK eksik).
+
+### Favori şoför ("tekrar onu çağır")
+
+```http
+GET /customer/favorites
+→ 200 { "ok": true, "drivers": [ { "id": 12, "name": "Mehmet K.", "rating": 4.9,
+        "is_favorite": true, "is_online": true, "availability_status": "online", ... } ] }
+
+POST   /customer/favorites/12   → 200 { "ok": true, "favorited": true,  "message": "Favorilere eklendi." }
+DELETE /customer/favorites/12   → 200 { "ok": true, "favorited": false, "message": "Favorilerden çıkarıldı." }
+```
+
+Tekrar çağırmak için: `favorites`'ten `is_online: true` olan sürücüyü al, normal
+`POST /customer/ride-requests` akışına `preferred_driver_id` olarak ver. Limit dolarsa
+ekleme `422` döner. Sürücü o an offline ise talep `422` ("müsait değil") döner — UI'da
+"çevrimdışı" rozetiyle göster.
 
 ## Sürücü akışı
 

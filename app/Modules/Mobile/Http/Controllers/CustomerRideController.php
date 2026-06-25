@@ -7,6 +7,7 @@ use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Models\RideMessage;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Booking\Services\CustomerTrustService;
+use App\Modules\Booking\Services\FavoriteDriverService;
 use App\Modules\Booking\Services\NoShowService;
 use App\Modules\Booking\Services\RideRequestService;
 use App\Modules\Driver\Models\Driver;
@@ -36,6 +37,7 @@ class CustomerRideController extends Controller
         private CustomerTrustService $trustService,
         private NoShowService $noShowService,
         private FareCalculator $calculator,
+        private FavoriteDriverService $favoriteService,
     ) {}
 
     // ─────────────────────────────────────────────────────────────
@@ -188,11 +190,14 @@ class CustomerRideController extends Controller
             ->limit(50)
             ->get();
 
-        $scored = $candidates->map(function (Driver $d) use ($lat, $lng) {
+        $favoriteIds = $this->favoriteService->favoriteIds($request->user());
+
+        $scored = $candidates->map(function (Driver $d) use ($lat, $lng, $favoriteIds) {
             $km = $this->haversineKm($lat, $lng, (float) $d->current_lat, (float) $d->current_lng);
             return array_merge($this->driverShortPayload($d), [
                 'distance_km' => round($km, 2),
                 'eta_minutes' => max(1, (int) round($km * 2.4 + 0.8)),
+                'is_favorite' => in_array((int) $d->id, $favoriteIds, true),
             ]);
         })->sortBy('distance_km')->take($limit)->values();
 
@@ -303,8 +308,49 @@ class CustomerRideController extends Controller
                 ],
                 'credentials'  => $credentials,
                 'vehicle'      => $vehiclePayload,
+                'is_favorite'  => $this->favoriteService->isFavorite(request()->user(), $driver->id),
             ],
         ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  FAVORİ SÜRÜCÜLER ("tekrar onu çağır")
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/v1/customer/favorites
+     * Müşterinin favori sürücüleri + canlı müsaitlik (online ise hemen çağrılabilir).
+     */
+    public function favorites(Request $request): JsonResponse
+    {
+        $drivers = $this->favoriteService->listForUser($request->user());
+
+        return response()->json([
+            'ok'      => true,
+            'drivers' => $drivers->map(fn (Driver $d) => array_merge($this->driverShortPayload($d), [
+                'is_favorite'         => true,
+                'is_online'           => $d->availability_status === 'online',
+                'availability_status' => $d->availability_status,
+            ]))->values(),
+        ]);
+    }
+
+    /**
+     * POST /api/v1/customer/favorites/{driverId} — favoriye ekle.
+     */
+    public function addFavorite(Request $request, int $driverId): JsonResponse
+    {
+        $result = $this->favoriteService->add($request->user(), $driverId);
+        return response()->json($result, $result['ok'] ? 200 : 422);
+    }
+
+    /**
+     * DELETE /api/v1/customer/favorites/{driverId} — favoriden çıkar.
+     */
+    public function removeFavorite(Request $request, int $driverId): JsonResponse
+    {
+        $result = $this->favoriteService->remove($request->user(), $driverId);
+        return response()->json($result, 200);
     }
 
     // ─────────────────────────────────────────────────────────────

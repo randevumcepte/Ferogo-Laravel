@@ -7,6 +7,7 @@ use App\Modules\Booking\Models\RideMessage;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Booking\Services\CustomerTrustService;
 use App\Modules\Booking\Services\DispatcherService;
+use App\Modules\Booking\Services\FavoriteDriverService;
 use App\Modules\Booking\Services\NoShowService;
 use App\Modules\Booking\Services\PhoneVerificationService;
 use App\Modules\Booking\Services\RideRequestService;
@@ -26,6 +27,7 @@ class RideRequestController extends Controller
         private PhoneVerificationService $verificationService,
         private NoShowService $noShowService,
         private DispatcherService $dispatcher,
+        private FavoriteDriverService $favoriteService,
     ) {}
 
     /**
@@ -229,6 +231,7 @@ class RideRequestController extends Controller
                 'credentials'    => $credentials,
                 'bio'            => $bio,
                 'vehicle'        => $vehiclePayload,
+                'is_favorite'    => $this->favoriteService->isFavorite(Auth::user(), $driver->id),
                 'privacy_level'  => 'public',
                 'privacy_note'   => 'Eşleştirme sonrası tam profil bilgilerine erişim açılacaktır.',
             ],

@@ -378,6 +378,78 @@
         </script>
     </section>
 
+    {{-- ===== Favori Şoförlerim — "tekrar onu çağır" ===== --}}
+    <section class="rounded-3xl border border-white/10 bg-zinc-950 overflow-hidden" id="favorites-section"
+             data-empty="{{ $favoriteDrivers->isEmpty() ? '1' : '0' }}">
+        <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div>
+                <h2 class="text-sm uppercase tracking-[0.25em] text-zinc-400 font-bold flex items-center gap-2">
+                    <span class="text-brand">♥</span> Favori Şoförlerim
+                </h2>
+                <div class="text-xs text-zinc-500 mt-0.5">Beğendiğin sürücüyü tek dokunuşla tekrar çağır</div>
+            </div>
+            <span class="text-xs text-zinc-600" id="favorites-count">{{ $favoriteDrivers->count() }} sürücü</span>
+        </div>
+
+        {{-- Boş durum --}}
+        <div id="favorites-empty" class="p-10 text-center {{ $favoriteDrivers->isEmpty() ? '' : 'hidden' }}">
+            <div class="text-4xl mb-3">♡</div>
+            <div class="text-sm text-zinc-400 mb-1">Henüz favori şoförün yok.</div>
+            <div class="text-xs text-zinc-600">Bir sürücünün profilinde ya da geçmiş yolculukta kalbe dokun, buraya eklensin.</div>
+        </div>
+
+        <div id="favorites-grid" class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 {{ $favoriteDrivers->isEmpty() ? 'hidden' : '' }}">
+            @foreach ($favoriteDrivers as $fav)
+                @php
+                    $favUser   = $fav->user;
+                    $favVeh    = $fav->currentVehicle;
+                    $favVClass = $favVeh?->vehicleClass;
+                    $favAvatar = $favUser?->avatar
+                        ? (str_starts_with($favUser->avatar, 'http') ? $favUser->avatar : asset('storage/' . ltrim($favUser->avatar, '/')))
+                        : null;
+                    $favOnline = $fav->availability_status === 'online';
+                    $favName   = $favUser?->name ?? 'Sürücü';
+                    $favVLabel = $favVeh ? trim(($favVeh->brand ?? '') . ' ' . ($favVeh->model ?? '')) : null;
+                @endphp
+                <div class="favorite-card relative rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex items-center gap-3"
+                     data-driver-id="{{ $fav->id }}">
+                    <div class="relative shrink-0">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand to-brand-600 text-black font-extrabold text-lg flex items-center justify-center overflow-hidden border border-brand/30">
+                            @if ($favAvatar)
+                                <img src="{{ $favAvatar }}" alt="" class="w-full h-full object-cover">
+                            @else
+                                {{ mb_strtoupper(mb_substr($favName, 0, 1)) }}
+                            @endif
+                        </div>
+                        <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-zinc-950 {{ $favOnline ? 'bg-emerald-400' : 'bg-zinc-600' }}"
+                              title="{{ $favOnline ? 'Çevrimiçi' : 'Çevrimdışı' }}"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-bold text-white truncate">{{ $favName }}</div>
+                        <div class="text-xs text-zinc-500 truncate">
+                            <span class="text-brand font-semibold">★ {{ number_format((float) $fav->rating, 2) }}</span>
+                            @if ($favVLabel) · {{ $favVLabel }} @endif
+                            @if ($favVClass) · {{ $favVClass->name }} @endif
+                        </div>
+                        <div class="text-[11px] mt-0.5 {{ $favOnline ? 'text-emerald-400' : 'text-zinc-500' }}">
+                            {{ $favOnline ? '● Şu an müsait' : '○ Çevrimdışı' }}
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-2 shrink-0">
+                        <a href="{{ route('ride.show') }}?prefer_driver={{ $fav->id }}"
+                           class="px-3 py-2 rounded-xl bg-brand hover:bg-brand-600 text-black text-xs font-bold transition whitespace-nowrap">
+                            Tekrar Çağır
+                        </a>
+                        <button type="button" class="fav-remove text-[11px] text-zinc-500 hover:text-red-300 transition"
+                                data-driver-id="{{ $fav->id }}" title="Favorilerden çıkar">
+                            ♥ Çıkar
+                        </button>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
     {{-- ===== Recent rides ===== --}}
     <section class="rounded-3xl border border-white/10 bg-zinc-950 overflow-hidden">
         <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">
@@ -419,6 +491,17 @@
                                 @endif
                             </div>
                         </div>
+                        @if ($ride->driver)
+                            @php $isFav = in_array($ride->driver->id, $favoriteIds, true); @endphp
+                            <button type="button"
+                                    class="fav-toggle shrink-0 w-9 h-9 rounded-full border flex items-center justify-center text-base transition
+                                           {{ $isFav ? 'bg-brand/15 border-brand/40 text-brand' : 'bg-white/[0.03] border-white/10 text-zinc-500 hover:text-brand hover:border-brand/30' }}"
+                                    data-driver-id="{{ $ride->driver->id }}"
+                                    data-favorited="{{ $isFav ? '1' : '0' }}"
+                                    title="{{ $isFav ? 'Favorilerden çıkar' : 'Favori şoför yap' }}">
+                                <span class="fav-icon">{{ $isFav ? '♥' : '♡' }}</span>
+                            </button>
+                        @endif
                         <div class="text-right shrink-0">
                             <div class="text-sm font-bold text-brand">₺{{ number_format((float) $ride->total_fare, 0, ',', '.') }}</div>
                             <div class="text-[11px] font-semibold {{ $sLabel[1] }}">{{ $sLabel[0] }}</div>
@@ -547,6 +630,83 @@
     // Saniye-saniye smooth ETA azaltma
     if (countdownHandle) clearInterval(countdownHandle);
     countdownHandle = setInterval(renderTick, 1000);
+})();
+</script>
+
+<script>
+(function () {
+    'use strict';
+
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    async function toggleFavorite(driverId) {
+        const res = await fetch(`/musteri-paneli/favori/${driverId}`, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+        });
+        return res.json().catch(() => ({ ok: false, message: 'Bağlantı hatası.' }));
+    }
+
+    // Tüm yüzeylerdeki (geçmiş yolculuk satırı) kalpleri senkronize et.
+    function syncHearts(driverId, favorited) {
+        document.querySelectorAll(`.fav-toggle[data-driver-id="${driverId}"]`).forEach(btn => {
+            btn.dataset.favorited = favorited ? '1' : '0';
+            btn.title = favorited ? 'Favorilerden çıkar' : 'Favori şoför yap';
+            const icon = btn.querySelector('.fav-icon');
+            if (icon) icon.textContent = favorited ? '♥' : '♡';
+            btn.classList.toggle('bg-brand/15', favorited);
+            btn.classList.toggle('border-brand/40', favorited);
+            btn.classList.toggle('text-brand', favorited);
+            btn.classList.toggle('bg-white/[0.03]', !favorited);
+            btn.classList.toggle('border-white/10', !favorited);
+            btn.classList.toggle('text-zinc-500', !favorited);
+        });
+    }
+
+    function removeFavoriteCard(driverId) {
+        const card = document.querySelector(`.favorite-card[data-driver-id="${driverId}"]`);
+        if (card) card.remove();
+        const grid = document.getElementById('favorites-grid');
+        const empty = document.getElementById('favorites-empty');
+        const countEl = document.getElementById('favorites-count');
+        const remaining = grid ? grid.querySelectorAll('.favorite-card').length : 0;
+        if (countEl) countEl.textContent = remaining + ' sürücü';
+        if (remaining === 0) {
+            grid?.classList.add('hidden');
+            empty?.classList.remove('hidden');
+        }
+    }
+
+    document.addEventListener('click', async (e) => {
+        // Geçmiş yolculuk satırındaki kalp → ekle/çıkar
+        const toggle = e.target.closest('.fav-toggle');
+        if (toggle) {
+            e.preventDefault();
+            if (toggle.dataset.busy === '1') return;
+            toggle.dataset.busy = '1';
+            const id = toggle.dataset.driverId;
+            const data = await toggleFavorite(id);
+            toggle.dataset.busy = '';
+            if (!data.ok) { alert(data.message || 'İşlem başarısız.'); return; }
+            syncHearts(id, data.favorited);
+            if (data.favorited) location.reload(); // yeni kart listede görünsün
+            return;
+        }
+
+        // Favori kartındaki "Çıkar"
+        const remove = e.target.closest('.fav-remove');
+        if (remove) {
+            e.preventDefault();
+            if (remove.dataset.busy === '1') return;
+            remove.dataset.busy = '1';
+            const id = remove.dataset.driverId;
+            const data = await toggleFavorite(id);
+            remove.dataset.busy = '';
+            if (!data.ok) { alert(data.message || 'İşlem başarısız.'); return; }
+            syncHearts(id, false);
+            removeFavoriteCard(id);
+        }
+    });
 })();
 </script>
 
