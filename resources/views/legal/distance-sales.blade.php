@@ -1,7 +1,7 @@
 @extends('legal._layout')
 
-@section('title', 'Mesafeli Satış Sözleşmesi · Ferogo')
-@section('description', 'Ferogo dijital üyelik paketleri mesafeli satış sözleşmesi.')
+@section('title', 'Mesafeli Satış Sözleşmesi · Ferxgo')
+@section('description', 'Ferxgo dijital üyelik paketleri mesafeli satış sözleşmesi.')
 
 @section('legal-title', 'Mesafeli Satış Sözleşmesi')
 
@@ -9,16 +9,16 @@
 
 <p>
     İşbu Mesafeli Satış Sözleşmesi, 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği
-    hükümleri çerçevesinde, Ferogo Paylaşımlı Yolculuk Platformu üzerinden satın alınan <strong>dijital üyelik paketleri</strong>
+    hükümleri çerçevesinde, Ferxgo Paylaşımlı Yolculuk Platformu üzerinden satın alınan <strong>dijital üyelik paketleri</strong>
     için düzenlenmiştir.
 </p>
 
 <h2>1. Taraflar</h2>
-<h3>Satıcı (Ferogo)</h3>
+<h3>Satıcı (Ferxgo)</h3>
 <ul>
-    <li>Unvan: Ferogo</li>
+    <li>Unvan: Ferxgo</li>
     <li>Adres: İzmir / Türkiye</li>
-    <li>İletişim: <a href="mailto:destek@ferogo.com.tr">destek@ferogo.com.tr</a> · 0850 840 13 77</li>
+    <li>İletişim: <a href="mailto:destek@ferxgo.com.tr">destek@ferxgo.com.tr</a> · 0850 340 3039</li>
 </ul>
 
 <h3>Alıcı (Üye)</h3>
@@ -26,7 +26,7 @@
 
 <h2>2. Sözleşmenin Konusu</h2>
 <p>
-    Sözleşmenin konusu, Alıcı'nın Ferogo Platformu üzerinden satın aldığı, niteliği ve fiyatı sözleşmede belirtilen
+    Sözleşmenin konusu, Alıcı'nın Ferxgo Platformu üzerinden satın aldığı, niteliği ve fiyatı sözleşmede belirtilen
     <strong>dijital platform üyelik paketinin</strong> elektronik ortamda sağlanmasıdır. Üyelik paketi içeriği:
 </p>
 <ul>
@@ -41,7 +41,7 @@
 <p>
     Üyelik paketi bedeli, paket türüne göre değişir ve satın alma sırasında ekranda KDV dahil olarak gösterilir.
     Ödeme, kayıtlı kredi/banka kartı üzerinden anlık olarak gerçekleştirilir. Ödeme bilgileri 3D Secure ile korunur ve PCI-DSS uyumlu
-    ödeme altyapısı sağlayıcıları aracılığıyla işlenir; Ferogo kart bilgilerini saklamaz.
+    ödeme altyapısı sağlayıcıları aracılığıyla işlenir; Ferxgo kart bilgilerini saklamaz.
 </p>
 
 <h2>4. Hizmetin İfası</h2>
@@ -60,24 +60,24 @@
     ifa edilen hizmetler bakımından cayma hakkı kullanılamaz. Üye, paket satın alma anında bu durumu kabul eder; ancak henüz yararlanılmamış kalan süre için kısmi iade talep edilebilir.
 </p>
 <p>
-    Cayma için: <a href="mailto:destek@ferogo.com.tr">destek@ferogo.com.tr</a> adresine bildirim. İade, 14 gün içinde aynı ödeme yöntemine yapılır.
+    Cayma için: <a href="mailto:destek@ferxgo.com.tr">destek@ferxgo.com.tr</a> adresine bildirim. İade, 14 gün içinde aynı ödeme yöntemine yapılır.
 </p>
 
 <h2>6. Hizmet Kalitesi &amp; Kesinti</h2>
 <p>
-    Ferogo, üyelere kesintisiz hizmet sunmak için makul özen gösterir; ancak teknik aksaklıklar veya mücbir sebep hallerinde
+    Ferxgo, üyelere kesintisiz hizmet sunmak için makul özen gösterir; ancak teknik aksaklıklar veya mücbir sebep hallerinde
     geçici kesintiler yaşanabilir. 24 saati aşan kesintilerde Alıcı'ya orantılı süre uzatımı yapılır.
 </p>
 
 <h2>7. Sorumluluk</h2>
 <p>
     Üyelik paketi <strong>dijital eşleştirme platformuna erişim</strong> sağlar; yolculuk hizmetinin kendisini sağlamaz.
-    Yolculuğun gerçekleştirilmesi üye sürücünün sorumluluğundadır. Ferogo yolculuk sırasındaki olaylardan sorumlu tutulamaz.
+    Yolculuğun gerçekleştirilmesi üye sürücünün sorumluluğundadır. Ferxgo yolculuk sırasındaki olaylardan sorumlu tutulamaz.
 </p>
 
 <h2>8. Şikayet &amp; Uyuşmazlık Çözümü</h2>
 <p>
-    Şikayetler için: <a href="mailto:destek@ferogo.com.tr">destek@ferogo.com.tr</a><br>
+    Şikayetler için: <a href="mailto:destek@ferxgo.com.tr">destek@ferxgo.com.tr</a><br>
     Uyuşmazlık halinde Alıcı, Tüketici Hakem Heyetlerine veya Tüketici Mahkemelerine başvurabilir.
     Türkiye Cumhuriyeti hukuku uygulanır; <strong>İzmir Mahkemeleri ve İcra Daireleri</strong> yetkilidir.
 </p>

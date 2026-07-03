@@ -22,7 +22,7 @@
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
         <a href="{{ route('driver.panel') }}" class="flex items-center gap-2 min-w-0">
             <span class="text-2xl font-extrabold tracking-tight">
-                <span class="text-white">FERO</span><span class="text-brand">GO</span>
+                <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
             </span>
         </a>
         <div class="flex items-center gap-2 shrink-0">

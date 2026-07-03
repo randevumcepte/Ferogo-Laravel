@@ -94,7 +94,7 @@ class PanicAlertController extends Controller
             'success'   => true,
             'alert_id'  => $alert->public_id,
             'message'   => 'Acil yardım talebiniz alındı. Çağrı merkezi sizinle anında iletişime geçecek.',
-            'call'      => '+908508401377',
+            'call'      => '+908503403039',
         ]);
     }
 }

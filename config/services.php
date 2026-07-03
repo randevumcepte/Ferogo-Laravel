@@ -38,6 +38,18 @@ return [
     'google_maps_key' => env('GOOGLE_MAPS_API_KEY'),
 
     /*
+     * SEO — site geneli meta / Schema.org / Search Console.
+     * site_url: kanonik ve sitemap URL'lerinin tabanı (APP_URL fallback).
+     * verification: Google Search Console "HTML etiketi" doğrulama kodu.
+     */
+    'seo' => [
+        'site_url'     => rtrim(env('APP_URL', 'https://ferxgo.com'), '/'),
+        'phone'        => env('SEO_PHONE', '+908503403039'),
+        'phone_label'  => env('SEO_PHONE_LABEL', '0850 340 3039'),
+        'verification' => env('GOOGLE_SITE_VERIFICATION'),
+    ],
+
+    /*
      * WebRTC sesli görüşme için ICE sunucu listesi.
      * STUN: NAT keşfi (default'ta Google + Cloudflare public STUN, parasız).
      * TURN: P2P kurulamadığında relay — production için ŞART, özellikle
@@ -85,7 +97,7 @@ return [
      * enabled=false → MockGateway devreye girer (dev için, fake checkout).
      *
      * test_mode=true iken PayTR test kartları ile çalışır, gerçek tahsilat yok.
-     * Canlıya geçerken Ferogo'ya özel mağaza credential'ları + test_mode=false.
+     * Canlıya geçerken Ferxgo'ya özel mağaza credential'ları + test_mode=false.
      */
     'paytr' => [
         'enabled'         => (bool) env('PAYTR_ENABLED', false),

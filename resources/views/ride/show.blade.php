@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Yolculuk Yap · Ferogo · Paylaşımlı Yolculuk')
+@section('title', 'Yolculuk Yap · Ferxgo · Paylaşımlı Yolculuk')
 @section('description', 'Şehir içi, havalimanı veya uzun mesafe — bağımsız üye sürücüler, konforlu araçlar, şeffaf katkı payı. 60 saniyede paylaşımlı yolculuk eşleştirmesi.')
 
 @php
@@ -259,7 +259,7 @@
                         <span class="text-zinc-500">şu an</span> hareket halinde.
                     </h2>
                     <p class="text-zinc-400 leading-relaxed">
-                        Konumunu paylaş, çevrendeki Ferogo araçlarını gerçek zamanlı izle. Bu önizleme salt okunur — çağırmak için rezervasyon formuna geç.
+                        Konumunu paylaş, çevrendeki Ferxgo araçlarını gerçek zamanlı izle. Bu önizleme salt okunur — çağırmak için rezervasyon formuna geç.
                     </p>
                 </div>
                 <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 backdrop-blur-sm shrink-0">
@@ -397,9 +397,9 @@
                         Rezervasyon Yap
                         <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </a>
-                    <a href="tel:+908508401377" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium text-base transition backdrop-blur-sm">
+                    <a href="tel:+908503403039" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium text-base transition backdrop-blur-sm">
                         <svg class="w-5 h-5 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02l-2.21 2.2z"/></svg>
-                        0850 840 13 77
+                        0850 340 3039
                     </a>
                 </div>
 
@@ -1071,9 +1071,9 @@
     <section class="relative px-6 py-20">
         <div class="max-w-7xl mx-auto">
             <div class="max-w-3xl mb-16">
-                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Neden Ferogo</div>
+                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Neden Ferxgo</div>
                 <h2 class="display-font text-4xl md:text-6xl text-white mb-6">
-                    Ferogo deneyimi:<br>
+                    Ferxgo deneyimi:<br>
                     <span class="text-zinc-500">net,</span> güvenli, <span class="text-zinc-500">profesyonel.</span>
                 </h2>
                 <p class="text-lg text-zinc-400 leading-relaxed">
@@ -1254,7 +1254,7 @@
                             Rezervasyon Yap
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                         </a>
-                        <a href="https://wa.me/908508401377" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition">
+                        <a href="https://wa.me/908503403039" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition">
                             💬 WhatsApp
                         </a>
                     </div>
@@ -1650,7 +1650,7 @@
             return results;
         } catch (err) {
             if (err.name === 'AbortError') return [];
-            console.warn('[Ferogo] searchPlaces failed', err);
+            console.warn('[Ferxgo] searchPlaces failed', err);
             return [];
         }
     }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Paketler · Ferogo Sürücü</title>
+    <title>Paketler · Ferxgo Sürücü</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
             <a href="{{ route('driver.panel') }}" class="flex items-center gap-2 min-w-0">
                 <span class="text-2xl font-extrabold tracking-tight">
-                    <span class="text-white">FERO</span><span class="text-brand">GO</span>
+                    <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
                 </span>
             </a>
             <a href="{{ route('driver.panel') }}" class="text-xs text-zinc-400 hover:text-white">← Panele dön</a>

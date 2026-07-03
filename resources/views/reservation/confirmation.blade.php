@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Rezervasyonunuz Alındı · Ferogo')
+@section('title', 'Rezervasyonunuz Alındı · Ferxgo')
 
 @section('content')
 <div class="gradient-radial pt-24 pb-16 min-h-screen">
@@ -141,8 +141,8 @@
                         <div class="font-semibold text-blue-300 mb-1">Sıradaki adım</div>
                         <div class="text-sm text-zinc-400 leading-relaxed">
                             Müşteri temsilcimiz size birazdan ulaşacak.
-                            Acil durumda <a href="tel:+908508401377" class="text-blue-300 underline">0850 840 13 77</a> arayabilirsiniz
-                            veya <a href="https://wa.me/908508401377" class="text-green-400 underline">WhatsApp'tan yazabilirsiniz</a>.
+                            Acil durumda <a href="tel:+908503403039" class="text-blue-300 underline">0850 340 3039</a> arayabilirsiniz
+                            veya <a href="https://wa.me/908503403039" class="text-green-400 underline">WhatsApp'tan yazabilirsiniz</a>.
                         </div>
                     </div>
                 </div>

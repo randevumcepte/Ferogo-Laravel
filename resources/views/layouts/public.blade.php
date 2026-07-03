@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Ferogo · Paylaşımlı Yolculuk Platformu')</title>
-    <meta name="description" content="@yield('description', 'Ferogo, bağımsız üye sürücüleri ve yolcuları buluşturan dijital paylaşımlı yolculuk platformudur. Şeffaf katkı payı, 7/24 platform erişimi.')">
+    <title>@yield('title', 'Ferxgo · Paylaşımlı Yolculuk Platformu')</title>
+    <meta name="description" content="@yield('description', 'Ferxgo, bağımsız üye sürücüleri ve yolcuları buluşturan dijital paylaşımlı yolculuk platformudur. Şeffaf katkı payı, 7/24 platform erişimi.')">
+
+    @include('partials.seo')
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,7 +53,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
             <a href="{{ route('home') }}" class="flex items-center gap-2">
                 <span class="text-2xl font-extrabold tracking-tight">
-                    <span class="text-white">FERO</span><span class="text-brand">GO</span>
+                    <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
                 </span>
             </a>
 
@@ -60,7 +62,7 @@
                 <a href="{{ route('home') }}#hizmetler" class="hover:text-white transition">Hizmetler</a>
                 <a href="{{ route('ride.show') }}" class="hover:text-white transition {{ request()->routeIs('ride.*') ? 'text-white' : '' }}">Yolculuk Yapın</a>
                 <a href="{{ route('driver.apply') }}" class="hover:text-white transition {{ request()->routeIs('driver.*') ? 'text-white' : '' }}">Üye Sürücü Olun</a>
-                <a href="tel:+908508401377" class="text-white font-medium">0850 840 13 77</a>
+                <a href="tel:+908503403039" class="text-white font-medium">0850 340 3039</a>
                 @auth('customer')
                     @if (auth('customer')->user()->type === 'customer')
                         <a href="{{ route('customer.panel') }}" class="px-3 py-1.5 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-xs transition">Hesabım</a>
@@ -89,9 +91,9 @@
                 <a href="{{ route('home') }}#hizmetler" class="block px-3 py-3 rounded-xl text-zinc-200 hover:bg-white/5 hover:text-white transition">Hizmetler</a>
                 <a href="{{ route('ride.show') }}" class="block px-3 py-3 rounded-xl text-zinc-200 hover:bg-white/5 hover:text-white transition {{ request()->routeIs('ride.*') ? 'bg-white/5 text-white' : '' }}">Yolculuk Yapın</a>
                 <a href="{{ route('driver.apply') }}" class="block px-3 py-3 rounded-xl text-zinc-200 hover:bg-white/5 hover:text-white transition {{ request()->routeIs('driver.*') ? 'bg-white/5 text-white' : '' }}">Üye Sürücü Olun</a>
-                <a href="tel:+908508401377" class="flex items-center gap-2 px-3 py-3 rounded-xl text-white font-medium hover:bg-white/5 transition">
+                <a href="tel:+908503403039" class="flex items-center gap-2 px-3 py-3 rounded-xl text-white font-medium hover:bg-white/5 transition">
                     <svg class="w-4 h-4 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02l-2.21 2.2z"/></svg>
-                    0850 840 13 77
+                    0850 340 3039
                 </a>
                 <div class="pt-2 mt-2 border-t border-white/5">
                     @auth('customer')
@@ -115,9 +117,9 @@
         <div class="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-zinc-400">
             <div>
                 <div class="text-2xl font-extrabold mb-3">
-                    <span class="text-white">FERO</span><span class="text-brand">GO</span>
+                    <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
                 </div>
-                <p class="leading-relaxed">Ferogo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk platformudur. Yolculuk hizmeti üye sürücü ile yolcu arasında gerçekleşir; Ferogo yalnızca aracılık ve eşleştirme hizmeti sunar.</p>
+                <p class="leading-relaxed">Ferxgo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk platformudur. Yolculuk hizmeti üye sürücü ile yolcu arasında gerçekleşir; Ferxgo yalnızca aracılık ve eşleştirme hizmeti sunar.</p>
             </div>
             <div>
                 <div class="text-white font-semibold mb-3">Yolculuk Kategorileri</div>
@@ -135,13 +137,13 @@
                     <li><a href="{{ route('legal.kvkk') }}" class="hover:text-white transition">KVKK Aydınlatma Metni</a></li>
                     <li><a href="{{ route('legal.distance-sales') }}" class="hover:text-white transition">Mesafeli Satış Sözleşmesi</a></li>
                     <li><a href="{{ route('legal.cookies') }}" class="hover:text-white transition">Çerez Politikası</a></li>
-                    <li class="pt-2 border-t border-white/5">📞 0850 840 13 77 · 💬 WhatsApp</li>
+                    <li class="pt-2 border-t border-white/5">📞 0850 340 3039 · 💬 WhatsApp</li>
                 </ul>
             </div>
         </div>
         <div class="border-t border-white/5 py-6 px-6 text-center text-[11px] text-zinc-500 leading-relaxed">
-            &copy; {{ date('Y') }} Ferogo · Tüm hakları saklıdır<br>
-            <span class="opacity-75">Ferogo bir dijital eşleştirme platformudur, ticari taşımacılık hizmeti sağlamaz. Yolculuk, bağımsız üye sürücü ile yolcu arasında gerçekleşir. Platform, taraflar arasında kişisel veri korumalı (KVKK 6698) bir aracılık hizmeti sunar.</span>
+            &copy; {{ date('Y') }} Ferxgo · Tüm hakları saklıdır<br>
+            <span class="opacity-75">Ferxgo bir dijital eşleştirme platformudur, ticari taşımacılık hizmeti sağlamaz. Yolculuk, bağımsız üye sürücü ile yolcu arasında gerçekleşir. Platform, taraflar arasında kişisel veri korumalı (KVKK 6698) bir aracılık hizmeti sunar.</span>
         </div>
     </footer>
     @endunless
@@ -170,7 +172,7 @@
             </div>
             <div class="px-6 pb-2">
                 <h2 id="legal-notice-title" class="text-2xl font-bold text-white leading-tight">
-                    Ferogo hakkında<br>bilmeniz gerekenler
+                    Ferxgo hakkında<br>bilmeniz gerekenler
                 </h2>
             </div>
 
@@ -180,7 +182,7 @@
                     <div>
                         <div class="font-semibold text-white mb-1">Paylaşımlı Yolculuk Platformu</div>
                         <p class="text-zinc-400 leading-relaxed text-[13px]">
-                            Ferogo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk koordinasyon platformudur.
+                            Ferxgo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk koordinasyon platformudur.
                             6563 sayılı E-Ticaret Kanunu kapsamında <strong class="text-zinc-200">aracı hizmet sağlayıcı</strong> sıfatıyla faaliyet gösterir;
                             ticari taşımacılık hizmeti sağlamaz.
                         </p>
@@ -205,7 +207,7 @@
                     <div>
                         <div class="font-semibold text-white mb-1">Hizmet Bölgesi</div>
                         <p class="text-zinc-400 leading-relaxed text-[13px]">
-                            Ferogo şu anda <strong class="text-zinc-200">İzmir</strong>'de aktiftir. Havalimanı yolculuğu, şehir içi ve
+                            Ferxgo şu anda <strong class="text-zinc-200">İzmir</strong>'de aktiftir. Havalimanı yolculuğu, şehir içi ve
                             kurumsal paylaşımlı yolculuk hizmetlerimiz mevcuttur. Hizmet kapsamımız yeni şehirlerle büyümeye devam etmektedir.
                         </p>
                     </div>

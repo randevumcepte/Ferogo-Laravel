@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Müşteri Girişi · Ferogo</title>
+    <title>Müşteri Girişi · Ferxgo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -56,7 +56,7 @@
 <header class="relative z-10 px-6 py-5">
     <a href="{{ route('home') }}" class="inline-flex items-center gap-2">
         <span class="text-xl font-extrabold tracking-tight">
-            <span class="text-white">FERO</span><span class="text-brand">GO</span>
+            <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
         </span>
     </a>
 </header>
@@ -66,7 +66,7 @@
         {{-- Big center logo (same as homepage HERO) --}}
         <a href="{{ route('home') }}" class="block text-center mb-8">
             <span class="text-4xl sm:text-5xl font-extrabold tracking-tight">
-                <span class="text-white">FERO</span><span class="text-brand glow-text">GO</span>
+                <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white glow-text">Go</span>
             </span>
             <div class="mt-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.3em] text-zinc-500">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>

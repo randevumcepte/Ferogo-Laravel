@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Güvenli Ödeme · Ferogo</title>
+    <title>Güvenli Ödeme · Ferxgo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -21,7 +21,7 @@
     <header class="sticky top-0 z-30 bg-black/85 backdrop-blur-md border-b border-white/10 px-4 py-3">
         <div class="max-w-3xl mx-auto flex items-center justify-between gap-3">
             <div class="text-sm font-bold">
-                <span class="text-white">FERO</span><span class="text-brand">GO</span>
+                <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
                 <span class="ml-2 text-xs text-zinc-500">Güvenli Ödeme (PayTR)</span>
             </div>
             <a href="{{ route('driver.packages.index') }}" class="text-xs text-zinc-400 hover:text-white">İptal et</a>
@@ -51,7 +51,7 @@
         </div>
 
         <p class="text-[11px] text-zinc-600 mt-3 leading-relaxed text-center">
-            Kart bilgilerin Ferogo'ya iletilmez; ödeme PayTR ve bankan arasında gerçekleşir.
+            Kart bilgilerin Ferxgo'ya iletilmez; ödeme PayTR ve bankan arasında gerçekleşir.
             Ödeme onaylandığında <span class="text-brand">birkaç saniye içinde</span> paketin aktive olur.
         </p>
     </main>

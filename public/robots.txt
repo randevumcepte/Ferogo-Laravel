@@ -1,2 +1,15 @@
 User-agent: *
-Disallow:
+Allow: /
+
+# Panel, API ve teknik sayfalar — indekslenmesin
+Disallow: /api/
+Disallow: /musteri-paneli
+Disallow: /musteri-giris
+Disallow: /surucu-paneli
+Disallow: /surucu-giris
+Disallow: /rezervasyonlarim
+Disallow: /admin-debug/
+Disallow: /admin
+Disallow: /*?embed=1
+
+Sitemap: https://ferxgo.com/sitemap.xml

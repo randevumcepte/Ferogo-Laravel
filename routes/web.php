@@ -17,6 +17,27 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
 
+// ─────────────────────────────────────────────────────────
+// SEO — sitemap.xml (yalnızca herkese açık, indekslenebilir sayfalar)
+// Panel / API / debug rotaları bilerek hariç (robots.txt'de de Disallow).
+// ─────────────────────────────────────────────────────────
+Route::get('/sitemap.xml', function () {
+    $urls = [
+        ['loc' => route('home'),                 'freq' => 'daily',   'priority' => '1.0'],
+        ['loc' => route('ride.show'),            'freq' => 'weekly',  'priority' => '0.9'],
+        ['loc' => route('driver.apply'),         'freq' => 'weekly',  'priority' => '0.8'],
+        ['loc' => route('legal.ride-sharing'),   'freq' => 'monthly', 'priority' => '0.6'],
+        ['loc' => route('legal.terms'),          'freq' => 'yearly',  'priority' => '0.3'],
+        ['loc' => route('legal.kvkk'),           'freq' => 'yearly',  'priority' => '0.3'],
+        ['loc' => route('legal.distance-sales'), 'freq' => 'yearly',  'priority' => '0.3'],
+        ['loc' => route('legal.cookies'),        'freq' => 'yearly',  'priority' => '0.3'],
+    ];
+
+    return response()
+        ->view('sitemap', ['urls' => $urls])
+        ->header('Content-Type', 'application/xml; charset=UTF-8');
+})->name('sitemap');
+
 Route::post('/rezervasyon', [ReservationController::class, 'store'])
     ->name('reservation.store');
 
