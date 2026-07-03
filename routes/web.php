@@ -33,8 +33,20 @@ Route::get('/sitemap.xml', function () {
         ['loc' => route('legal.cookies'),        'freq' => 'yearly',  'priority' => '0.3'],
     ];
 
-    return response()
-        ->view('sitemap', ['urls' => $urls])
+    // XML doğrudan burada üretilir (blade'de "<?xml" PHP açılış etiketi
+    // sanılıp bazı sunucularda ParseError veriyordu — bu yol o sorunu tamamen önler).
+    $xml  = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+    foreach ($urls as $u) {
+        $xml .= '  <url>' . "\n";
+        $xml .= '    <loc>' . htmlspecialchars($u['loc'], ENT_QUOTES) . '</loc>' . "\n";
+        $xml .= '    <changefreq>' . $u['freq'] . '</changefreq>' . "\n";
+        $xml .= '    <priority>' . $u['priority'] . '</priority>' . "\n";
+        $xml .= '  </url>' . "\n";
+    }
+    $xml .= '</urlset>';
+
+    return response($xml, 200)
         ->header('Content-Type', 'application/xml; charset=UTF-8');
 })->name('sitemap');
 
