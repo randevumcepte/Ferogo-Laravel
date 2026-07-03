@@ -46,7 +46,7 @@ return [
         'site_url'     => rtrim(env('APP_URL', 'https://ferxgo.com'), '/'),
         'phone'        => env('SEO_PHONE', '+908503403039'),
         'phone_label'  => env('SEO_PHONE_LABEL', '0850 340 3039'),
-        'verification' => env('GOOGLE_SITE_VERIFICATION'),
+        'verification' => env('GOOGLE_SITE_VERIFICATION', 'o5jAuyGzejz-qSghYooDQmOoiZtiQ9H4cRc1CkOUQcI'),
     ],
 
     /*
