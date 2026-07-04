@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Ferogo · İzmir Paylaşımlı Yolculuk Platformu')
+@section('title', 'Ferxgo · İzmir Paylaşımlı Yolculuk Platformu')
 @section('description', 'İzmir\'de bağımsız üye sürücüler ile yolcuları buluşturan paylaşımlı yolculuk platformu. Şeffaf katkı payı, 7/24 platform erişimi.')
 
 @push('head')
@@ -126,6 +126,18 @@
                         <svg class="w-5 h-5 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11m-14 0h14m-14 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1v1a1 1 0 0 0 2 0v-1h8v1a1 1 0 0 0 2 0v-1h1a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1M7 14h.01M17 14h.01"/></svg>
                         Yolculuk Yap
                     </a>
+                </div>
+
+                {{-- Live stat counters --}}
+                <div id="hero-stats" class="mt-10 sm:mt-14 flex items-stretch justify-center gap-4 sm:gap-8">
+                    <div class="flex-1 max-w-[180px] rounded-2xl bg-white/5 border border-white/10 px-4 py-5 sm:px-8 sm:py-6 backdrop-blur-sm">
+                        <div class="text-3xl sm:text-5xl font-extrabold text-brand tracking-tight tabular-nums js-counter" data-target="23534" data-suffix="+">0</div>
+                        <div class="mt-1 text-[11px] sm:text-xs text-zinc-400 uppercase tracking-widest">Yolcu</div>
+                    </div>
+                    <div class="flex-1 max-w-[180px] rounded-2xl bg-white/5 border border-white/10 px-4 py-5 sm:px-8 sm:py-6 backdrop-blur-sm">
+                        <div class="text-3xl sm:text-5xl font-extrabold text-brand tracking-tight tabular-nums js-counter" data-target="2376" data-suffix="+">0</div>
+                        <div class="mt-1 text-[11px] sm:text-xs text-zinc-400 uppercase tracking-widest">Araç</div>
+                    </div>
                 </div>
 
                 {{-- Trust strip --}}
@@ -439,6 +451,52 @@
 </div>
 
 @push('scripts')
+{{-- Hero animated counters (0 → hedef, artarak) --}}
+<script>
+(function () {
+    function animateCounter(el) {
+        var target = parseInt(el.getAttribute('data-target'), 10) || 0;
+        var suffix = el.getAttribute('data-suffix') || '';
+        var duration = 1800;
+        var start = null;
+        function step(ts) {
+            if (start === null) start = ts;
+            var progress = Math.min((ts - start) / duration, 1);
+            // easeOutExpo — hızlı başlayıp yavaşlayarak biter
+            var eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+            var value = Math.floor(eased * target);
+            el.textContent = value.toLocaleString('tr-TR') + (progress === 1 ? suffix : '');
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    function run() {
+        var counters = document.querySelectorAll('.js-counter');
+        if (!counters.length) return;
+        if (!('IntersectionObserver' in window)) {
+            counters.forEach(animateCounter);
+            return;
+        }
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    animateCounter(entry.target);
+                    io.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.4 });
+        counters.forEach(function (c) { io.observe(c); });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
+    } else {
+        run();
+    }
+})();
+</script>
+
 {{-- Google Maps Places Library --}}
 <script>
     window.initMap = function() {
