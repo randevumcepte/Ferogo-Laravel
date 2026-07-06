@@ -661,7 +661,9 @@
                         showLocError('Konum alınırken bir hata oluştu.');
                     }
                 },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                // Hız önceliği: WiFi/ağ tabanlı konum anında gelir; 60 sn'lik önbelleği kabul et.
+                // Şehir içi adres için yeterince isabetli, kullanıcı zaten adresi görüp düzeltebiliyor.
+                { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
             );
         });
     };
