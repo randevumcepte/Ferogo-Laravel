@@ -29,13 +29,20 @@ if [ "$LOCAL" = "$REMOTE" ]; then
 fi
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Yeni surum bulundu: $REMOTE — deploy basliyor"
-git pull origin main --quiet
 
-# Bekleyen migration'lari uygula (yalniz bekleyen varsa mesaj ureti)
-"$PHP_BIN" artisan migrate --force
+# git pull yerine reset --hard: sunucudaki yerel (tracked) degisiklikler pull'u
+# ENGELLEMESIN diye zorla origin/main'e esitle. Untracked dosyalar (.env vb.) korunur.
+git reset --hard origin/main --quiet
+
+# Bekleyen migration'lari uygula. Bir migration hata verse bile deploy'u durdurma
+# (yoksa cache temizlenmez ve sunucu eski surumde takili kalir).
+"$PHP_BIN" artisan migrate --force || echo "  ! migrate hata verdi, devam ediliyor"
 
 # Filament / Blade / config / route / view cache'lerini toplu temizle
-"$PHP_BIN" artisan optimize:clear
+"$PHP_BIN" artisan optimize:clear || true
+
+# OPcache'i de sifirla (derlenmis Blade/PHP bytecode'u bellekten dusur)
+"$PHP_BIN" -r "if (function_exists('opcache_reset')) { opcache_reset(); echo '  opcache reset\n'; }" || true
 
 # Storage sembolik linki yoksa olustur (public/storage → storage/app/public)
 if [ ! -L public/storage ] && [ ! -d public/storage ]; then
