@@ -47,7 +47,9 @@ class AdvertisementForm
                 ->label('Görsel URL')
                 ->url()
                 ->maxLength(255)
-                ->helperText('Boş bırakılırsa marka kartı olarak gösterilir.'),
+                ->placeholder('https://... .jpg')
+                ->helperText('Önerilen ölçü: 1200×628 px (yatay 1.91:1 oran). JPG veya PNG, max ~300 KB. '
+                    . 'Sitede sol tarafta kırpılarak gösterilir. Boş bırakılırsa marka kartı (★) gösterilir.'),
 
             TextInput::make('link_url')
                 ->label('Tıklanınca Gidilecek Adres')

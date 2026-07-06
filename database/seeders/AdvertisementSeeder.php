@@ -24,6 +24,8 @@ class AdvertisementSeeder extends Seeder
                 'sponsor_name' => 'Ege Sigorta',
                 'description'  => 'Aracın için dakikalar içinde teklif al, hemen poliçeni oluştur.',
                 'cta_text'     => 'Teklif Al',
+                // Örnek görsel — süper adminden gerçek görselle değiştirilmeli (önerilen 1200×628 px)
+                'image_url'    => 'https://picsum.photos/seed/ferxgo-sigorta/640/400',
                 'sort_order'   => 0,
             ],
             [
@@ -33,6 +35,7 @@ class AdvertisementSeeder extends Seeder
                 'sponsor_name' => 'Bornova Lastik & Servis',
                 'description'  => 'Yolculuğun bitmeden randevunu ayırt, sıra bekleme.',
                 'cta_text'     => 'Randevu Al',
+                'image_url'    => 'https://picsum.photos/seed/ferxgo-lastik/640/400',
                 'sort_order'   => 0,
             ],
             [
@@ -42,6 +45,7 @@ class AdvertisementSeeder extends Seeder
                 'sponsor_name' => 'İzmir Oto Plaza',
                 'description'  => 'Sana en yakın bayide bugün test sürüşü fırsatı.',
                 'cta_text'     => 'Bayiyi Gör',
+                'image_url'    => 'https://picsum.photos/seed/ferxgo-oto/640/400',
                 'sort_order'   => 0,
             ],
         ];
