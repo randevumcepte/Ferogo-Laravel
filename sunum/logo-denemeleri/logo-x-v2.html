@@ -1,0 +1,50 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;box-sizing:border-box}
+body{background:#000;font-family:"Arial Black","Segoe UI",Arial,sans-serif}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cell{height:165px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 50% 0%,#1c1c1c,#000);border:1px solid #1c1c1c}
+.lg{font-weight:900;letter-spacing:-2px;font-size:54px;display:flex;align-items:center}
+.w{color:#fff}.g{color:#EDBA3E}
+.lbl{margin-top:14px;font-family:Arial;font-weight:400;font-size:12px;letter-spacing:2px;color:#8a8a8a}
+
+/* keskin bicak X govdesi */
+.xb{position:relative;display:inline-block;width:.60em;height:.84em;margin:0 .05em}
+.xb b{position:absolute;top:50%;left:50%;width:.95em;height:.17em;transform-origin:center}
+.xb b:nth-child(1){transform:translate(-50%,-50%) rotate(45deg)}
+.xb b:nth-child(2){transform:translate(-50%,-50%) rotate(-45deg)}
+/* 1: duz keskin bicak (parallelogram uclar) */
+.blade b{background:#EDBA3E;clip-path:polygon(8% 0,100% 0,92% 100%,0 100%)}
+/* 2: mavi keskin */
+.blade-blue b{background:#2E9BFF;clip-path:polygon(8% 0,100% 0,92% 100%,0 100%)}
+/* 3: ileri ok hissi (uclar sivri) */
+.arrow b{background:#EDBA3E;clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%)}
+/* 4: kare dugum (yol nodu) */
+.node b{background:#EDBA3E;clip-path:polygon(8% 0,100% 0,92% 100%,0 100%)}
+.node .sq{position:absolute;top:50%;left:50%;width:.19em;height:.19em;background:#0e0e0e;
+  border:.03em solid #EDBA3E;transform:translate(-50%,-50%) rotate(45deg)}
+/* 5: konum pini (X + damla) */
+.pin{position:relative;display:inline-block;width:.58em;height:.84em;margin:0 .05em}
+.pin b{position:absolute;top:54%;left:50%;width:.9em;height:.16em;background:#EDBA3E;transform-origin:center;
+  clip-path:polygon(8% 0,100% 0,92% 100%,0 100%)}
+.pin b:nth-child(1){transform:translate(-50%,-50%) rotate(45deg)}
+.pin b:nth-child(2){transform:translate(-50%,-50%) rotate(-45deg)}
+.pin .drop{position:absolute;top:-.02em;left:50%;width:.30em;height:.30em;background:#EDBA3E;
+  border-radius:50% 50% 50% 0;transform:translateX(-50%) rotate(45deg)}
+.pin .drop::after{content:"";position:absolute;top:50%;left:50%;width:.11em;height:.11em;background:#0e0e0e;border-radius:50%;transform:translate(-50%,-50%)}
+</style></head><body>
+<div class="grid">
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="xb blade"><b></b><b></b></span><span class="g">GO</span></div><div class="lbl">1 · KESKIN BICAK X (altin)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="xb blade-blue"><b></b><b></b></span><span class="g">GO</span></div><div class="lbl">2 · KESKIN BICAK X (mavi)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="xb arrow"><b></b><b></b></span><span class="g">GO</span></div><div class="lbl">3 · ILERI OK X (hiz)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="xb node"><b></b><b></b><span class="sq"></span></span><span class="g">GO</span></div><div class="lbl">4 · KARE DUGUM (yol kesisimi)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="pin"><b></b><b></b><span class="drop"></span></span><span class="g">GO</span></div><div class="lbl">5 · KONUM PINI + X</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="g" style="font-style:italic;transform:skewX(-6deg);display:inline-block">X</span><span class="g">GO</span></div><div class="lbl">6 · SADE italik harf X (temiz)</div></div>
+
+</div></body></html>

@@ -294,7 +294,7 @@ class PhoneVerificationService
      */
     protected function sendSms(string $phone, string $code): void
     {
-        $message = "Ferogo dogrulama kodun: {$code}. Kimseyle paylasma. Kod 5 dakika gecerli.";
+        $message = "Ferxgo dogrulama kodun: {$code}. Kimseyle paylasma. Kod 5 dakika gecerli.";
 
         // Yedek: log + cache (10 dk)
         Log::info('[OTP] Telefon: ' . $phone . ' Kod: ' . $code);

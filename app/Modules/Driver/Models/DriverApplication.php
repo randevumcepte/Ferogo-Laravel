@@ -17,6 +17,7 @@ class DriverApplication extends Model
         'email',
         'city_id',
         'birth_year',
+        'gender',
         'license_class',
         'experience_band',
         'has_src',

@@ -16,7 +16,7 @@ use Illuminate\Console\Command;
  *   - Stale pool_expanded taleplerini exhausted yapar
  *
  * Crontab'a ekleyin (server-side):
- *   * * * * * cd /path/to/Ferogo-Laravel && php artisan dispatcher:tick >> storage/logs/dispatcher.log 2>&1
+ *   * * * * * cd /path/to/Ferxgo-Laravel && php artisan dispatcher:tick >> storage/logs/dispatcher.log 2>&1
  */
 class DispatcherTickCommand extends Command
 {

@@ -1,23 +1,23 @@
 @extends('legal._layout')
 
-@section('title', 'KVKK Aydınlatma Metni · Ferogo')
-@section('description', 'Ferogo Kişisel Verilerin Korunması Kanunu (6698) kapsamında aydınlatma metni.')
+@section('title', 'KVKK Aydınlatma Metni · Ferxgo')
+@section('description', 'Ferxgo Kişisel Verilerin Korunması Kanunu (6698) kapsamında aydınlatma metni.')
 
 @section('legal-title', 'KVKK Aydınlatma Metni')
 
 @section('legal-body')
 
 <p>
-    Ferogo olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında <strong>veri sorumlusu</strong> sıfatıyla,
+    Ferxgo olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında <strong>veri sorumlusu</strong> sıfatıyla,
     paylaşımlı yolculuk platformumuzu kullanan kullanıcıların kişisel verilerinin korunmasına önem veriyoruz.
     Bu aydınlatma metni KVKK m.10 kapsamında hazırlanmıştır.
 </p>
 
 <h2>1. Veri Sorumlusu Kimliği</h2>
 <ul>
-    <li><strong>Unvan:</strong> Ferogo</li>
+    <li><strong>Unvan:</strong> Ferxgo</li>
     <li><strong>Adres:</strong> İzmir / Türkiye</li>
-    <li><strong>İletişim:</strong> <a href="mailto:kvkk@ferogo.com.tr">kvkk@ferogo.com.tr</a></li>
+    <li><strong>İletişim:</strong> <a href="mailto:kvkk@ferxgo.com.tr">kvkk@ferxgo.com.tr</a></li>
     <li><strong>VERBİS Kayıt:</strong> Başvuru tamamlandığında bu alanda yayınlanacaktır.</li>
 </ul>
 
@@ -76,7 +76,7 @@
 
 <h2>6. Yurt Dışına Aktarım</h2>
 <p>
-    Ferogo, kişisel verileri kural olarak Türkiye'de tutar. Zorunlu bulut altyapı entegrasyonlarında, KVKK Kurulu izinli veya
+    Ferxgo, kişisel verileri kural olarak Türkiye'de tutar. Zorunlu bulut altyapı entegrasyonlarında, KVKK Kurulu izinli veya
     güvenli kabul edilen ülkelerdeki sağlayıcılarla çalışılır; bu durumda KVKK m.9 hükümleri uygulanır.
 </p>
 
@@ -101,7 +101,7 @@
 </ul>
 
 <p>
-    Başvurular için: <a href="mailto:kvkk@ferogo.com.tr">kvkk@ferogo.com.tr</a> veya Veri Sahibi Başvuru Formu doldurularak posta yoluyla iletilebilir.
+    Başvurular için: <a href="mailto:kvkk@ferxgo.com.tr">kvkk@ferxgo.com.tr</a> veya Veri Sahibi Başvuru Formu doldurularak posta yoluyla iletilebilir.
     KVKK m.13 uyarınca taleplere en geç <strong>30 gün</strong> içinde cevap verilir.
 </p>
 

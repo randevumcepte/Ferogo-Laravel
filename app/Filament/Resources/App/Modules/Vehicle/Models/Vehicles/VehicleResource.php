@@ -26,7 +26,7 @@ class VehicleResource extends Resource
 
     protected static ?string $navigationLabel = 'Araçlar';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Operasyon';
+    protected static string|\UnitEnum|null $navigationGroup = 'Filo';
 
     protected static ?int $navigationSort = 30;
 

@@ -50,7 +50,7 @@ final class PayTRGateway implements PaymentGateway
         $paymentAmount = (int) round((float) $package->price * 100);
 
         // Sepet: [[ürün adı, fiyat_kurus, adet], ...]
-        $packageLabel = 'Ferogo ' . ($package->definition()['label'] ?? $package->type) . ' Sürücü Paketi';
+        $packageLabel = 'Ferxgo ' . ($package->definition()['label'] ?? $package->type) . ' Sürücü Paketi';
         $basket = [[
             $packageLabel,
             (string) $paymentAmount,
@@ -60,7 +60,7 @@ final class PayTRGateway implements PaymentGateway
 
         $email = $user?->email ?: 'no-reply@ferogo.app';
         $userName = $user?->name ?: 'Sürücü';
-        $userAddress = 'Ferogo Sürücü Paneli';
+        $userAddress = 'Ferxgo Sürücü Paneli';
         $userPhone = $user?->phone ?: '+905555555555';
         $userIp = request()->ip() ?: '85.34.78.112';
         $testMode = $this->testMode ? 1 : 0;

@@ -1,0 +1,46 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;box-sizing:border-box}
+body{background:#000;font-family:"Arial Black","Segoe UI",Arial,sans-serif}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cell{height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 50% 0%,#1c1c1c,#000);border:1px solid #1c1c1c}
+.lg{font-weight:900;letter-spacing:-2px;font-size:52px;display:flex;align-items:center}
+.w{color:#fff}.g{color:#EDBA3E}
+.lbl{margin-top:12px;font-family:Arial;font-weight:400;font-size:12px;letter-spacing:2px;color:#888}
+/* renk varyantlari */
+.x-gold{color:#EDBA3E;font-style:italic}
+.x-blue{color:#2E9BFF;font-style:italic}
+.x-red{color:#FF5A4E;font-style:italic}
+.x-teal{color:#2DD4BF;font-style:italic}
+.x-grad{background:linear-gradient(135deg,#FFF,#EDBA3E);-webkit-background-clip:text;background-clip:text;color:transparent;font-style:italic}
+.x-white{color:#fff;font-style:italic}
+/* stilize: iki yolun kesisimi */
+.xbar{position:relative;display:inline-block;width:.60em;height:.86em;margin:0 .02em}
+.xbar i{position:absolute;top:50%;left:0;width:100%;height:.15em;border-radius:3px;transform-origin:center}
+.xbar i:nth-child(1){transform:translateY(-50%) rotate(45deg)}
+.xbar i:nth-child(2){transform:translateY(-50%) rotate(-45deg)}
+.xbar.gold i{background:#EDBA3E}
+.xbar .dot{position:absolute;top:50%;left:50%;width:.20em;height:.20em;border-radius:50%;
+  background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 6px #EDBA3E}
+.xbar.split i:nth-child(1){background:#EDBA3E}
+.xbar.split i:nth-child(2){background:#FF5A4E}
+</style></head><body>
+<div class="grid">
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="x-gold">X</span><span class="g">GO</span></div><div class="lbl">1 · ALTIN italik (temel)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="x-blue">X</span><span class="g">GO</span></div><div class="lbl">2 · ELEKTRIK MAVISI</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="x-red">X</span><span class="g">GO</span></div><div class="lbl">3 · MERCAN KIRMIZI</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="x-teal">X</span><span class="g">GO</span></div><div class="lbl">4 · TURKUAZ</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="x-grad">X</span><span class="g">GO</span></div><div class="lbl">5 · BEYAZ-ALTIN degrade</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="xbar gold"><i></i><i></i></span><span class="g">GO</span></div><div class="lbl">6 · YOL KESISIMI (cizgi X)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="xbar gold"><i></i><i></i><span class="dot"></span></span><span class="g">GO</span></div><div class="lbl">7 · KESISIM + merkez nokta (konum)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="xbar split"><i></i><i></i></span><span class="g">GO</span></div><div class="lbl">8 · CIFT RENK yol (altin+kirmizi)</div></div>
+
+</div></body></html>

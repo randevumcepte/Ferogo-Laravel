@@ -444,6 +444,26 @@
                             <label class="block text-xs font-medium text-zinc-400 mb-2">Doğum yılı</label>
                             <input type="number" name="birth_year" value="{{ old('birth_year') }}" min="1940" max="{{ date('Y') - 18 }}" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="1990">
                         </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Cinsiyet</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="check-pill cursor-pointer">
+                                    <input type="radio" name="gender" value="male" class="sr-only peer" {{ old('gender') === 'male' ? 'checked' : '' }} required>
+                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
+                                        <span class="text-lg">👨</span>
+                                        <span class="text-sm font-medium">Erkek</span>
+                                    </div>
+                                </label>
+                                <label class="check-pill cursor-pointer">
+                                    <input type="radio" name="gender" value="female" class="sr-only peer" {{ old('gender') === 'female' ? 'checked' : '' }} required>
+                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
+                                        <span class="text-lg">👩</span>
+                                        <span class="text-sm font-medium">Kadın</span>
+                                    </div>
+                                </label>
+                            </div>
+                            <p class="text-[11px] text-zinc-500 mt-2">Kadın sürücülerimize "sadece kadın yolcu" opsiyonu sunulur.</p>
+                        </div>
                     </div>
                 </div>
 

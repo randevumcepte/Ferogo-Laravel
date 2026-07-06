@@ -1,0 +1,46 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;box-sizing:border-box}
+body{background:#000;font-family:"Arial Black","Segoe UI",Arial,sans-serif}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cell{height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 50% 0%,#1c1c1c,#000);border:1px solid #1c1c1c}
+.lg{font-weight:900;letter-spacing:-2px;font-size:54px;display:flex;align-items:center;position:relative}
+.w{color:#fff}.g{color:#EDBA3E}
+.xi{color:#EDBA3E;font-style:italic;display:inline-block}
+.lbl{margin-top:16px;font-family:Arial;font-weight:400;font-size:12px;letter-spacing:2px;color:#8a8a8a}
+
+/* 2 hiz cizgileri */
+.speed{position:relative;display:inline-block;width:.55em;height:.84em}
+.speed i{position:absolute;right:.05em;height:.10em;background:linear-gradient(90deg,transparent,#EDBA3E);border-radius:2px;transform:skewX(-16deg)}
+.speed i:nth-child(1){top:26%;width:.5em}
+.speed i:nth-child(2){top:46%;width:.72em}
+.speed i:nth-child(3){top:66%;width:.4em}
+
+/* 3 glow */
+.glow{color:#EDBA3E;font-style:italic;display:inline-block;text-shadow:0 0 14px rgba(237,186,62,.9),0 0 4px rgba(237,186,62,.8)}
+
+/* 4 degrade */
+.grad{font-style:italic;display:inline-block;background:linear-gradient(180deg,#FDE68A,#EDBA3E 60%,#C98F1E);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* 5 alt swoosh */
+.underline{position:absolute;left:0;right:0;bottom:-.02em;height:.10em;
+  background:linear-gradient(90deg,transparent,#EDBA3E 40%,#EDBA3E 70%,transparent);transform:skewX(-16deg)}
+
+/* 6 iri baskin X */
+.bigx{color:#EDBA3E;font-style:italic;display:inline-block;font-size:1.25em;line-height:.8;transform:translateY(.03em)}
+</style></head><body>
+<div class="grid">
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="xi">X</span><span class="g">GO</span></div><div class="lbl">1 · TEMEL (altin italik)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="speed"><i></i><i></i><i></i></span><span class="xi">X</span><span class="g">GO</span></div><div class="lbl">2 · HIZ CIZGILI X</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="glow">X</span><span class="g">GO</span></div><div class="lbl">3 · PARLAYAN (neon) X</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="grad">X</span><span class="g">GO</span></div><div class="lbl">4 · DEGRADE X (acik-koyu altin)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="xi">X</span><span class="g">GO</span><span class="underline"></span></div><div class="lbl">5 · ALT SWOOSH cizgi</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="bigx">X</span><span class="g">GO</span></div><div class="lbl">6 · IRI BASKIN X</div></div>
+
+</div></body></html>

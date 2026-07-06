@@ -32,6 +32,7 @@ class DriverApplicationController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'city_id' => ['nullable', Rule::in($cityIds)],
             'birth_year' => ['nullable', 'integer', 'min:1940', 'max:' . (date('Y') - 18)],
+            'gender' => ['required', Rule::in(['male', 'female'])],
             'license_class' => ['required', Rule::in(['B', 'D', 'D1', 'E'])],
             'experience_band' => ['required', Rule::in(['under_1', '1_to_3', '3_to_5', '5_plus'])],
             'has_src' => ['nullable', 'boolean'],
@@ -40,8 +41,10 @@ class DriverApplicationController extends Controller
             'kvkk' => ['accepted'],
             'terms' => ['accepted'],
         ], [
-            'kvkk.accepted'  => 'KVKK onayını işaretlemen gerekiyor.',
-            'terms.accepted' => 'Hizmet Şartları ve Paylaşımlı Yolculuk model onayı zorunlu.',
+            'gender.required' => 'Cinsiyet seçimi zorunlu.',
+            'gender.in'       => 'Geçersiz cinsiyet değeri.',
+            'kvkk.accepted'   => 'KVKK onayını işaretlemen gerekiyor.',
+            'terms.accepted'  => 'Hizmet Şartları ve Paylaşımlı Yolculuk model onayı zorunlu.',
         ]);
 
         $application = DriverApplication::create([

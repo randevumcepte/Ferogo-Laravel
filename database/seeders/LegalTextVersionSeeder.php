@@ -89,7 +89,7 @@ class LegalTextVersionSeeder extends Seeder
                     'title'        => $item['title'],
                     'published_at' => now(),
                     'superseded_at' => null,
-                    'change_notes' => 'İlk yayın (Ferogo lansman v1.0).',
+                    'change_notes' => 'İlk yayın (Ferxgo lansman v1.0).',
                 ]
             );
 
@@ -111,10 +111,10 @@ class LegalTextVersionSeeder extends Seeder
     protected function platformNoticeContent(): string
     {
         return <<<'TXT'
-YASAL PLATFORM BİLDİRİMİ — Ferogo hakkında bilmeniz gerekenler
+YASAL PLATFORM BİLDİRİMİ — Ferxgo hakkında bilmeniz gerekenler
 
 Paylaşımlı Yolculuk Platformu
-Ferogo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk koordinasyon platformudur.
+Ferxgo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk koordinasyon platformudur.
 6563 sayılı E-Ticaret Kanunu kapsamında aracı hizmet sağlayıcı sıfatıyla faaliyet gösterir; ticari taşımacılık hizmeti sağlamaz.
 
 Şeffaf Katkı Payı
@@ -122,7 +122,7 @@ Yolculuk katkı payı, üye sürücü ile yolcu arasında belirlenir. Tahmini ka
 Yolculuk hizmeti üye sürücü ile yolcu arasında gerçekleşir.
 
 Hizmet Bölgesi
-Ferogo şu anda İzmir'de aktiftir. Havalimanı yolculuğu, şehir içi ve kurumsal paylaşımlı yolculuk hizmetlerimiz mevcuttur.
+Ferxgo şu anda İzmir'de aktiftir. Havalimanı yolculuğu, şehir içi ve kurumsal paylaşımlı yolculuk hizmetlerimiz mevcuttur.
 Hizmet kapsamımız yeni şehirlerle büyümeye devam etmektedir.
 
 Kişisel Verilerin Korunması
@@ -139,15 +139,15 @@ TXT;
         return <<<'TXT'
 SÜRÜCÜ KAYIT ONAY METNİ (Vergi Sorumluluğu Beyanı)
 
-Ferogo bir paylaşımlı yolculuk platformudur; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
+Ferxgo bir paylaşımlı yolculuk platformudur; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
 
 Gelir İdaresi Başkanlığı'nın 7 Ağustos 2024 tarihli kararı uyarınca paylaşımlı yolculuk faaliyetinden elde edilen kazanç
 üye sürücünün ticari kazancıdır ve vergi yükümlülüğü tamamen üye sürücüye aittir.
 
-Ferogo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
+Ferxgo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
 
 Aşağıdaki bilgileri okuduğumu ve onaylıyorum:
-- Ferogo'nun aracı hizmet sağlayıcı olduğunu,
+- Ferxgo'nun aracı hizmet sağlayıcı olduğunu,
 - Vergi sorumluluğunun bana ait olduğunu,
 - Hizmet Şartları ve Paylaşımlı Yolculuk modelini kabul ettiğimi,
 - KVKK kapsamında verilerimin işlenmesine onay verdiğimi.

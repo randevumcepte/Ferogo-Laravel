@@ -1,15 +1,15 @@
 @extends('legal._layout')
 
-@section('title', 'Paylaşımlı Yolculuk Nedir? · Ferogo')
-@section('description', 'Ferogo platformunda paylaşımlı yolculuk modelinin nasıl çalıştığı.')
+@section('title', 'Paylaşımlı Yolculuk Nedir? · Ferxgo')
+@section('description', 'Ferxgo platformunda paylaşımlı yolculuk modelinin nasıl çalıştığı.')
 
 @section('legal-title', 'Paylaşımlı Yolculuk Nedir?')
 
 @section('legal-body')
 
 <p>
-    Ferogo, Türkiye'de hızla büyüyen <strong>paylaşımlı yolculuk</strong> (ride-sharing) modelinin dijital platformu olarak
-    faaliyet gösterir. Bu sayfa, paylaşımlı yolculuğun ne olduğunu ve Ferogo'nun bu modeldeki rolünü açıklar.
+    Ferxgo, Türkiye'de hızla büyüyen <strong>paylaşımlı yolculuk</strong> (ride-sharing) modelinin dijital platformu olarak
+    faaliyet gösterir. Bu sayfa, paylaşımlı yolculuğun ne olduğunu ve Ferxgo'nun bu modeldeki rolünü açıklar.
 </p>
 
 <h2>Paylaşımlı Yolculuk Nedir?</h2>
@@ -47,9 +47,9 @@
     <li><strong>Gelir İdaresi Başkanlığı (7 Ağustos 2024):</strong> Paylaşımlı yolculuk gelirinin ticari kazanç olduğunu ve <strong>üye sürücüye ait</strong> olduğunu duyurmuştur.</li>
 </ul>
 
-<h2>Ferogo'nun Rolü</h2>
+<h2>Ferxgo'nun Rolü</h2>
 <p>
-    Ferogo, 6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun kapsamında <strong>aracı hizmet sağlayıcı</strong> sıfatıyla:
+    Ferxgo, 6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun kapsamında <strong>aracı hizmet sağlayıcı</strong> sıfatıyla:
 </p>
 <ul>
     <li>Üye sürücüleri ve yolcuları algoritma yoluyla eşleştirir</li>
@@ -58,7 +58,7 @@
     <li>Yolculuk sonrası değerlendirme ve geri bildirim toplar</li>
 </ul>
 
-<p>Ferogo:</p>
+<p>Ferxgo:</p>
 <ul>
     <li><strong>Yolculuk hizmetinin tarafı değildir</strong></li>
     <li><strong>Ticari taşımacılık yapmaz</strong></li>
@@ -78,14 +78,14 @@
     <li>KDV ve gelir vergisi beyanı üye sürücü tarafından yapılır</li>
 </ul>
 <p>
-    Ferogo, üye sürücülerin vergisel yükümlülüklerini doğru biçimde yerine getirebilmeleri için anlaşmalı mali müşavirlik
+    Ferxgo, üye sürücülerin vergisel yükümlülüklerini doğru biçimde yerine getirebilmeleri için anlaşmalı mali müşavirlik
     desteği sunabilir.
 </p>
 
 <h2>Sorularınız İçin</h2>
 <p>
     Paylaşımlı yolculuk modeli, üyelik koşulları veya hukuki çerçeve hakkında daha fazla bilgi için:
-    <a href="mailto:destek@ferogo.com.tr">destek@ferogo.com.tr</a>
+    <a href="mailto:destek@ferxgo.com.tr">destek@ferxgo.com.tr</a>
 </p>
 
 @endsection

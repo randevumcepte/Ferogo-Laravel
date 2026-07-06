@@ -1,4 +1,4 @@
-# Ferogo Mobile API — v1
+# Ferxgo Mobile API — v1
 
 Bu doküman Flutter mobil uygulamasının kullanacağı backend API'sini özetler. Web tarafı (session-cookie) değişmeden çalışmaya devam eder; mobile ayrı namespace altında Sanctum bearer token ile.
 

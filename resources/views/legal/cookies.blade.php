@@ -1,14 +1,14 @@
 @extends('legal._layout')
 
-@section('title', 'Çerez Politikası · Ferogo')
-@section('description', 'Ferogo dijital platformunda kullanılan çerezler ve amaçları.')
+@section('title', 'Çerez Politikası · Ferxgo')
+@section('description', 'Ferxgo dijital platformunda kullanılan çerezler ve amaçları.')
 
 @section('legal-title', 'Çerez Politikası')
 
 @section('legal-body')
 
 <p>
-    Ferogo web sitesinde ve mobil uygulamasında, kullanıcı deneyimini iyileştirmek, güvenliği sağlamak ve hizmet kalitesini
+    Ferxgo web sitesinde ve mobil uygulamasında, kullanıcı deneyimini iyileştirmek, güvenliği sağlamak ve hizmet kalitesini
     artırmak amacıyla çerezler ve benzeri teknolojiler kullanılır. Bu metin, KVKK ve 5651 sayılı Kanun çerçevesinde hangi
     çerezlerin kullanıldığı hakkında bilgi verir.
 </p>
@@ -81,7 +81,7 @@
 
 <h2>6. İletişim</h2>
 <p>
-    Çerez kullanımına ilişkin sorularınız için: <a href="mailto:kvkk@ferogo.com.tr">kvkk@ferogo.com.tr</a>
+    Çerez kullanımına ilişkin sorularınız için: <a href="mailto:kvkk@ferxgo.com.tr">kvkk@ferxgo.com.tr</a>
 </p>
 
 @endsection

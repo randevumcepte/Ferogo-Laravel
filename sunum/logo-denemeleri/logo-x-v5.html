@@ -1,0 +1,49 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;box-sizing:border-box}
+body{background:#000;font-family:"Arial Black","Segoe UI",Arial,sans-serif}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cell{height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 50% 0%,#1c1c1c,#000);border:1px solid #1c1c1c}
+.lg{font-weight:900;letter-spacing:-2px;font-size:56px;display:flex;align-items:center}
+.w{color:#fff}.g{color:#EDBA3E}
+.lbl{margin-top:16px;font-family:Arial;font-weight:400;font-size:12px;letter-spacing:2px;color:#8a8a8a}
+
+/* X = iki damali serit */
+.cx{position:relative;display:inline-block;height:.86em;margin:0 .07em}
+.cx b{position:absolute;top:50%;left:50%;transform-origin:center;overflow:hidden;
+  clip-path:polygon(7% 0,100% 0,93% 100%,0 100%)}
+.cx b::before{content:"";position:absolute;inset:-2px;background-repeat:repeat}
+.cx b:nth-child(1){transform:translate(-50%,-50%) rotate(45deg)}
+.cx b:nth-child(2){transform:translate(-50%,-50%) rotate(-45deg)}
+
+/* boyut */
+.cx.m{width:.60em}
+.cx.m b{width:.98em;height:.22em}
+.cx.k{width:.64em}
+.cx.k b{width:1.02em;height:.28em}
+
+/* renkler (2 sifir damasi) */
+.gold b::before{background:conic-gradient(#EDBA3E 25%,#141414 0 50%,#EDBA3E 0 75%,#141414 0);background-size:.11em .11em}
+.wb b::before{background:conic-gradient(#fff 25%,#141414 0 50%,#fff 0 75%,#141414 0);background-size:.11em .11em}
+.it{transform:skewX(-10deg)}
+
+/* alternatif: sade altin X + alt damali serit */
+.flag{position:absolute;left:0;right:0;bottom:-.06em;height:.14em;
+  background:conic-gradient(#141414 25%,#EDBA3E 0 50%,#141414 0 75%,#EDBA3E 0);background-size:.14em .14em}
+.xi{color:#EDBA3E;font-style:italic;display:inline-block}
+</style></head><body>
+<div class="grid">
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="cx m gold"><b></b><b></b></span><span class="g">GO</span></div><div class="lbl">1 · DAMALI SERIT X · altin+siyah</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="cx m wb"><b></b><b></b></span><span class="g">GO</span></div><div class="lbl">2 · DAMALI SERIT X · beyaz+siyah (klasik taksi)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="cx k gold"><b></b><b></b></span><span class="g">GO</span></div><div class="lbl">3 · DAMALI SERIT X · kalin</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="cx k wb it"><b></b><b></b></span><span class="g">GO</span></div><div class="lbl">4 · DAMALI SERIT X · italik kalin</div></div>
+
+  <div class="cell"><div class="lg" style="position:relative"><span class="w">FERI</span><span class="xi">X</span><span class="g">GO</span><span class="flag"></span></div><div class="lbl">5 · SADE X + ALT damali serit</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="cx m gold"><b></b><b></b></span><span class="w">GO</span></div><div class="lbl">6 · DAMALI SERIT X · GO beyaz</div></div>
+
+</div></body></html>

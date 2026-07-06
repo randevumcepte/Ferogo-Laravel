@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Sürücü Girişi · Ferogo</title>
+    <title>Sürücü Girişi · Ferxgo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <a href="{{ url('/') }}" class="inline-flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-                <span class="text-brand">●</span> Ferogo
+                <span class="text-brand">●</span> Ferxgo
             </a>
             <div class="mt-2 text-xs uppercase tracking-[0.3em] text-zinc-500">Sürücü Paneli</div>
         </div>
@@ -41,7 +41,7 @@
                     <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">E-posta</label>
                     <input type="email" name="email" required autofocus value="{{ old('email') }}"
                            class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none transition"
-                           placeholder="surucu@ferogo.com.tr">
+                           placeholder="surucu@ferxgo.com.tr">
                 </div>
                 <div>
                     <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Şifre</label>
@@ -63,7 +63,7 @@
         </div>
 
         <div class="mt-6 text-center text-[11px] text-zinc-600">
-            © {{ date('Y') }} Ferogo · Sürücü Paneli
+            © {{ date('Y') }} Ferxgo · Sürücü Paneli
         </div>
     </div>
     @include('partials.mobile-action-bar')

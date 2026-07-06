@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>FERXGO — Reklam & Sponsorluk Sunumu</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --gold: #F2C94C;
+    --gold-2: #E0A82E;
+    --ink: #0a0a0a;
+    --ink-2: #141414;
+    --line: #2a2a2a;
+    --muted: #b8b8b8;
+  }
+  html, body { background: #000; }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Vektörel logo — her boyutta net */
+  .logo-text {
+    font-family: "Arial Black", "Segoe UI", Arial, sans-serif;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    line-height: 1;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .logo-text .w { color: #ffffff; }
+  .logo-text .g2 { color: #EDBA3E; }
+  .clogo { font-size: 78pt; }
+  .hlogo { font-size: 20pt; }
+  .slide {
+    position: relative;
+    width: 297mm;
+    height: 210mm;
+    padding: 16mm 18mm 14mm 18mm;
+    background: radial-gradient(120% 90% at 85% 0%, #1c1c1c 0%, #0a0a0a 55%, #000 100%);
+    page-break-after: always;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .slide::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 8px;
+    background: linear-gradient(180deg, var(--gold), var(--gold-2));
+  }
+  .kicker {
+    color: var(--gold);
+    font-size: 12pt;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 6mm;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 5mm;
+    margin-bottom: 8mm;
+  }
+  .header .hnum { color: var(--muted); font-size: 11pt; letter-spacing: 2px; }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  p.lead { font-size: 15pt; line-height: 1.5; color: #eaeaea; margin-bottom: 6mm; }
+  ul.feat { list-style: none; }
+  ul.feat li {
+    font-size: 14pt;
+    line-height: 1.5;
+    padding: 3.5mm 0 3.5mm 0;
+    border-bottom: 1px solid #1e1e1e;
+    color: #f0f0f0;
+  }
+  ul.feat li b { color: var(--gold); }
+  .quote {
+    margin-top: 7mm;
+    background: linear-gradient(90deg, rgba(242,201,76,0.14), rgba(242,201,76,0.03));
+    border-left: 5px solid var(--gold);
+    padding: 6mm 8mm;
+    font-size: 15.5pt;
+    font-weight: 700;
+    line-height: 1.45;
+    color: #fff;
+    border-radius: 0 6px 6px 0;
+  }
+  .talk {
+    margin-top: 6mm;
+    color: var(--muted);
+    font-size: 11.5pt;
+    font-style: italic;
+    line-height: 1.5;
+    border-top: 1px dashed #333;
+    padding-top: 4mm;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4mm 0 3mm 0;
+    font-size: 13pt;
+  }
+  th {
+    background: linear-gradient(180deg, var(--gold), var(--gold-2));
+    color: #111;
+    text-align: left;
+    padding: 4mm 5mm;
+    font-weight: 800;
+    font-size: 12.5pt;
+  }
+  td {
+    padding: 3.6mm 5mm;
+    border-bottom: 1px solid #242424;
+    color: #ededed;
+  }
+  tr:nth-child(even) td { background: #131313; }
+  td.big { color: var(--gold); font-weight: 800; font-size: 15pt; }
+  .cols { display: flex; gap: 10mm; }
+  .cols > div { flex: 1; }
+  .note { color: var(--muted); font-size: 10.5pt; font-style: italic; margin-bottom: 2mm; }
+  /* Büyüme projeksiyonu — belirgin veri bloğu */
+  .proj {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 5mm; margin: 6mm 0 2mm 0;
+  }
+  .proj-item {
+    flex: 1; text-align: center;
+    background: linear-gradient(180deg, #1a1a1a, #101010);
+    border: 1px solid #333; border-radius: 10px;
+    padding: 6mm 3mm;
+  }
+  .proj-item.hot { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(242,201,76,0.35) inset; }
+  .proj-item span {
+    display: block; color: var(--muted); font-size: 10.5pt;
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2.5mm;
+  }
+  .proj-item b { color: var(--gold); font-size: 27pt; font-weight: 800; }
+  .proj-arrow { color: var(--gold); font-size: 24pt; font-weight: 800; }
+  .footer {
+    position: absolute;
+    bottom: 7mm; right: 12mm;
+    color: #555;
+    font-size: 9pt;
+    letter-spacing: 1px;
+  }
+
+  /* Cover */
+  .cover { align-items: center; justify-content: center; text-align: center; }
+  .cover .clogo { margin-bottom: 10mm; }
+  .cover h1 {
+    font-size: 30pt; font-weight: 800; margin-bottom: 6mm; letter-spacing: 1px;
+  }
+  .cover .sub {
+    font-size: 16pt; color: var(--gold); font-weight: 600; line-height: 1.5;
+    max-width: 210mm;
+  }
+  .cover .tag {
+    margin-top: 12mm; color: var(--muted); font-size: 12pt; letter-spacing: 2px;
+  }
+  .cover::before { width: 0; }
+  .cover .rule {
+    width: 60mm; height: 3px; background: linear-gradient(90deg, var(--gold), transparent);
+    margin: 8mm auto;
+  }
+  /* Closing */
+  .closing { align-items: center; justify-content: center; text-align: center; }
+  .closing .big-quote {
+    font-size: 22pt; font-weight: 800; line-height: 1.35; max-width: 230mm;
+    color: #fff; margin-bottom: 10mm;
+  }
+  .closing .big-quote .g { color: var(--gold); }
+  .closing .cta { color: var(--gold); font-size: 15pt; font-weight: 700; letter-spacing: 2px; }
+
+  /* === Telefon mockup'ları === */
+  .mockrow { display: flex; gap: 8mm; justify-content: center; align-items: flex-start; margin-top: 1.5mm; }
+  .phone-wrap { width: 72mm; text-align: center; }
+  .phone {
+    position: relative; width: 72mm; height: 128mm;
+    background: #0c0c0c; border: 3px solid #333; border-radius: 20px;
+    padding: 4mm 3mm 3mm; overflow: hidden; text-align: left;
+    box-shadow: 0 8px 26px rgba(0,0,0,.5);
+  }
+  .m-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5mm; }
+  .m-logo { font-family: "Arial Black", sans-serif; font-weight: 900; font-size: 9pt; letter-spacing: -.5px; }
+  .m-logo .w2 { color: #fff; } .m-logo .g2b { color: var(--gold); }
+  .pill { display: inline-block; font-size: 5.7pt; font-weight: 800; padding: .8mm 1.8mm; border-radius: 20px; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+  .pill.em { background: rgba(52,211,153,.15); color: #6ee7b7; border: 1px solid rgba(52,211,153,.4); }
+  .pill.gd { background: rgba(242,201,76,.15); color: var(--gold); border: 1px solid rgba(242,201,76,.4); }
+  .m-h { font-size: 6pt; text-transform: uppercase; letter-spacing: 2px; color: #8a8a8a; margin: 2.5mm 0 1.5mm; }
+  .msub { font-size: 6pt; color: #9a9a9a; margin-top: .4mm; }
+  .star { color: var(--gold); font-weight: 700; }
+  .card { background: #151515; border: 1px solid #262626; border-radius: 7px; padding: 2mm; margin-bottom: 1.6mm; display: flex; gap: 2mm; align-items: center; }
+  .av { width: 7.5mm; height: 7.5mm; border-radius: 5px; background: linear-gradient(135deg, var(--gold), var(--gold-2)); color: #111; font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 8pt; flex-shrink: 0; }
+  .nm { font-size: 7pt; font-weight: 700; color: #fff; }
+  .trk { display: flex; gap: 2.5mm; align-items: center; background: linear-gradient(90deg, rgba(242,201,76,.12), transparent); border-radius: 7px; padding: 2.5mm; margin-bottom: 1.6mm; }
+  .car { width: 8.5mm; height: 8.5mm; border-radius: 50%; background: rgba(242,201,76,.18); border: 1.5px solid rgba(242,201,76,.5); display: flex; align-items: center; justify-content: center; font-size: 10pt; flex-shrink: 0; }
+  .eta { font-size: 12pt; font-weight: 800; color: #fff; }
+  .bar { height: 1.6mm; background: rgba(255,255,255,.1); border-radius: 4px; overflow: hidden; margin-top: 1.2mm; }
+  .bar > i { display: block; height: 100%; width: 62%; background: linear-gradient(90deg, var(--gold), #34d399); }
+  .btn { background: linear-gradient(180deg, var(--gold), var(--gold-2)); color: #111; font-weight: 800; font-size: 7.5pt; text-align: center; padding: 2.3mm; border-radius: 7px; margin-top: 1.6mm; }
+  .mapbg { height: 24mm; border-radius: 7px; background: linear-gradient(135deg, #12261f, #0c0c0c); border: 1px solid #223; position: relative; overflow: hidden; margin-bottom: 1.6mm; }
+  .mapbg::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px); background-size: 6mm 6mm; }
+  .mdot { position: absolute; width: 2.2mm; height: 2.2mm; border-radius: 50%; background: var(--gold); box-shadow: 0 0 4px var(--gold); }
+  .adzone {
+    border: 2px dashed var(--gold); border-radius: 8px;
+    background: linear-gradient(180deg, rgba(242,201,76,.20), rgba(242,201,76,.05));
+    padding: 3mm 2mm; text-align: center; box-shadow: 0 0 12px rgba(242,201,76,.35);
+  }
+  .adzone .t { color: var(--gold); font-weight: 800; font-size: 8pt; letter-spacing: .5px; }
+  .adzone .s { color: #eacf74; font-size: 6pt; margin-top: .8mm; }
+  .cap { margin-top: 2mm; }
+  .cap .ct { color: var(--gold); font-weight: 800; font-size: 11pt; }
+  .cap .cs { color: var(--muted); font-size: 8.5pt; margin-top: .8mm; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<section class="slide cover">
+  <div class="clogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div>
+  <h1>Reklam &amp; Sponsorluk Sunumu</h1>
+  <div class="rule"></div>
+  <div class="sub">"Markanız bir ilanda değil, İzmir'in cebinde yaşasın."</div>
+  <div class="tag">İZMİR'İN PAYLAŞIMLI YOLCULUK PLATFORMU</div>
+</section>
+
+<!-- SLAYT 1 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">01 · AÇILIŞ</div></div>
+  <div class="body">
+    <div class="kicker">Rakam Konuşur</div>
+    <div class="quote">"Biz size reklam alanı satmıyoruz. Size 22.000 kişilik bir aileye her gün girme hakkı veriyoruz — üstelik daha 2 aylıkken."</div>
+    <div class="talk">"Bu rakamı aklınızda tutun: 22.000. Ve şunu da tutun: 2 ay. Bu sunum bittiğinde, bu ikisinin sizin için ne anlama geldiğini asla unutmayacaksınız."</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 2 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">02 · FERXGO NEDİR</div></div>
+  <div class="body">
+    <div class="kicker">Ferxgo Nedir?</div>
+    <p class="lead">Ferxgo, İzmir'in <b style="color:var(--gold)">paylaşımlı yolculuk</b> platformudur. Dünyada Uber, Türkiye'de Martı Tag'in kanıtladığı model — ama daha güvenli ve daha kaliteli kurulmuş hâli.</p>
+    <ul class="feat">
+      <li>❌ Korsan taksi değiliz. Komisyon avcısı değiliz.</li>
+      <li>✅ İnsanları güvenli, <b>doğrulanmış sürücülerle</b> buluşturan bir topluluk.</li>
+      <li>✅ Kadın sürücü–kadın yolcu güvenlik katmanı, favori sürücü, anlık radar takibi.</li>
+    </ul>
+    <div class="talk">"Karşınızda bir 'taksi durağı' değil, her gün büyüyen dijital bir topluluk var. Ve o topluluğun tam ortasında — reklam alanınız."</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 3 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">03 · SİSTEMİN GÜZELLİĞİ</div></div>
+  <div class="body">
+    <div class="kicker">Biz Nereye Giriyoruz?</div>
+    <p class="lead">Bir billboard yolun kenarında durur, insan geçer gider. Gazete ilanı çöpe atılır. TV reklamı gelince kanal değiştirilir. <b style="color:var(--gold)">Ferxgo öyle değil — insanın hayatının içine giriyor:</b></p>
+    <ul class="feat">
+      <li>📱 <b>Cebine giriyoruz</b> — telefonunu açtığı an markanız orada.</li>
+      <li>🏠 <b>Evine giriyoruz</b> — kanepesinde otururken araç çağırırken markanızı görüyor.</li>
+      <li>👨‍👩‍👧‍👦 <b>Ailesinin tam içine giriyoruz</b> — araca bindiğinde yanında eşi, çocuğu, annesi var. Bir kişiye gösterdiğimiz reklamı aslında bütün aile görüyor.</li>
+    </ul>
+    <div class="quote">Reklamınız bir yerde "asılı durmuyor" — insanın günlük hayatına misafir oluyor.</div>
+    <div class="talk">"Düşünün: adam telefonunu açıyor, araç bekliyor, elinde başka iş yok, gözü ekranda. O anki dikkat, dünyadaki en pahalı dikkattir. Ve o ekranda sizin markanız var."</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 4 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">04 · BÜYÜME HİKÂYESİ</div></div>
+  <div class="body">
+    <div class="kicker">2 Ayda 22.000 Kayıt</div>
+    <table>
+      <tr><th>Gösterge</th><th>Rakam</th></tr>
+      <tr><td>Kayıtlı müşteri</td><td class="big">20.000</td></tr>
+      <tr><td>Kayıtlı sürücü</td><td class="big">2.000</td></tr>
+      <tr><td>Toplam topluluk</td><td class="big">22.000</td></tr>
+      <tr><td>Günlük ortalama yeni kayıt</td><td class="big">~370 kişi/gün</td></tr>
+    </table>
+    <div class="proj">
+      <div class="proj-item"><span>Bugün</span><b>22.000</b></div>
+      <div class="proj-arrow">→</div>
+      <div class="proj-item"><span>6 ay sonra</span><b>60.000</b></div>
+      <div class="proj-arrow">→</div>
+      <div class="proj-item hot"><span>Yıl sonu</span><b>100.000+</b></div>
+    </div>
+    <div class="quote">Bugün girmek, şirket daha küçükken hissesini almak gibidir — 6 ayda kitleniz 3 katına çıkıyor. Büyümesini beklemeyin, büyürken içinde olun.</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 4B -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">05 · KİTLEMİZ KİM?</div></div>
+  <div class="body">
+    <div class="kicker">Kime Ulaşıyorsunuz?</div>
+    <p class="lead">Bu sıradan bir kalabalık değil. Ferxgo kitlesi tam olarak yüksek bütçeli markaların aradığı profildir:</p>
+    <ul class="feat">
+      <li>🚗 <b>Araç ve yol dünyasının tam içinde</b> — otomobil, sigorta, akaryakıt, lastik markalarının birebir hedefi.</li>
+      <li>👔 <b>Karar veren, harcama gücü olan yetişkinler</b> — çalışan, hareket eden, cüzdanı açık kesim.</li>
+      <li>👨 <b>Erkek-ağırlıklı profil</b> — sigorta, otomotiv, inşaat gibi sektörlerin en çok aradığı demografi.</li>
+    </ul>
+    <div class="quote">Reklamınızı "herkese" değil, tam da ürününüzü alacak kişiye gösteriyoruz.</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 5 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">06 · DÜNYA BUNU GÖRDÜ</div></div>
+  <div class="body">
+    <div class="kicker">Kanıtlanmış Model</div>
+    <p class="lead">Bu bir hayal değil, dünyanın en büyük şirketlerinin kanıtladığı bir model:</p>
+    <ul class="feat">
+      <li><b>Uber</b>, yolculuk ekranına reklam koyan "Journey Ads" işini kurdu ve reklam gelirini <b>yıllık 1 milyar doları aşan</b> bir kola dönüştürdü. Neden? Çünkü yolcunun dikkati o ekrana <b>kilitli</b>.</li>
+      <li><b>Martı Tag</b> Türkiye'de paylaşımlı yolculuğun para kazandığını ispatladı.</li>
+      <li><b>Uygulama içi reklam</b> dünyada en yüksek "hatırlanma oranına" sahip mecralardan biri — çünkü izleyici kaçamıyor.</li>
+    </ul>
+    <div class="quote">Devler milyar dolarlık bütçelerle bunu doğruladı. Biz aynısını İzmir'e getirdik — siz de bu treni İzmir'de ilk yakalayanlardan olun.</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 6 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">07 · NEDEN BİZİ YENEMEZLER</div></div>
+  <div class="body">
+    <div class="kicker">Esir Dikkat</div>
+    <table>
+      <tr><th>Mecra</th><th>İzleyici ne yapıyor?</th><th>Dikkat</th></tr>
+      <tr><td>Billboard</td><td>2 saniyede geçip gidiyor</td><td>Çok düşük</td></tr>
+      <tr><td>Instagram</td><td>Parmakla kaydırıp geçiyor</td><td>Düşük</td></tr>
+      <tr><td>TV reklamı</td><td>Kanal değiştiriyor</td><td>Düşük</td></tr>
+      <tr><td><b style="color:var(--gold)">Ferxgo (yolda/beklerken)</b></td><td><b style="color:var(--gold)">Ekrana kilitlenmiş, başka işi yok</b></td><td class="big">En yüksek</td></tr>
+    </table>
+    <ul class="feat" style="margin-top:2mm">
+      <li>🎯 <b>Hedefli</b> — Kimin nerede olduğunu biliyoruz. Dükkânınızın 500 m yakınına bırakılan yolcuya, tam o an reklamınızı gösterebiliriz.</li>
+      <li>👆 <b>Tıklanabilir</b> — Gören değil, gelen müşteri. Reklama dokunur, sizi arar, yol tarifi alır.</li>
+      <li>📊 <b>Ölçülebilir</b> — Kaç kişi gördü, kaç kişi tıkladı, hepsini rapor ediyoruz. Billboard bunu asla veremez.</li>
+    </ul>
+    <div class="quote">Billboard "gören" satar. Ferxgo "gelen" satar.</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT: REKLAM ALANLARI -->
+<section class="slide" style="padding-top:11mm;padding-bottom:8mm;">
+  <div class="header" style="margin-bottom:5mm;"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">08 · REKLAM ALANLARI</div></div>
+  <div class="body">
+    <div class="kicker" style="margin-bottom:3mm;">Nerede Görüneceksiniz? — Uygulamada Canlı</div>
+    <p class="lead" style="margin-bottom:1mm;font-size:11.5pt;">Reklamınız tam olarak şu ekranlarda, şu köşede görünür. Her alanda sektörler dönüşümlü çıkar — ama <b style="color:var(--gold)">her sektörde tek marka</b>, rakibiniz giremez.</p>
+    <div class="mockrow">
+
+      <!-- Telefon 1: Müşteri Ana Ekran -->
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="m-top"><div class="m-logo"><span class="w2">FER</span><span class="g2b">X</span><span class="g2b">GO</span></div><span class="pill em">● Çevrimiçi</span></div>
+          <div style="font-size:9pt;font-weight:700;color:#fff;">Merhaba 👋</div>
+          <div class="msub">Nereye gitmek istersiniz?</div>
+          <div class="m-h">Reklam</div>
+          <div class="adzone"><div class="t">REKLAM ALANINIZ</div><div class="s">Ana sayfa banner · markanız burada</div></div>
+          <div class="m-h">Yakındaki sürücüler</div>
+          <div class="card"><div class="av">M</div><div><div class="nm">Mehmet K.</div><div class="msub"><span class="star">★ 4.92</span> · 3 dk uzakta</div></div></div>
+          <div class="card"><div class="av">A</div><div><div class="nm">Ayşe D.</div><div class="msub"><span class="star">★ 4.88</span> · Kadın sürücü</div></div></div>
+          <div class="btn">Sürücü Çağır</div>
+        </div>
+        <div class="cap"><div class="ct">① Ana Sayfa Banner</div><div class="cs">Tüm sektörler · dönüşümlü</div></div>
+      </div>
+
+      <!-- Telefon 2: Aktif Yolculuk (esir dikkat) -->
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="m-top"><span class="pill em">● Aktif Yolculuk</span><span class="pill em">Üye sürücü yolda</span></div>
+          <div class="trk">
+            <div class="car">🚗</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:5.7pt;letter-spacing:1px;color:#eacf74;font-weight:700;">ÜYE SÜRÜCÜ YOLDA</div>
+              <div><span class="eta">3</span> <span class="msub">dk kaldı · 1.2 km</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+          <div class="card"><div class="av">M</div><div style="flex:1;min-width:0;"><div class="nm">Mehmet K. <span class="pill gd">5+ yıl</span></div><div class="msub"><span class="star">★ 4.92</span> · 1.240 yolculuk</div></div></div>
+          <div class="card" style="display:block;"><div class="m-h" style="margin:0 0 1mm;">Araç</div><div style="display:flex;justify-content:space-between;align-items:center;gap:1mm;"><div class="nm">Fiat Egea <span class="msub">Beyaz · 2022</span></div><span class="pill gd">35 ABC 123</span></div></div>
+          <div class="m-h">Reklam</div>
+          <div class="adzone"><div class="t">REKLAM ALANINIZ</div><div class="s">Yolculuk takip · esir dikkat anı</div></div>
+        </div>
+        <div class="cap"><div class="ct">② Yolculuk Takip</div><div class="cs">Esir dikkat · Platin</div></div>
+      </div>
+
+      <!-- Telefon 3: Radar -->
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="m-top"><div class="m-logo" style="font-size:9pt;"><span class="w2">Radar</span></div><span class="pill gd">İzmir</span></div>
+          <div class="mapbg">
+            <span class="mdot" style="left:16mm;top:7mm;"></span>
+            <span class="mdot" style="left:40mm;top:12mm;"></span>
+            <span class="mdot" style="left:28mm;top:16mm;"></span>
+            <div class="adzone" style="position:absolute;left:2mm;right:2mm;bottom:2mm;padding:2mm;"><div class="t" style="font-size:7pt;">REKLAM ALANINIZ</div></div>
+          </div>
+          <div class="m-h">Yakındaki üye sürücüler</div>
+          <div class="card"><div class="av">M</div><div style="flex:1;min-width:0;"><div class="nm">Mehmet K. <span class="pill gd">❤ 128</span></div><div class="msub"><span class="star">★ 4.92</span> · 3 dk</div></div></div>
+          <div class="card"><div class="av">A</div><div style="flex:1;min-width:0;"><div class="nm">Ayşe D. <span class="pill em">Kadın Sürücü</span></div><div class="msub"><span class="star">★ 4.88</span> · 5 dk</div></div></div>
+          <div class="card"><div class="av">S</div><div style="flex:1;min-width:0;"><div class="nm">Serkan T. <span class="pill gd">❤ 96</span></div><div class="msub"><span class="star">★ 4.90</span> · 6 dk</div></div></div>
+        </div>
+        <div class="cap"><div class="ct">③ Radar / Harita</div><div class="cs">Orta segment</div></div>
+      </div>
+
+    </div>
+    <div style="margin-top:2mm;color:var(--muted);font-size:9.5pt;text-align:center;">Ayrıca <b style="color:#ddd;">sürücü paneli</b> (gün boyu açık) ve <b style="color:#ddd;">sponsorlu bildirim</b> alanları · <b style="color:var(--gold);">rakibiniz bu alanlara giremez.</b></div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 7 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">09 · ERİŞİM MATEMATİĞİ</div></div>
+  <div class="body">
+    <div class="kicker">Reklamınız Kaç Kez Cebe Giriyor?</div>
+    <div class="note">Muhafazakâr tahmin — gerçek uygulama verisiyle netleştirilir.</div>
+    <table>
+      <tr><th>Kaynak</th><th>Hesap</th><th>Günlük gösterim</th></tr>
+      <tr><td>Sürücüler (gün boyu uygulama açık)</td><td>2.000 × ~40 bakış</td><td class="big">~80.000</td></tr>
+      <tr><td>Aktif müşteriler</td><td>~4.000 × ~5 bakış</td><td class="big">~20.000</td></tr>
+      <tr><td><b>Toplam günlük gösterim</b></td><td></td><td class="big">~100.000</td></tr>
+      <tr><td><b>Aylık gösterim</b></td><td></td><td class="big">~3.000.000</td></tr>
+    </table>
+    <div class="quote">Ayda ~3 milyon kez markanız birinin cebinde beliriyor. "Aile çarpanıyla" gerçek görülme çok daha yüksek.</div>
+    <div class="talk">"İzmir'de hangi billboard size ayda 3 milyon kez, üstelik tıklanabilir, üstelik tam hedefinizdeki insana görünme sözü verebilir? Hiçbiri."</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 8 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">10 · SPONSORUN KASASI</div></div>
+  <div class="body">
+    <div class="kicker">Reklam Değil, Para Basan Makine</div>
+    <div class="cols">
+      <div>
+        <div class="note">Önce erişim → potansiyel müşteri (Platin sponsor)</div>
+        <table>
+          <tr><th>Adım</th><th>Değer</th></tr>
+          <tr><td>Yıllık gösterim</td><td class="big">25.000.000</td></tr>
+          <tr><td>Tıklayan (%2)</td><td class="big">500.000 kişi</td></tr>
+          <tr><td>Potansiyel müşteri</td><td class="big">binlerce</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="note">Tek satış bile reklam bedelini çıkarır</div>
+        <table>
+          <tr><th>Sektör</th><th>Tek müşteri değeri</th><th>10 M'yi çıkarması için</th></tr>
+          <tr><td>🏗️ İnşaat / Emlak</td><td>~4.000.000 TL</td><td class="big">sadece 3 satış</td></tr>
+          <tr><td>🚗 Otomotiv</td><td>~1.500.000 TL</td><td class="big">sadece 7 araç</td></tr>
+          <tr><td>🛡️ Sigorta</td><td>~20.000 TL/poliçe</td><td class="big">~500 poliçe</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="quote">İnşaat firmasıysanız yıl boyu SADECE 3 daire, otomobil firmasıysanız SADECE 7 araç satmanız tüm reklam bedelini çıkarır. Üstünü koyduğumuzda potansiyel ciro yüz milyonları buluyor.</div>
+    <div class="talk">"Ben size gider satmıyorum. Koca yıl boyunca sadece 3 daire, sadece 7 araba. Bunu zaten çıkarırsınız — gerisi kâr. Biz binlerce potansiyel müşteriyi cebine kadar getiriyoruz, kaç kişinin tıkladığını tek tek sayarak."</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 9 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">11 · SÜREKLİLİK</div></div>
+  <div class="body">
+    <div class="kicker">Bir Kez Değil, Her Ay — Reklam Açık Bir Musluktur</div>
+    <p class="lead">Tek seferlik reklam tek bir dalga yaratır, sonra biter. Ama müşteri <b style="color:var(--gold)">her gün</b> yola çıkıyor. En akıllı sponsor, musluğu açık tutandır:</p>
+    <ul class="feat">
+      <li>💧 <b>Sürekli görünürlük = sürekli müşteri akışı.</b> Kesince akış durur, kimse sizi hatırlamaz.</li>
+      <li>📈 <b>Kitle her ay büyüyor</b> — aynı anlaşma her ay daha çok kişiye ulaşır. Kalan sponsor, artan erişimi bedavaya alır.</li>
+      <li>🔁 <b>Her ay daha iyi performans</b> — veri biriktikçe hangi saat, bölge, görsel daha çok tıklıyor, hedeflemeyi optimize ediyoruz.</li>
+      <li>🚪 <b>Yeriniz boş kalmaz</b> — çıkarsanız o alanı rakibiniz kapar, müşteri artık onun reklamını görür.</li>
+    </ul>
+    <div class="quote">Reklamı kesmek, tabelanızın ışığını kapatmaktır — dükkân yerinde, ama kimse göremiyor.</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 10 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">12 · HEDEF SEKTÖRLER</div></div>
+  <div class="body">
+    <div class="kicker">Kimler Reklam Vermeli</div>
+    <table>
+      <tr><th>Sektör</th><th>Neden tam size göre</th></tr>
+      <tr><td>🛡️ <b>Sigorta</b></td><td>Araç ve yol dünyasının tam içindeki kitle</td></tr>
+      <tr><td>🚗 <b>Otomotiv / bayiler</b></td><td>Binlerce sürücü, doğrudan müşteri profili</td></tr>
+      <tr><td>🏗️ <b>İnşaat / emlak</b></td><td>Harcama gücü olan, karar veren yetişkin kitle</td></tr>
+      <tr><td>⛽ <b>Akaryakıt / lastik / oto servis</b></td><td>Her gün yolda olan hedef kitle</td></tr>
+      <tr><td>🏦 <b>Banka / finans</b></td><td>Taşıt kredisi, mevduat için ideal demografi</td></tr>
+      <tr><td>🍽️ <b>Alt kategoriler</b></td><td>Restoran, kafe, AVM, klinik de yerel pakette yer alır</td></tr>
+    </table>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT 11 -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">13 · KITLIK &amp; ACİLİYET</div></div>
+  <div class="body">
+    <div class="kicker">Erken Girenin Ayrıcalığı — Önce Yerini Al</div>
+    <ul class="feat">
+      <li>🔒 <b>Sektörünüzde tek sponsor — rakibinize kapıyı kapatırsınız.</b> Her kategoride yalnızca bir Platin sponsor olur. Siz aldığınız an, rakibiniz o alana <b>giremez</b>. Ferxgo'yu açan binlerce kişi sizin markanızı görür, rakibinizinkini değil. Bu sadece reklam değil — rakibin önünü kesmektir.</li>
+      <li>🔐 <b>Bugünün şartını kilitleyin — büyümenin bedelini ödemeyin.</b> Kitle her gün ~370 kişi büyüyor: bugün 22.000, yıl sonu 100.000+. Kitle büyüdükçe reklam alanının değeri de artar. Erken giren sponsor bugünkü şartı sabitler; yani <b>"küçük kitle" fiyatına girer, "büyük kitle"ye ulaşır.</b> Sonradan gelen her yeni kayıt, size bedava eklenen ekstra erişimdir. Gelecekteki zamlar sizi etkilemez.</li>
+      <li>⏳ <b>Beklemenin bedeli her gün artıyor.</b> Bugün girmezseniz, yarın aynı bütçeye daha az pay ve daha yüksek giriş şartı demek. Kalabalıklaşan bir caddede kira her gün artar — ilk kiracı hem ucuza tutar hem de en görünür köşeyi kapar.</li>
+      <li>👑 <b>İlk olan, "o" marka olur.</b> Ferxgo ile ilk özdeşleşen marka akılda kalır ve lider konumunu satın alır. Sonradan gelenler artık kapılmış alanların arasından seçmek zorunda kalır.</li>
+    </ul>
+    <div class="quote">Reklam alanı, gitgide kalabalıklaşan işlek bir caddedeki köşe dükkân gibidir. Kirayı bugün kilitleyen, cadde patlayınca hâlâ eski kirayı öder — ama kapısının önünden 5 kat insan geçer. Geç kalan ya çok daha pahalıya girer, ya da o köşeyi rakibine kaptırır.</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- SLAYT: MARKA HİKAYESİ -->
+<section class="slide">
+  <div class="header"><div class="hlogo logo-text"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div><div class="hnum">14 · MARKA HİKÂYESİ</div></div>
+  <div class="body">
+    <div class="kicker">İsmimiz Ne Anlatıyor?</div>
+    <div style="text-align:center;margin:1mm 0 6mm;">
+      <div class="logo-text" style="font-size:46pt;"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div>
+    </div>
+    <div class="cols">
+      <div style="background:#131313;border:1px solid #2a2a2a;border-radius:10px;padding:6mm;">
+        <div style="color:var(--gold);font-size:30pt;font-weight:800;margin-bottom:3mm;">FER</div>
+        <div style="font-size:12.5pt;line-height:1.5;color:#eaeaea;"><b style="color:#fff;">Ferdi</b> — kurucunun imzası. Arkasında <b style="color:var(--gold);">ismi olan</b>, sorumluluğunu taşıyan, güven veren bir marka.</div>
+      </div>
+      <div style="background:#131313;border:1px solid var(--gold);border-radius:10px;padding:6mm;box-shadow:0 0 0 1px rgba(242,201,76,0.25) inset;">
+        <div style="color:var(--gold);font-size:30pt;font-weight:800;margin-bottom:3mm;">X</div>
+        <div style="font-size:12.5pt;line-height:1.5;color:#eaeaea;"><b style="color:var(--gold);">Kesişim noktası</b> — yolcu ile sürücünün yolu X'te buluşur; iki insanın rotasının kesiştiği yer.</div>
+      </div>
+      <div style="background:#131313;border:1px solid #2a2a2a;border-radius:10px;padding:6mm;">
+        <div style="color:var(--gold);font-size:30pt;font-weight:800;margin-bottom:3mm;">GO</div>
+        <div style="font-size:12.5pt;line-height:1.5;color:#eaeaea;"><b style="color:var(--gold);">Hareket.</b> "Hadi, yola çık." Aksiyon, hız ve markanın çağrısı.</div>
+      </div>
+    </div>
+    <div class="quote">Yolcuyla sürücünün yolunun kesiştiği (X) ve birlikte yola çıktığı (GO), arkasında ismim olan (FER) marka.</div>
+  </div>
+  <div class="footer">FERXGO</div>
+</section>
+
+<!-- CLOSING -->
+<section class="slide closing">
+  <div class="logo-text" style="font-size:52pt;margin-bottom:10mm;"><span class="w">FER</span><span class="g2">X</span><span class="g2">GO</span></div>
+  <div class="big-quote">"İzmir yola çıkıyor ve her sabah büyüyor. Markanız <span class="g">yolcu koltuğunda</span> mı olacak, yoksa <span class="g">dışarıda geçtiğini</span> mi izleyecek?"</div>
+  <div style="margin-top:10mm;color:#777;font-size:11pt;letter-spacing:2px;">İLETİŞİM · HEMEN BAŞLAYIN</div>
+</section>
+
+</body>
+</html>

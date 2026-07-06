@@ -1,0 +1,38 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;box-sizing:border-box}
+body{background:#000;font-family:"Arial Black","Segoe UI",Arial,sans-serif}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cell{height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 50% 0%,#1c1c1c,#000);border:1px solid #1c1c1c}
+.lg{font-weight:900;letter-spacing:-2px;font-size:56px;display:flex;align-items:center}
+.w{color:#fff}.g{color:#EDBA3E}
+.lbl{margin-top:16px;font-family:Arial;font-weight:400;font-size:12px;letter-spacing:2px;color:#8a8a8a}
+
+/* dama deseni ile dolu X (background-clip:text) */
+.dam{display:inline-block;color:transparent;-webkit-background-clip:text;background-clip:text;
+  font-weight:900;font-size:1.12em;line-height:.9}
+/* altin + siyah */
+.dam.gold{background:conic-gradient(#EDBA3E 25%,#141414 0 50%,#EDBA3E 0 75%,#141414 0);background-size:.15em .15em}
+/* beyaz + siyah klasik taksi */
+.dam.wb{background:conic-gradient(#fff 25%,#141414 0 50%,#fff 0 75%,#141414 0);background-size:.15em .15em}
+/* altin + beyaz */
+.dam.gw{background:conic-gradient(#EDBA3E 25%,#fff 0 50%,#EDBA3E 0 75%,#fff 0);background-size:.15em .15em}
+.it{font-style:italic}
+/* ince desen */
+.fine{background-size:.10em .10em}
+</style></head><body>
+<div class="grid">
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="dam gold">X</span><span class="g">GO</span></div><div class="lbl">1 · DAMALI X · altin+siyah</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="dam wb">X</span><span class="g">GO</span></div><div class="lbl">2 · DAMALI X · beyaz+siyah (klasik taksi)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="dam gw">X</span><span class="g">GO</span></div><div class="lbl">3 · DAMALI X · altin+beyaz</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="dam gold it">X</span><span class="g">GO</span></div><div class="lbl">4 · DAMALI X · italik (hiz)</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="dam wb it fine">X</span><span class="g">GO</span></div><div class="lbl">5 · DAMALI X · ince desen italik</div></div>
+
+  <div class="cell"><div class="lg"><span class="w">FERI</span><span class="dam gold">X</span><span class="w">GO</span></div><div class="lbl">6 · DAMALI X · GO beyaz</div></div>
+
+</div></body></html>
