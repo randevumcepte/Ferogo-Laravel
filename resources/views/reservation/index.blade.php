@@ -666,8 +666,8 @@
         });
     };
 </script>
-<script async defer
-    src="https://maps.googleapis.com/maps/api/js?key={{ $googleMapsKey }}&libraries=places&callback=initMap&language=tr&region=TR"></script>
+<script async
+    src="https://maps.googleapis.com/maps/api/js?key={{ $googleMapsKey }}&libraries=places&callback=initMap&language=tr&region=TR&loading=async"></script>
 
 {{-- Form interaction & live fare --}}
 <script>
