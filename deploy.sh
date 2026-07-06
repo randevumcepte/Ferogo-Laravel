@@ -34,6 +34,10 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Yeni surum bulundu: $REMOTE — deploy basl
 # ENGELLEMESIN diye zorla origin/main'e esitle. Untracked dosyalar (.env vb.) korunur.
 git reset --hard origin/main --quiet
 
+# Reset sonrasi deploy.sh'in kendisinin +x izni korunsun (Windows'tan commit
+# edilmis dosyalarda mode bit bazen kayboluyor).
+chmod +x "$0" 2>/dev/null || true
+
 # Bekleyen migration'lari uygula. Bir migration hata verse bile deploy'u durdurma
 # (yoksa cache temizlenmez ve sunucu eski surumde takili kalir).
 "$PHP_BIN" artisan migrate --force || echo "  ! migrate hata verdi, devam ediliyor"
