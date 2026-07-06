@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Modules\Marketing\Models;
+
+use App\Modules\Tenant\Models\Tenant;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+/**
+ * Reklam / Sponsorluk alanı.
+ *
+ * Sunumdaki "REKLAM ALANLARI" slaytının veri karşılığı: her uygulama slotu (placement)
+ * için tek aktif reklam gösterilir. Süper admin panelinden yönetilir.
+ */
+class Advertisement extends Model
+{
+    use HasFactory;
+
+    /** Uygulamadaki reklam slotları → görünen etiket */
+    public const PLACEMENTS = [
+        'home_banner'            => 'Ana Sayfa Banner',
+        'ride_tracking'          => 'Yolculuk Takip (Platin)',
+        'radar_map'              => 'Radar / Harita',
+        'driver_panel'           => 'Sürücü Paneli',
+        'sponsored_notification' => 'Sponsorlu Bildirim',
+    ];
+
+    /** Slot segment/açıklaması (boş alan görselinde gösterilir) */
+    public const PLACEMENT_SEGMENTS = [
+        'home_banner'            => 'Standart · tüm sektörler',
+        'ride_tracking'          => 'Platin · esir dikkat anı',
+        'radar_map'              => 'Orta segment',
+        'driver_panel'           => 'Gün boyu açık',
+        'sponsored_notification' => 'Push bildirimi',
+    ];
+
+    /** Hedef sektörler (sunum: Slayt 12) */
+    public const SECTORS = [
+        'sigorta'          => 'Sigorta',
+        'otomotiv'         => 'Otomotiv / Bayi',
+        'insaat_emlak'     => 'İnşaat / Emlak',
+        'akaryakit_lastik' => 'Akaryakıt / Lastik / Servis',
+        'banka_finans'     => 'Banka / Finans',
+        'yerel'            => 'Yerel (Restoran / AVM / Klinik)',
+        'diger'            => 'Diğer',
+    ];
+
+    protected $fillable = [
+        'tenant_id',
+        'placement',
+        'sector',
+        'title',
+        'sponsor_name',
+        'description',
+        'image_url',
+        'link_url',
+        'cta_text',
+        'is_active',
+        'sort_order',
+        'starts_at',
+        'ends_at',
+        'impressions',
+        'clicks',
+    ];
+
+    protected $casts = [
+        'is_active'  => 'boolean',
+        'starts_at'  => 'datetime',
+        'ends_at'    => 'datetime',
+        'impressions' => 'integer',
+        'clicks'      => 'integer',
+    ];
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    /** Yayında olan (aktif + tarih penceresi içinde) reklamlar */
+    public function scopeLive(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where(fn (Builder $q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
+    }
+
+    /** Bir slot için gösterilecek aktif reklam (yoksa null → boş alan gösterilir) */
+    public static function activeFor(string $placement): ?self
+    {
+        return static::query()
+            ->where('placement', $placement)
+            ->live()
+            ->orderBy('sort_order')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    public function placementLabel(): string
+    {
+        return self::PLACEMENTS[$this->placement] ?? $this->placement;
+    }
+
+    public function placementSegment(): string
+    {
+        return self::PLACEMENT_SEGMENTS[$this->placement] ?? '';
+    }
+
+    /** Gösterim sayacını artır (blade render'ında çağrılır, modeli kirletmez) */
+    public function recordImpression(): void
+    {
+        static::query()->whereKey($this->getKey())->increment('impressions');
+    }
+}

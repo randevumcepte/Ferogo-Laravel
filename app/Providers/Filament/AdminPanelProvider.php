@@ -42,6 +42,7 @@ class AdminPanelProvider extends PanelProvider
                 'Müşteri',
                 'Filo',
                 'Çağrı Merkezi',
+                'Pazarlama',
                 'Konfigürasyon',
                 'Yasal',
                 'Sistem',

@@ -247,6 +247,9 @@
             @endif
 
 
+            {{-- Reklam alanı: Radar / Harita --}}
+            @include('partials.ad-slot', ['placement' => 'radar_map', 'class' => 'mb-8'])
+
             {{-- Section heading --}}
             <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
                 <div class="max-w-2xl">

@@ -346,6 +346,9 @@
         </section>
     @endif
 
+    {{-- Reklam alanı: Yolculuk Takip (Platin · esir dikkat) --}}
+    @include('partials.ad-slot', ['placement' => 'ride_tracking'])
+
     {{-- ===== Canlı Radar (yolculuk-yapin sayfasının embed versiyonu) ===== --}}
     <section class="rounded-3xl border border-white/10 bg-zinc-950 overflow-hidden">
         <div class="px-5 py-4 border-b border-white/5">

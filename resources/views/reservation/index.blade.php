@@ -168,6 +168,9 @@
                 <p class="text-sm sm:text-base text-zinc-400">Adresleri yazın, fiyat ekranda anında görünsün.</p>
             </div>
 
+            {{-- Reklam alanı: Ana Sayfa Banner --}}
+            @include('partials.ad-slot', ['placement' => 'home_banner', 'class' => 'mb-8'])
+
             @if($errors->any())
                 <div class="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200">
                     <div class="font-semibold mb-2">Lütfen aşağıdaki hataları düzeltin:</div>

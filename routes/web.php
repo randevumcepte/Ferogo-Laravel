@@ -10,12 +10,20 @@ use App\Modules\Driver\Http\Controllers\DriverApplicationController;
 use App\Modules\Driver\Http\Controllers\DriverPanelController;
 use App\Modules\Driver\Http\Controllers\DriverReservationController;
 use App\Modules\Legal\Http\Controllers\LegalConsentController;
+use App\Modules\Marketing\Models\Advertisement;
 use App\Modules\Payment\Http\Controllers\DriverPackageController;
 use App\Modules\Security\Http\Controllers\SecurityIncidentController;
 use App\Modules\Security\Http\Controllers\PanicAlertController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
+
+// Reklam tıklama takibi: tıklamayı sayar, sponsorun adresine yönlendirir.
+Route::get('/reklam/{advertisement}', function (Advertisement $advertisement) {
+    $advertisement->increment('clicks');
+
+    return redirect()->away($advertisement->link_url ?: url('/'));
+})->name('ad.click');
 
 // ─────────────────────────────────────────────────────────
 // SEO — sitemap.xml (yalnızca herkese açık, indekslenebilir sayfalar)
