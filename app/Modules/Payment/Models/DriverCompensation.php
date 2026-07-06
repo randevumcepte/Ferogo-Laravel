@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DriverCompensation extends Model
 {
+    // Laravel inflector "compensation"'ı uncountable sayıyor
+    // (driver_compensation olur, migration ise driver_compensations)
+    protected $table = 'driver_compensations';
+
     protected $fillable = [
         'driver_id',
         'no_show_report_id',
