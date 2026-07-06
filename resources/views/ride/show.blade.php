@@ -366,6 +366,9 @@
                             Liste 3 saniyede bir güncellenir. Sürücüler yolculuk aldıkça <span class="text-zinc-500">gri</span>, müsait olduklarında <span class="text-brand">altın</span> görünür.
                         </p>
                     </div>
+
+                    {{-- Reklam alanı: Radar sürücü listesi altı (kompakt / dikey) --}}
+                    @include('partials.ad-slot', ['placement' => 'radar_sidebar', 'compact' => true, 'class' => 'mt-1'])
                 </div>
             </div>
         </div>

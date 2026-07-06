@@ -23,6 +23,7 @@ class Advertisement extends Model
         'home_banner'            => 'Ana Sayfa Banner',
         'ride_tracking'          => 'Yolculuk Takip (Platin)',
         'radar_map'              => 'Radar / Harita',
+        'radar_sidebar'          => 'Radar Sürücü Listesi Altı',
         'driver_panel'           => 'Sürücü Paneli',
         'sponsored_notification' => 'Sponsorlu Bildirim',
     ];
@@ -32,6 +33,7 @@ class Advertisement extends Model
         'home_banner'            => 'Standart · tüm sektörler',
         'ride_tracking'          => 'Platin · esir dikkat anı',
         'radar_map'              => 'Orta segment',
+        'radar_sidebar'          => 'Sürücü listesi yanı · sürekli görünür',
         'driver_panel'           => 'Gün boyu açık',
         'sponsored_notification' => 'Push bildirimi',
     ];
