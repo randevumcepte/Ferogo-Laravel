@@ -4,6 +4,7 @@ namespace App\Filament\Resources\App\Modules\Driver\Models\Drivers\Tables;
 
 use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use App\Modules\Driver\Models\Driver;
+use App\Modules\Payment\Models\DriverPackage;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -282,6 +283,34 @@ class DriversTable
                                 ->title('Şifre güncellendi')
                                 ->body('E-posta: ' . $user->email . ' · Yeni şifre: ' . $data['password'] . ' · ' . $smsBadge)
                                 ->persistent()
+                                ->send();
+                        }),
+                    Action::make('grant_test_package')
+                        ->label('Test paketi ver (30 gün)')
+                        ->icon(\Filament\Support\Icons\Heroicon::OutlinedGift)
+                        ->color('info')
+                        ->requiresConfirmation()
+                        ->modalHeading('Test paketi ver')
+                        ->modalDescription('30 gün süreli ücretsiz test paketi oluşturulur. Sürücü hemen radar/dispatch havuzuna girer.')
+                        ->action(function (Driver $d) {
+                            $expires = now()->addDays(30);
+                            $pkg = DriverPackage::create([
+                                'driver_id'         => $d->id,
+                                'type'              => 'monthly',
+                                'duration_hours'    => 30 * 24,
+                                'price'             => 0.00,
+                                'starts_at'         => now(),
+                                'expires_at'        => $expires,
+                                'status'            => 'active',
+                                'payment_provider'  => 'manual_test',
+                                'payment_reference' => 'TEST-' . now()->format('YmdHis'),
+                                'paid_at'           => now(),
+                            ]);
+                            $d->update(['package_active_until' => $expires]);
+                            Notification::make()
+                                ->success()
+                                ->title('Test paketi verildi')
+                                ->body('Paket #' . $pkg->id . ' · Bitiş: ' . $expires->format('d.m.Y'))
                                 ->send();
                         }),
                     Action::make('approve_documents')
