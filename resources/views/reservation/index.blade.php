@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Ferxgo · İzmir Paylaşımlı Yolculuk Platformu')
+@section('title', 'FerXGo · İzmir Paylaşımlı Yolculuk Platformu')
 @section('description', 'İzmir\'de bağımsız üye sürücüler ile yolcuları buluşturan paylaşımlı yolculuk platformu. Şeffaf katkı payı, 7/24 platform erişimi.')
 
 @push('head')

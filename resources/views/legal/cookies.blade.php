@@ -1,14 +1,14 @@
 @extends('legal._layout')
 
-@section('title', 'Çerez Politikası · Ferxgo')
-@section('description', 'Ferxgo dijital platformunda kullanılan çerezler ve amaçları.')
+@section('title', 'Çerez Politikası · FerXGo')
+@section('description', 'FerXGo dijital platformunda kullanılan çerezler ve amaçları.')
 
 @section('legal-title', 'Çerez Politikası')
 
 @section('legal-body')
 
 <p>
-    Ferxgo web sitesinde ve mobil uygulamasında, kullanıcı deneyimini iyileştirmek, güvenliği sağlamak ve hizmet kalitesini
+    FerXGo web sitesinde ve mobil uygulamasında, kullanıcı deneyimini iyileştirmek, güvenliği sağlamak ve hizmet kalitesini
     artırmak amacıyla çerezler ve benzeri teknolojiler kullanılır. Bu metin, KVKK ve 5651 sayılı Kanun çerçevesinde hangi
     çerezlerin kullanıldığı hakkında bilgi verir.
 </p>

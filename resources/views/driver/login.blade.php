@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Sürücü Girişi · Ferxgo</title>
+    <title>Sürücü Girişi · FerXGo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <a href="{{ url('/') }}" class="inline-flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-                <span class="text-brand">●</span> Ferxgo
+                <span class="text-brand">●</span> FerXGo
             </a>
             <div class="mt-2 text-xs uppercase tracking-[0.3em] text-zinc-500">Sürücü Paneli</div>
         </div>
@@ -63,7 +63,7 @@
         </div>
 
         <div class="mt-6 text-center text-[11px] text-zinc-600">
-            © {{ date('Y') }} Ferxgo · Sürücü Paneli
+            © {{ date('Y') }} FerXGo · Sürücü Paneli
         </div>
     </div>
     @include('partials.mobile-action-bar')

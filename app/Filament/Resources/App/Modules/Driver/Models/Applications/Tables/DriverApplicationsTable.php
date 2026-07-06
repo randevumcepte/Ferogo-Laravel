@@ -183,7 +183,7 @@ class DriverApplicationsTable
                         $smsStatus = 'gonderilmedi';
                         try {
                             $phone   = preg_replace('/\s+/', '', $a->phone);
-                            $message = "Ferxgo surucu basvurun onaylandi! ferxgo.com/surucu-giris - "
+                            $message = "FerXGo surucu basvurun onaylandi! ferxgo.com/surucu-giris - "
                                      . "E-posta: {$data['email']} - Sifre: {$data['password']} - "
                                      . "Giris yapip profil ekranindan sifreni degistir.";
                             $client  = app(VoiceTelekomClient::class);

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Ferxgo · Paylaşımlı Yolculuk Platformu')</title>
-    <meta name="description" content="@yield('description', 'Ferxgo, bağımsız üye sürücüleri ve yolcuları buluşturan dijital paylaşımlı yolculuk platformudur. Şeffaf katkı payı, 7/24 platform erişimi.')">
+    <title>@yield('title', 'FerXGo · Paylaşımlı Yolculuk Platformu')</title>
+    <meta name="description" content="@yield('description', 'FerXGo, bağımsız üye sürücüleri ve yolcuları buluşturan dijital paylaşımlı yolculuk platformudur. Şeffaf katkı payı, 7/24 platform erişimi.')">
 
     @include('partials.seo')
 
@@ -119,7 +119,7 @@
                 <div class="text-2xl font-extrabold mb-3">
                     <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
                 </div>
-                <p class="leading-relaxed">Ferxgo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk platformudur. Yolculuk hizmeti üye sürücü ile yolcu arasında gerçekleşir; Ferxgo yalnızca aracılık ve eşleştirme hizmeti sunar.</p>
+                <p class="leading-relaxed">FerXGo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk platformudur. Yolculuk hizmeti üye sürücü ile yolcu arasında gerçekleşir; FerXGo yalnızca aracılık ve eşleştirme hizmeti sunar.</p>
             </div>
             <div>
                 <div class="text-white font-semibold mb-3">Yolculuk Kategorileri</div>
@@ -142,8 +142,8 @@
             </div>
         </div>
         <div class="border-t border-white/5 py-6 px-6 text-center text-[11px] text-zinc-500 leading-relaxed">
-            &copy; {{ date('Y') }} Ferxgo · Tüm hakları saklıdır<br>
-            <span class="opacity-75">Ferxgo bir dijital eşleştirme platformudur, ticari taşımacılık hizmeti sağlamaz. Yolculuk, bağımsız üye sürücü ile yolcu arasında gerçekleşir. Platform, taraflar arasında kişisel veri korumalı (KVKK 6698) bir aracılık hizmeti sunar.</span>
+            &copy; {{ date('Y') }} FerXGo · Tüm hakları saklıdır<br>
+            <span class="opacity-75">FerXGo bir dijital eşleştirme platformudur, ticari taşımacılık hizmeti sağlamaz. Yolculuk, bağımsız üye sürücü ile yolcu arasında gerçekleşir. Platform, taraflar arasında kişisel veri korumalı (KVKK 6698) bir aracılık hizmeti sunar.</span>
         </div>
     </footer>
     @endunless
@@ -172,7 +172,7 @@
             </div>
             <div class="px-6 pb-2">
                 <h2 id="legal-notice-title" class="text-2xl font-bold text-white leading-tight">
-                    Ferxgo hakkında<br>bilmeniz gerekenler
+                    FerXGo hakkında<br>bilmeniz gerekenler
                 </h2>
             </div>
 
@@ -182,7 +182,7 @@
                     <div>
                         <div class="font-semibold text-white mb-1">Paylaşımlı Yolculuk Platformu</div>
                         <p class="text-zinc-400 leading-relaxed text-[13px]">
-                            Ferxgo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk koordinasyon platformudur.
+                            FerXGo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk koordinasyon platformudur.
                             6563 sayılı E-Ticaret Kanunu kapsamında <strong class="text-zinc-200">aracı hizmet sağlayıcı</strong> sıfatıyla faaliyet gösterir;
                             ticari taşımacılık hizmeti sağlamaz.
                         </p>
@@ -207,7 +207,7 @@
                     <div>
                         <div class="font-semibold text-white mb-1">Hizmet Bölgesi</div>
                         <p class="text-zinc-400 leading-relaxed text-[13px]">
-                            Ferxgo şu anda <strong class="text-zinc-200">İzmir</strong>'de aktiftir. Havalimanı yolculuğu, şehir içi ve
+                            FerXGo şu anda <strong class="text-zinc-200">İzmir</strong>'de aktiftir. Havalimanı yolculuğu, şehir içi ve
                             kurumsal paylaşımlı yolculuk hizmetlerimiz mevcuttur. Hizmet kapsamımız yeni şehirlerle büyümeye devam etmektedir.
                         </p>
                     </div>

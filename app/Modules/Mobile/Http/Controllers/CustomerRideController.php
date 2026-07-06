@@ -100,7 +100,7 @@ class CustomerRideController extends Controller
         $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
             try {
                 $response = Http::withHeaders([
-                    'User-Agent'      => 'Ferxgo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
+                    'User-Agent'      => 'FerXGo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
                     'Accept-Language' => 'tr,en',
                 ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
                     'q'              => $q,

@@ -13,7 +13,7 @@ use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;
 
 /**
- * Ferxgo süper admin kontrol merkezi — anlık operasyon KPI, gelir, filo sağlığı,
+ * FerXGo süper admin kontrol merkezi — anlık operasyon KPI, gelir, filo sağlığı,
  * güvenlik alarmları ve bekleyen aksiyonlar tek ekranda.
  */
 class Dashboard extends BaseDashboard

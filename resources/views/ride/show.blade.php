@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Yolculuk Yap · Ferxgo · Paylaşımlı Yolculuk')
+@section('title', 'Yolculuk Yap · FerXGo · Paylaşımlı Yolculuk')
 @section('description', 'Şehir içi, havalimanı veya uzun mesafe — bağımsız üye sürücüler, konforlu araçlar, şeffaf katkı payı. 60 saniyede paylaşımlı yolculuk eşleştirmesi.')
 
 @php
@@ -264,7 +264,7 @@
                         <span class="text-zinc-500">şu an</span> hareket halinde.
                     </h2>
                     <p class="text-zinc-400 leading-relaxed">
-                        Konumunu paylaş, çevrendeki Ferxgo araçlarını gerçek zamanlı izle. Bu önizleme salt okunur — çağırmak için rezervasyon formuna geç.
+                        Konumunu paylaş, çevrendeki FerXGo araçlarını gerçek zamanlı izle. Bu önizleme salt okunur — çağırmak için rezervasyon formuna geç.
                     </p>
                 </div>
                 <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 backdrop-blur-sm shrink-0">
@@ -1076,9 +1076,9 @@
     <section class="relative px-6 py-20">
         <div class="max-w-7xl mx-auto">
             <div class="max-w-3xl mb-16">
-                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Neden Ferxgo</div>
+                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Neden FerXGo</div>
                 <h2 class="display-font text-4xl md:text-6xl text-white mb-6">
-                    Ferxgo deneyimi:<br>
+                    FerXGo deneyimi:<br>
                     <span class="text-zinc-500">net,</span> güvenli, <span class="text-zinc-500">profesyonel.</span>
                 </h2>
                 <p class="text-lg text-zinc-400 leading-relaxed">
@@ -1647,7 +1647,7 @@
             return results;
         } catch (err) {
             if (err.name === 'AbortError') return [];
-            console.warn('[Ferxgo] searchPlaces failed', err);
+            console.warn('[FerXGo] searchPlaces failed', err);
             return [];
         }
     }

@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Ferxgo süper admin hesabı oluştur / şifresini sıfırla.
+ * FerXGo süper admin hesabı oluştur / şifresini sıfırla.
  *
  *   php artisan ferxgo:make-admin
  *   php artisan ferxgo:make-admin --email=ferdi@ferxgo.com.tr --password=Xyz --name="Ferdi Korkmaz"
@@ -21,7 +21,7 @@ class MakeSuperAdminCommand extends Command
         {--name= : Ad Soyad}
         {--reset-password : Var olan hesabın şifresini sıfırla}';
 
-    protected $description = 'Ferxgo /admin paneline giriş yetkisi olan bir süper admin hesabı oluşturur veya şifreyi sıfırlar.';
+    protected $description = 'FerXGo /admin paneline giriş yetkisi olan bir süper admin hesabı oluşturur veya şifreyi sıfırlar.';
 
     public function handle(): int
     {
@@ -60,7 +60,7 @@ class MakeSuperAdminCommand extends Command
             }
         }
 
-        $name = $this->option('name') ?: ($existing?->name ?? $this->ask('Ad Soyad', 'Ferxgo Admin'));
+        $name = $this->option('name') ?: ($existing?->name ?? $this->ask('Ad Soyad', 'FerXGo Admin'));
         $password = $this->option('password') ?: \Illuminate\Support\Str::random(12);
 
         $data = [

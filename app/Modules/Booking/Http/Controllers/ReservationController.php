@@ -287,7 +287,7 @@ class ReservationController extends Controller
             try {
                 // İzmir geniş viewbox: lon_min, lat_max, lon_max, lat_min
                 $response = Http::withHeaders([
-                    'User-Agent' => 'Ferxgo/1.0 (+https://ferxgo.com.tr)',
+                    'User-Agent' => 'FerXGo/1.0 (+https://ferxgo.com.tr)',
                     'Accept-Language' => 'tr,en',
                 ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
                     'q' => $q,

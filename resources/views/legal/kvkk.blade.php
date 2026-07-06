@@ -1,21 +1,21 @@
 @extends('legal._layout')
 
-@section('title', 'KVKK Aydınlatma Metni · Ferxgo')
-@section('description', 'Ferxgo Kişisel Verilerin Korunması Kanunu (6698) kapsamında aydınlatma metni.')
+@section('title', 'KVKK Aydınlatma Metni · FerXGo')
+@section('description', 'FerXGo Kişisel Verilerin Korunması Kanunu (6698) kapsamında aydınlatma metni.')
 
 @section('legal-title', 'KVKK Aydınlatma Metni')
 
 @section('legal-body')
 
 <p>
-    Ferxgo olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında <strong>veri sorumlusu</strong> sıfatıyla,
+    FerXGo olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında <strong>veri sorumlusu</strong> sıfatıyla,
     paylaşımlı yolculuk platformumuzu kullanan kullanıcıların kişisel verilerinin korunmasına önem veriyoruz.
     Bu aydınlatma metni KVKK m.10 kapsamında hazırlanmıştır.
 </p>
 
 <h2>1. Veri Sorumlusu Kimliği</h2>
 <ul>
-    <li><strong>Unvan:</strong> Ferxgo</li>
+    <li><strong>Unvan:</strong> FerXGo</li>
     <li><strong>Adres:</strong> İzmir / Türkiye</li>
     <li><strong>İletişim:</strong> <a href="mailto:kvkk@ferxgo.com.tr">kvkk@ferxgo.com.tr</a></li>
     <li><strong>VERBİS Kayıt:</strong> Başvuru tamamlandığında bu alanda yayınlanacaktır.</li>
@@ -76,7 +76,7 @@
 
 <h2>6. Yurt Dışına Aktarım</h2>
 <p>
-    Ferxgo, kişisel verileri kural olarak Türkiye'de tutar. Zorunlu bulut altyapı entegrasyonlarında, KVKK Kurulu izinli veya
+    FerXGo, kişisel verileri kural olarak Türkiye'de tutar. Zorunlu bulut altyapı entegrasyonlarında, KVKK Kurulu izinli veya
     güvenli kabul edilen ülkelerdeki sağlayıcılarla çalışılır; bu durumda KVKK m.9 hükümleri uygulanır.
 </p>
 

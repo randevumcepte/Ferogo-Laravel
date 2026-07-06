@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Rezervasyonlarım · Ferxgo')
+@section('title', 'Rezervasyonlarım · FerXGo')
 
 @section('content')
 <div class="gradient-radial pt-24 pb-16 min-h-screen">

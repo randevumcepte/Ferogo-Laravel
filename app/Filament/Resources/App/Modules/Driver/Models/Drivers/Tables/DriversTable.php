@@ -189,7 +189,7 @@ class DriversTable
                         if (! empty($data['send_sms']) && $user->phone) {
                             try {
                                 $phone   = preg_replace('/\s+/', '', $user->phone);
-                                $message = "Ferxgo sifren guncellendi. Giris: ferxgo.com/surucu-giris - "
+                                $message = "FerXGo sifren guncellendi. Giris: ferxgo.com/surucu-giris - "
                                          . "E-posta: {$user->email} - Yeni sifre: {$data['password']} - "
                                          . "Girip profil ekranindan degistir.";
                                 $result  = app(VoiceTelekomClient::class)->sendSingle($phone, $message);
@@ -253,7 +253,7 @@ class DriversTable
                             if (! empty($data['send_sms']) && $user->phone) {
                                 try {
                                     $phone   = preg_replace('/\s+/', '', $user->phone);
-                                    $message = "Ferxgo sifren guncellendi. Giris: ferxgo.com/surucu-giris - "
+                                    $message = "FerXGo sifren guncellendi. Giris: ferxgo.com/surucu-giris - "
                                              . "E-posta: {$user->email} - Yeni sifre: {$data['password']} - "
                                              . "Girip profil ekranindan degistir.";
                                     $result  = app(VoiceTelekomClient::class)->sendSingle($phone, $message);

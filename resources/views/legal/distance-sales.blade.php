@@ -1,7 +1,7 @@
 @extends('legal._layout')
 
-@section('title', 'Mesafeli Satış Sözleşmesi · Ferxgo')
-@section('description', 'Ferxgo dijital üyelik paketleri mesafeli satış sözleşmesi.')
+@section('title', 'Mesafeli Satış Sözleşmesi · FerXGo')
+@section('description', 'FerXGo dijital üyelik paketleri mesafeli satış sözleşmesi.')
 
 @section('legal-title', 'Mesafeli Satış Sözleşmesi')
 
@@ -9,14 +9,14 @@
 
 <p>
     İşbu Mesafeli Satış Sözleşmesi, 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği
-    hükümleri çerçevesinde, Ferxgo Paylaşımlı Yolculuk Platformu üzerinden satın alınan <strong>dijital üyelik paketleri</strong>
+    hükümleri çerçevesinde, FerXGo Paylaşımlı Yolculuk Platformu üzerinden satın alınan <strong>dijital üyelik paketleri</strong>
     için düzenlenmiştir.
 </p>
 
 <h2>1. Taraflar</h2>
-<h3>Satıcı (Ferxgo)</h3>
+<h3>Satıcı (FerXGo)</h3>
 <ul>
-    <li>Unvan: Ferxgo</li>
+    <li>Unvan: FerXGo</li>
     <li>Adres: İzmir / Türkiye</li>
     <li>İletişim: <a href="mailto:destek@ferxgo.com.tr">destek@ferxgo.com.tr</a> · 0850 340 3039</li>
 </ul>
@@ -26,7 +26,7 @@
 
 <h2>2. Sözleşmenin Konusu</h2>
 <p>
-    Sözleşmenin konusu, Alıcı'nın Ferxgo Platformu üzerinden satın aldığı, niteliği ve fiyatı sözleşmede belirtilen
+    Sözleşmenin konusu, Alıcı'nın FerXGo Platformu üzerinden satın aldığı, niteliği ve fiyatı sözleşmede belirtilen
     <strong>dijital platform üyelik paketinin</strong> elektronik ortamda sağlanmasıdır. Üyelik paketi içeriği:
 </p>
 <ul>
@@ -41,7 +41,7 @@
 <p>
     Üyelik paketi bedeli, paket türüne göre değişir ve satın alma sırasında ekranda KDV dahil olarak gösterilir.
     Ödeme, kayıtlı kredi/banka kartı üzerinden anlık olarak gerçekleştirilir. Ödeme bilgileri 3D Secure ile korunur ve PCI-DSS uyumlu
-    ödeme altyapısı sağlayıcıları aracılığıyla işlenir; Ferxgo kart bilgilerini saklamaz.
+    ödeme altyapısı sağlayıcıları aracılığıyla işlenir; FerXGo kart bilgilerini saklamaz.
 </p>
 
 <h2>4. Hizmetin İfası</h2>
@@ -65,14 +65,14 @@
 
 <h2>6. Hizmet Kalitesi &amp; Kesinti</h2>
 <p>
-    Ferxgo, üyelere kesintisiz hizmet sunmak için makul özen gösterir; ancak teknik aksaklıklar veya mücbir sebep hallerinde
+    FerXGo, üyelere kesintisiz hizmet sunmak için makul özen gösterir; ancak teknik aksaklıklar veya mücbir sebep hallerinde
     geçici kesintiler yaşanabilir. 24 saati aşan kesintilerde Alıcı'ya orantılı süre uzatımı yapılır.
 </p>
 
 <h2>7. Sorumluluk</h2>
 <p>
     Üyelik paketi <strong>dijital eşleştirme platformuna erişim</strong> sağlar; yolculuk hizmetinin kendisini sağlamaz.
-    Yolculuğun gerçekleştirilmesi üye sürücünün sorumluluğundadır. Ferxgo yolculuk sırasındaki olaylardan sorumlu tutulamaz.
+    Yolculuğun gerçekleştirilmesi üye sürücünün sorumluluğundadır. FerXGo yolculuk sırasındaki olaylardan sorumlu tutulamaz.
 </p>
 
 <h2>8. Şikayet &amp; Uyuşmazlık Çözümü</h2>

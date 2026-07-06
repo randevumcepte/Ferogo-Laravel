@@ -19,7 +19,7 @@ class SmsTestCommand extends Command
     {
         $phone   = (string) $this->argument('phone');
         $message = (string) ($this->argument('message')
-            ?? 'Ferxgo SMS testi. Bu mesaji aliyorsan entegrasyon calisiyor.');
+            ?? 'FerXGo SMS testi. Bu mesaji aliyorsan entegrasyon calisiyor.');
 
         $cfg = config('services.voicetelekom');
         $this->info("Provider: Voice Telekom");

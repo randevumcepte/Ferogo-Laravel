@@ -1,15 +1,15 @@
 @extends('legal._layout')
 
-@section('title', 'Paylaşımlı Yolculuk Nedir? · Ferxgo')
-@section('description', 'Ferxgo platformunda paylaşımlı yolculuk modelinin nasıl çalıştığı.')
+@section('title', 'Paylaşımlı Yolculuk Nedir? · FerXGo')
+@section('description', 'FerXGo platformunda paylaşımlı yolculuk modelinin nasıl çalıştığı.')
 
 @section('legal-title', 'Paylaşımlı Yolculuk Nedir?')
 
 @section('legal-body')
 
 <p>
-    Ferxgo, Türkiye'de hızla büyüyen <strong>paylaşımlı yolculuk</strong> (ride-sharing) modelinin dijital platformu olarak
-    faaliyet gösterir. Bu sayfa, paylaşımlı yolculuğun ne olduğunu ve Ferxgo'nun bu modeldeki rolünü açıklar.
+    FerXGo, Türkiye'de hızla büyüyen <strong>paylaşımlı yolculuk</strong> (ride-sharing) modelinin dijital platformu olarak
+    faaliyet gösterir. Bu sayfa, paylaşımlı yolculuğun ne olduğunu ve FerXGo'nun bu modeldeki rolünü açıklar.
 </p>
 
 <h2>Paylaşımlı Yolculuk Nedir?</h2>
@@ -47,9 +47,9 @@
     <li><strong>Gelir İdaresi Başkanlığı (7 Ağustos 2024):</strong> Paylaşımlı yolculuk gelirinin ticari kazanç olduğunu ve <strong>üye sürücüye ait</strong> olduğunu duyurmuştur.</li>
 </ul>
 
-<h2>Ferxgo'nun Rolü</h2>
+<h2>FerXGo'nun Rolü</h2>
 <p>
-    Ferxgo, 6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun kapsamında <strong>aracı hizmet sağlayıcı</strong> sıfatıyla:
+    FerXGo, 6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun kapsamında <strong>aracı hizmet sağlayıcı</strong> sıfatıyla:
 </p>
 <ul>
     <li>Üye sürücüleri ve yolcuları algoritma yoluyla eşleştirir</li>
@@ -58,7 +58,7 @@
     <li>Yolculuk sonrası değerlendirme ve geri bildirim toplar</li>
 </ul>
 
-<p>Ferxgo:</p>
+<p>FerXGo:</p>
 <ul>
     <li><strong>Yolculuk hizmetinin tarafı değildir</strong></li>
     <li><strong>Ticari taşımacılık yapmaz</strong></li>
@@ -78,7 +78,7 @@
     <li>KDV ve gelir vergisi beyanı üye sürücü tarafından yapılır</li>
 </ul>
 <p>
-    Ferxgo, üye sürücülerin vergisel yükümlülüklerini doğru biçimde yerine getirebilmeleri için anlaşmalı mali müşavirlik
+    FerXGo, üye sürücülerin vergisel yükümlülüklerini doğru biçimde yerine getirebilmeleri için anlaşmalı mali müşavirlik
     desteği sunabilir.
 </p>
 

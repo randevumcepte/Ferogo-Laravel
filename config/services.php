@@ -97,7 +97,7 @@ return [
      * enabled=false → MockGateway devreye girer (dev için, fake checkout).
      *
      * test_mode=true iken PayTR test kartları ile çalışır, gerçek tahsilat yok.
-     * Canlıya geçerken Ferxgo'ya özel mağaza credential'ları + test_mode=false.
+     * Canlıya geçerken FerXGo'ya özel mağaza credential'ları + test_mode=false.
      */
     'paytr' => [
         'enabled'         => (bool) env('PAYTR_ENABLED', false),

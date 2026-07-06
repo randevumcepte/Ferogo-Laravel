@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
-@section('title', 'Üye Sürücü Olun · Ferxgo · Kendi Yolculuğunun Sahibi Ol')
-@section('description', 'Ferxgo paylaşımlı yolculuk platformuna üye sürücü olarak katıl. Esnek saatler, katkı payının tamamı senin, üyelik tabanlı şeffaf model. İzmir genelinde üye sürücü kayıtları açık.')
+@section('title', 'Üye Sürücü Olun · FerXGo · Kendi Yolculuğunun Sahibi Ol')
+@section('description', 'FerXGo paylaşımlı yolculuk platformuna üye sürücü olarak katıl. Esnek saatler, katkı payının tamamı senin, üyelik tabanlı şeffaf model. İzmir genelinde üye sürücü kayıtları açık.')
 
 @push('head')
 <style>
@@ -232,10 +232,10 @@
                         <div class="text-xs md:text-sm text-zinc-300 leading-relaxed">
                             <div class="font-semibold text-amber-200 mb-1.5">Vergi Sorumluluğu Bilgilendirmesi</div>
                             <p>
-                                Ferxgo bir <strong>paylaşımlı yolculuk platformudur</strong>; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
+                                FerXGo bir <strong>paylaşımlı yolculuk platformudur</strong>; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
                                 Gelir İdaresi Başkanlığı'nın 7 Ağustos 2024 tarihli kararı uyarınca paylaşımlı yolculuk faaliyetinden elde edilen kazanç
                                 <strong>üye sürücünün ticari kazancıdır</strong> ve vergi yükümlülüğü tamamen üye sürücüye aittir.
-                                Ferxgo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
+                                FerXGo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
                             </p>
                         </div>
                     </div>
@@ -255,7 +255,7 @@
                         <span class="text-sm text-zinc-400 leading-relaxed">
                             <a href="{{ route('legal.terms') }}" target="_blank" class="text-brand hover:underline">Hizmet Şartları</a> ve
                             <a href="{{ route('legal.ride-sharing') }}" target="_blank" class="text-brand hover:underline">Paylaşımlı Yolculuk modelini</a>
-                            okudum, anladım. Ferxgo'nun aracı hizmet sağlayıcı olduğunu, vergi sorumluluğunun bana ait olduğunu kabul ediyorum.
+                            okudum, anladım. FerXGo'nun aracı hizmet sağlayıcı olduğunu, vergi sorumluluğunun bana ait olduğunu kabul ediyorum.
                         </span>
                     </label>
                 </div>
@@ -422,7 +422,7 @@
     <section class="relative px-6 py-20">
         <div class="max-w-7xl mx-auto">
             <div class="max-w-3xl mb-16">
-                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Neden Ferxgo</div>
+                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Neden FerXGo</div>
                 <h2 class="display-font text-4xl md:text-6xl text-white mb-6">
                     Üç şey net:<br>
                     <span class="text-zinc-500">kazanç,</span> esneklik, <span class="text-zinc-500">saygı.</span>
@@ -441,7 +441,7 @@
                         <div class="text-xs uppercase tracking-[0.2em] text-brand mb-4">01 · Kazanç</div>
                         <h3 class="display-font text-3xl md:text-5xl text-white mb-4">Sektörün en yüksek sürücü payı</h3>
                         <p class="text-zinc-400 leading-relaxed mb-6 max-w-md">
-                            Yolcunun ödediği katkı payının <strong>tamamı senin</strong>. Ferxgo komisyon almaz; sabit dönemsel üyelik bedeli ile platforma erişirsin. Bahşişler tamamen sana aittir.
+                            Yolcunun ödediği katkı payının <strong>tamamı senin</strong>. FerXGo komisyon almaz; sabit dönemsel üyelik bedeli ile platforma erişirsin. Bahşişler tamamen sana aittir.
                         </p>
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="px-3 py-1 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold">%100 pay</span>

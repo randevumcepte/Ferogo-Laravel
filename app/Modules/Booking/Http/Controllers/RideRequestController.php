@@ -137,7 +137,7 @@ class RideRequestController extends Controller
                 'label'  => 'Onaylı Sürücü',
                 'icon'   => '✓',
                 'valid'  => $driver->approval_status === 'approved',
-                'detail' => 'Ferxgo tarafından doğrulanmış.',
+                'detail' => 'FerXGo tarafından doğrulanmış.',
             ],
             [
                 'key'    => 'license',

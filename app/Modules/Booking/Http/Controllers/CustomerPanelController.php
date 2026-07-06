@@ -279,7 +279,7 @@ class CustomerPanelController extends Controller
             'rides' => $rides,
         ];
 
-        $filename = 'ferogo-verilerim-' . now()->format('Y-m-d') . '.json';
+        $filename = 'ferxgo-verilerim-' . now()->format('Y-m-d') . '.json';
         return response()
             ->json($payload, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
