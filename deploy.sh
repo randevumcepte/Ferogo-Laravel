@@ -30,5 +30,16 @@ fi
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Yeni surum bulundu: $REMOTE — deploy basliyor"
 git pull origin main --quiet
+
+# Bekleyen migration'lari uygula (yalniz bekleyen varsa mesaj ureti)
+"$PHP_BIN" artisan migrate --force
+
+# Filament / Blade / config / route / view cache'lerini toplu temizle
 "$PHP_BIN" artisan optimize:clear
+
+# Storage sembolik linki yoksa olustur (public/storage → storage/app/public)
+if [ ! -L public/storage ] && [ ! -d public/storage ]; then
+    "$PHP_BIN" artisan storage:link || true
+fi
+
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy tamamlandi."
