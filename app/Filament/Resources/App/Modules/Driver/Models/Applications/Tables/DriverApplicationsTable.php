@@ -114,8 +114,7 @@ class DriverApplicationsTable
                         'contacted' => 'İletişime geçildi',
                         'approved'  => 'Onaylandı',
                         'rejected'  => 'Reddedildi',
-                    ])
-                    ->default('pending'),
+                    ]),
                 SelectFilter::make('gender')
                     ->label('Cinsiyet')
                     ->options([
