@@ -71,6 +71,9 @@ class RideRequestController extends Controller
             return array_merge($payload ?? [], [
                 'distance_km' => round($km, 2),
                 'eta_minutes' => max(1, (int) round($km * 2.4 + 0.8)),
+                // Radar haritasında gerçek konumdan marker çizmek için canlı GPS
+                'current_lat' => $d->current_lat !== null ? (float) $d->current_lat : null,
+                'current_lng' => $d->current_lng !== null ? (float) $d->current_lng : null,
             ]);
         })->sortBy('distance_km')->take($limit)->values();
 

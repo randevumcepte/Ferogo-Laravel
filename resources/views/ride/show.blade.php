@@ -1325,11 +1325,12 @@
     const VCLASS_ICONS = { easy: '🚗', platinum: '👔', vip: '♛' };
     let realDrivers = [];
     let realDriversHandle = null;
+    let realMarkers = {}; // driver_id -> L.marker (haritadaki gerçek sürücü)
 
     let realDriversTotalOnline = 0;
     async function fetchRealDrivers(center) {
         try {
-            const res = await fetch(`${NEARBY_URL}?lat=${center[0]}&lng=${center[1]}&limit=3`, {
+            const res = await fetch(`${NEARBY_URL}?lat=${center[0]}&lng=${center[1]}&limit=10`, {
                 headers: { 'Accept': 'application/json' }
             });
             if (!res.ok) {
@@ -1340,13 +1341,39 @@
             const next = Array.isArray(data.drivers) ? data.drivers : [];
             realDriversTotalOnline = Number(data.total_online) || 0;
             console.debug('[radar] nearby:', { total_online: realDriversTotalOnline, returned: next.length, drivers: next });
-            const changed = next.length !== realDrivers.length
-                || next.some((d, i) => !realDrivers[i] || realDrivers[i].id !== d.id);
             realDrivers = next;
-            if (changed && userCenterGlobal) renderRail(userCenterGlobal);
+            // Harita marker'larını gerçek GPS'e göre senkronla + listeyi tazele
+            syncRealMarkers();
+            if (userCenterGlobal) renderRail(userCenterGlobal);
         } catch (err) {
             console.error('[radar] nearby fetch failed:', err);
         }
+    }
+
+    /** Haritadaki gerçek sürücü marker'larını canlı GPS'e göre ekle/güncelle/kaldır. */
+    function syncRealMarkers() {
+        if (!map) return;
+        const seen = new Set();
+        realDrivers.forEach(r => {
+            if (r.current_lat == null || r.current_lng == null) return;
+            seen.add(String(r.id));
+            const pos = [r.current_lat, r.current_lng];
+            // Premium/vip sınıfı hafif farklı marker; diğerleri altın (müsait)
+            const state = (r.vehicle_class_slug === 'vip' || r.vehicle_class_slug === 'platinum') ? 'premium' : '';
+            if (realMarkers[r.id]) {
+                realMarkers[r.id].setLatLng(pos);
+                realMarkers[r.id].setIcon(driverIcon(state));
+            } else {
+                realMarkers[r.id] = L.marker(pos, { icon: driverIcon(state), interactive: false }).addTo(map);
+            }
+        });
+        // Artık listede olmayan (offline olmuş / uzaklaşmış) sürücülerin marker'ını kaldır
+        Object.keys(realMarkers).forEach(id => {
+            if (!seen.has(String(id))) {
+                map.removeLayer(realMarkers[id]);
+                delete realMarkers[id];
+            }
+        });
     }
 
     /** Mock kart tıklandığında gerçek sürücüyü seç (varsa). */
@@ -1488,38 +1515,8 @@
             raw: r,
         }));
 
-        // Mock drivers — animasyon devam etsin, görsel doluluk için
-        const sortedMock = [...drivers]
-            .map(d => ({ d, km: distanceKm(userCenter, [d.lat, d.lng]) }))
-            .sort((a, b) => a.km - b.km)
-            .map(({ d, km }) => ({
-                id: 'mock-' + d.id,
-                name: d.name,
-                plate: d.plate,
-                vIcon: d.vIcon,
-                vSlug: d.vSlug,
-                vclass: d.vclass,
-                rating: d.rating,
-                favoriteCount: d.favoriteCount || 0,
-                isFemale: false,
-                womenOnly: false,
-                km,
-                isBusy: d.state === 'busy',
-                isReal: false,
-                photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name || 'Sürücü')}&background=27272a&color=fff&size=128&bold=true`,
-                raw: d,
-            }));
-
-        // Real driver'lar üstte (max 3), mock'larla 5'e tamamla. İsim çakışmalarını ele
+        // Yalnızca gerçek/online sürücüler (mock yok) — yakındakiler GPS'e göre gelir
         let cards = [...realCards];
-        const usedNames = new Set(realCards.map(c => c.name.toLowerCase()));
-        for (const m of sortedMock) {
-            if (cards.length >= 5) break;
-            const key = m.name.toLowerCase();
-            if (usedNames.has(key)) continue;
-            cards.push(m);
-            usedNames.add(key);
-        }
 
         // Kadın sürücü filtresi aktifse yalnızca kadın sürücüleri göster
         if (womenFilterActive) cards = cards.filter(c => c.isFemale);
@@ -1570,7 +1567,7 @@
                     </div>
                     <div class="shrink-0">${selectBtn}</div>
                 </div>`;
-        }).join('') : `<div class="text-center py-8 text-xs text-zinc-500">Şu an çevrende kadın sürücü yok. Filtreyi kaldırıp tekrar dene.</div>`;
+        }).join('') : `<div class="text-center py-8 text-xs text-zinc-500">${womenFilterActive ? 'Şu an çevrende kadın sürücü yok. Filtreyi kaldırıp tekrar dene.' : 'Şu an çevrende müsait üye sürücü yok. Birazdan tekrar dene.'}</div>`;
 
         // Bind: real → openQuickModal(real); mock → openQuickModal(mock) (modal kendi remap eder)
         railEl.querySelectorAll('.quick-select-btn').forEach(btn => {
@@ -1581,16 +1578,11 @@
             });
         });
 
-        const availableCount = drivers.filter(d => d.state !== 'busy').length;
-        const nearestAvailable = sortedMock.find(m => !m.isBusy);
+        const availableCount = cards.length;
         availableCountEl.textContent = availableCount;
-        if (nearestAvailable) {
-            const mins = Math.max(1, Math.round(nearestAvailable.km * 2.4 + 0.8));
-            nearestEtaEl.textContent = `${mins} dk`;
-        } else {
-            nearestEtaEl.textContent = '—';
-        }
-        railMetaEl.textContent = `${drivers.length} araç`;
+        const nearest = cards.length ? cards.reduce((a, b) => (a.km <= b.km ? a : b)) : null;
+        nearestEtaEl.textContent = nearest ? `${Math.max(1, Math.round(nearest.km * 2.4 + 0.8))} dk` : '—';
+        railMetaEl.textContent = `${realDrivers.length} araç`;
         updateTimeEl.textContent = 'şimdi';
     }
 
@@ -1688,27 +1680,21 @@
 
         userMarker = L.marker(center, { icon: userIcon(), interactive: false, zIndexOffset: 1000 }).addTo(map);
 
-        drivers = Array.from({ length: DRIVER_COUNT }, (_, i) => makeDriver(center, i));
-        drivers.forEach(d => {
-            d.marker = L.marker([d.lat, d.lng], { icon: driverIcon(d.state), interactive: false }).addTo(map);
-        });
-
+        // İlk render (gerçek sürücü gelene kadar boş durum) + gerçek sürücüleri GPS'e göre çek
         renderRail(center);
-        tickHandle = setInterval(() => tick(center), TICK_MS);
-
-        // Gerçek sürücüleri arka planda çek — modal seçimi için
         fetchRealDrivers(center);
         if (realDriversHandle) clearInterval(realDriversHandle);
-        realDriversHandle = setInterval(() => fetchRealDrivers(center), 8000);
+        realDriversHandle = setInterval(() => fetchRealDrivers(center), 3000);
 
-        // Pause when off-screen
+        // Ekrandan çıkınca gerçek sürücü sorgusunu duraklat (batarya/ağ tasarrufu)
         const io = new IntersectionObserver((entries) => {
             entries.forEach(e => {
-                if (e.isIntersecting && !tickHandle) {
-                    tickHandle = setInterval(() => tick(center), TICK_MS);
-                } else if (!e.isIntersecting && tickHandle) {
-                    clearInterval(tickHandle);
-                    tickHandle = null;
+                if (e.isIntersecting && !realDriversHandle) {
+                    fetchRealDrivers(center);
+                    realDriversHandle = setInterval(() => fetchRealDrivers(center), 3000);
+                } else if (!e.isIntersecting && realDriversHandle) {
+                    clearInterval(realDriversHandle);
+                    realDriversHandle = null;
                 }
             });
         }, { threshold: 0.1 });
