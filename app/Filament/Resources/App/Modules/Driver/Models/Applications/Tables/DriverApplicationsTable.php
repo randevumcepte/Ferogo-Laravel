@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\App\Modules\Driver\Models\Applications\Tables;
 
 use App\Models\User;
+use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use App\Modules\Driver\Models\Driver;
 use App\Modules\Driver\Models\DriverApplication;
 use Filament\Actions\Action;
@@ -15,6 +16,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class DriverApplicationsTable
@@ -177,11 +179,38 @@ class DriverApplicationsTable
                             $a->update(['status' => 'approved']);
                         });
 
+                        // ─── Sürücüye onay + giriş bilgisi SMS'i ───
+                        $smsStatus = 'gonderilmedi';
+                        try {
+                            $phone   = preg_replace('/\s+/', '', $a->phone);
+                            $message = "Ferxgo surucu basvurun onaylandi! ferxgo.com/surucu-giris - "
+                                     . "E-posta: {$data['email']} - Sifre: {$data['password']} - "
+                                     . "Giris yapip profil ekranindan sifreni degistir.";
+                            $client  = app(VoiceTelekomClient::class);
+                            $result  = $client->sendSingle($phone, $message);
+                            $smsStatus = ($result['ok'] ?? false) ? 'gonderildi' : 'basarisiz';
+                            if (! ($result['ok'] ?? false)) {
+                                Log::warning('[DriverApproval] SMS gonderilemedi', [
+                                    'application_id' => $a->id,
+                                    'phone'          => $phone,
+                                    'error'          => $result['message'] ?? '?',
+                                ]);
+                            }
+                        } catch (\Throwable $e) {
+                            Log::error('[DriverApproval] SMS exception: ' . $e->getMessage(), [
+                                'application_id' => $a->id,
+                            ]);
+                        }
+
                         $genderNote = $a->gender === 'female' ? ' 👩 Kadın sürücü' : ' 👨 Erkek sürücü';
+                        $smsBadge   = $smsStatus === 'gonderildi'
+                            ? '✓ SMS gönderildi'
+                            : ($smsStatus === 'basarisiz' ? '⚠ SMS gönderilemedi (log\'a bak)' : '⚠ SMS provider hata');
+
                         Notification::make()
                             ->success()
                             ->title('Sürücü onaylandı' . $genderNote)
-                            ->body('Giriş: ' . $data['email'] . ' · Şifre: ' . $data['password'])
+                            ->body('Giriş: ' . $data['email'] . ' · Şifre: ' . $data['password'] . ' · ' . $smsBadge)
                             ->persistent()
                             ->send();
                     }),
