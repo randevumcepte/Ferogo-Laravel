@@ -2,16 +2,22 @@
 
 namespace App\Filament\Resources\App\Modules\Driver\Models\Drivers\Tables;
 
+use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use App\Modules\Driver\Models\Driver;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class DriversTable
 {
@@ -115,6 +121,68 @@ class DriversTable
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make(),
+                    Action::make('reset_password')
+                        ->label('Şifre sıfırla + SMS gönder')
+                        ->icon(\Filament\Support\Icons\Heroicon::OutlinedKey)
+                        ->color('warning')
+                        ->modalHeading('Yeni şifre oluştur ve sürücüye SMS gönder')
+                        ->modalDescription('Rastgele üretilen şifre sürücünün telefonuna SMS ile iletilir.')
+                        ->schema([
+                            TextInput::make('password')
+                                ->label('Yeni şifre')
+                                ->required()
+                                ->minLength(6)
+                                ->default(fn () => Str::random(10))
+                                ->helperText('Boş bırakma; SMS ile aynen bu değer gider.'),
+                            Checkbox::make('send_sms')
+                                ->label('SMS ile gönder')
+                                ->default(true)
+                                ->helperText('İşaretini kaldırırsan sadece şifre güncellenir, SMS gitmez.'),
+                        ])
+                        ->action(function (Driver $d, array $data) {
+                            $user = $d->user;
+                            if (! $user) {
+                                Notification::make()->danger()->title('Bu sürücüye bağlı kullanıcı yok')->send();
+                                return;
+                            }
+
+                            $user->update(['password' => Hash::make($data['password'])]);
+
+                            $smsStatus = 'atlandi';
+                            if (! empty($data['send_sms']) && $user->phone) {
+                                try {
+                                    $phone   = preg_replace('/\s+/', '', $user->phone);
+                                    $message = "Ferxgo sifren guncellendi. Giris: ferxgo.com/surucu-giris - "
+                                             . "E-posta: {$user->email} - Yeni sifre: {$data['password']} - "
+                                             . "Girip profil ekranindan degistir.";
+                                    $result  = app(VoiceTelekomClient::class)->sendSingle($phone, $message);
+                                    $smsStatus = ($result['ok'] ?? false) ? 'gonderildi' : 'basarisiz';
+                                    if (! ($result['ok'] ?? false)) {
+                                        Log::warning('[PasswordReset] SMS gonderilemedi', [
+                                            'driver_id' => $d->id,
+                                            'phone'     => $phone,
+                                            'error'     => $result['message'] ?? '?',
+                                        ]);
+                                    }
+                                } catch (\Throwable $e) {
+                                    Log::error('[PasswordReset] SMS exception: ' . $e->getMessage());
+                                    $smsStatus = 'basarisiz';
+                                }
+                            }
+
+                            $smsBadge = match ($smsStatus) {
+                                'gonderildi' => '✓ SMS gönderildi',
+                                'basarisiz'  => '⚠ SMS gönderilemedi',
+                                default      => 'SMS gönderilmedi',
+                            };
+
+                            Notification::make()
+                                ->success()
+                                ->title('Şifre güncellendi')
+                                ->body('E-posta: ' . $user->email . ' · Yeni şifre: ' . $data['password'] . ' · ' . $smsBadge)
+                                ->persistent()
+                                ->send();
+                        }),
                     Action::make('approve_documents')
                         ->label('Tüm belgeleri onayla')
                         ->icon(\Filament\Support\Icons\Heroicon::OutlinedCheckBadge)
