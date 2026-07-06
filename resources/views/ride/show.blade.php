@@ -247,10 +247,8 @@
             @endif
 
 
-            {{-- Reklam alanı: Radar / Harita (yapışkan — scroll'da görünür kalır) --}}
-            <div class="lg:sticky lg:top-4 z-30 mb-8">
-                @include('partials.ad-slot', ['placement' => 'radar_map'])
-            </div>
+            {{-- Reklam alanı: Radar / Harita --}}
+            @include('partials.ad-slot', ['placement' => 'radar_map', 'class' => 'mb-8'])
 
             {{-- Section heading --}}
             <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
