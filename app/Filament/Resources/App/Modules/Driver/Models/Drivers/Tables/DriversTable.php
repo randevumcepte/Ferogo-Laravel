@@ -37,6 +37,44 @@ class DriversTable
                     ->label('Telefon')
                     ->copyable(),
 
+                TextColumn::make('user.email')
+                    ->label('Giriş E-posta')
+                    ->searchable()
+                    ->copyable()
+                    ->icon('heroicon-o-envelope')
+                    ->tooltip('Sürücünün /surucu-giris ekranından giriş yaptığı e-posta')
+                    ->placeholder('—'),
+
+                TextColumn::make('user.gender')
+                    ->label('Cinsiyet')
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        'female' => 'danger',
+                        'male'   => 'info',
+                        default  => 'gray',
+                    })
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'female' => '👩 Kadın',
+                        'male'   => '👨 Erkek',
+                        default  => '—',
+                    })
+                    ->toggleable(),
+
+                TextColumn::make('women_passengers_only')
+                    ->label('Kadın Yolcu')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'success' : 'gray')
+                    ->formatStateUsing(fn ($state) => $state ? '✓ Aktif' : '—')
+                    ->tooltip('Sadece kadın yolcu kabul ediyor mu')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('user.last_login_at')
+                    ->label('Son Giriş')
+                    ->since()
+                    ->placeholder('Hiç girmedi')
+                    ->color(fn ($state) => $state ? 'success' : 'gray')
+                    ->toggleable(),
+
                 TextColumn::make('city.name')
                     ->label('Şehir')
                     ->badge()
@@ -119,6 +157,69 @@ class DriversTable
             ])
             ->defaultSort('id', 'desc')
             ->recordActions([
+                Action::make('reset_password_quick')
+                    ->label('Yeni Şifre + SMS')
+                    ->icon(\Filament\Support\Icons\Heroicon::OutlinedKey)
+                    ->color('warning')
+                    ->button()
+                    ->modalHeading('Yeni şifre oluştur ve sürücüye SMS gönder')
+                    ->modalDescription('Rastgele üretilen şifre sürücünün telefonuna SMS ile iletilir. Bu ekranda bir kez gösterilir, sonra sistem şifreyi düz metin olarak tutmaz.')
+                    ->schema([
+                        TextInput::make('password')
+                            ->label('Yeni şifre')
+                            ->required()
+                            ->minLength(6)
+                            ->default(fn () => Str::random(10))
+                            ->helperText('Boş bırakma; SMS ile aynen bu değer gider.'),
+                        Checkbox::make('send_sms')
+                            ->label('SMS ile gönder (sürücünün kayıtlı cebine)')
+                            ->default(true)
+                            ->helperText('İşaretini kaldırırsan sadece şifre güncellenir, SMS gitmez.'),
+                    ])
+                    ->action(function (Driver $d, array $data) {
+                        $user = $d->user;
+                        if (! $user) {
+                            Notification::make()->danger()->title('Bu sürücüye bağlı kullanıcı yok')->send();
+                            return;
+                        }
+
+                        $user->update(['password' => Hash::make($data['password'])]);
+
+                        $smsStatus = 'atlandi';
+                        if (! empty($data['send_sms']) && $user->phone) {
+                            try {
+                                $phone   = preg_replace('/\s+/', '', $user->phone);
+                                $message = "Ferxgo sifren guncellendi. Giris: ferxgo.com/surucu-giris - "
+                                         . "E-posta: {$user->email} - Yeni sifre: {$data['password']} - "
+                                         . "Girip profil ekranindan degistir.";
+                                $result  = app(VoiceTelekomClient::class)->sendSingle($phone, $message);
+                                $smsStatus = ($result['ok'] ?? false) ? 'gonderildi' : 'basarisiz';
+                                if (! ($result['ok'] ?? false)) {
+                                    Log::warning('[PasswordReset] SMS gonderilemedi', [
+                                        'driver_id' => $d->id,
+                                        'phone'     => $phone,
+                                        'error'     => $result['message'] ?? '?',
+                                    ]);
+                                }
+                            } catch (\Throwable $e) {
+                                Log::error('[PasswordReset] SMS exception: ' . $e->getMessage());
+                                $smsStatus = 'basarisiz';
+                            }
+                        }
+
+                        $smsBadge = match ($smsStatus) {
+                            'gonderildi' => '✓ SMS gönderildi (' . $user->phone . ')',
+                            'basarisiz'  => '⚠ SMS gönderilemedi — log\'a bak',
+                            default      => 'SMS gönderilmedi',
+                        };
+
+                        Notification::make()
+                            ->success()
+                            ->title('✓ Şifre güncellendi')
+                            ->body("E-posta: {$user->email}\nYeni şifre: {$data['password']}\n{$smsBadge}")
+                            ->persistent()
+                            ->send();
+                    }),
                 ActionGroup::make([
                     EditAction::make(),
                     Action::make('reset_password')
