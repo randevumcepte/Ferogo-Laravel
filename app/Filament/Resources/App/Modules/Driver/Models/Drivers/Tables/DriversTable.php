@@ -11,8 +11,10 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Illuminate\Support\HtmlString;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -285,6 +287,68 @@ class DriversTable
                                 ->persistent()
                                 ->send();
                         }),
+                    Action::make('diagnose')
+                        ->label('🔍 Radarda görünmüyor? Tanı yap')
+                        ->icon(\Filament\Support\Icons\Heroicon::OutlinedMagnifyingGlass)
+                        ->color('warning')
+                        ->modalHeading(fn (Driver $d) => 'Tanı: ' . ($d->user?->name ?? 'Sürücü'))
+                        ->modalDescription('Bu sürücünün radarda/dispatch\'te görünmesi için 5 şartın tümü YEŞİL olmalı. Kırmızı olanları düzeltmek için modalda alttaki "Sorunları düzelt" butonuna bas.')
+                        ->modalSubmitActionLabel('⚡ Sorunları otomatik düzelt')
+                        ->schema([
+                            Placeholder::make('diagnostic_report')
+                                ->label('')
+                                ->content(fn (Driver $d) => new HtmlString(self::buildDiagnosticHtml($d))),
+                        ])
+                        ->action(function (Driver $d) {
+                            // Modal submit = Sorunları düzelt aksiyonu
+                            $now = now();
+                            $expires = $now->copy()->addDays(30);
+                            $updates = [
+                                'approval_status'          => 'approved',
+                                'approved_at'              => $d->approved_at ?? $now,
+                                'is_suspended'             => false,
+                                'suspended_at'             => null,
+                                'suspension_reason'        => null,
+                                'availability_status'      => 'online',
+                                'last_location_updated_at' => $now,
+                            ];
+                            if (! $d->package_active_until || $d->package_active_until->isPast()) {
+                                DriverPackage::create([
+                                    'driver_id'         => $d->id,
+                                    'type'              => 'monthly',
+                                    'duration_hours'    => 30 * 24,
+                                    'price'             => 0.00,
+                                    'starts_at'         => $now,
+                                    'expires_at'        => $expires,
+                                    'status'            => 'active',
+                                    'payment_provider'  => 'manual_test',
+                                    'payment_reference' => 'DIAG-' . $now->format('YmdHis'),
+                                    'paid_at'           => $now,
+                                ]);
+                                $updates['package_active_until'] = $expires;
+                            }
+                            if (empty($d->current_lat) || empty($d->current_lng)) {
+                                $updates['current_lat'] = 38.4192;
+                                $updates['current_lng'] = 27.1287;
+                            }
+                            $d->update($updates);
+
+                            $fresh = $d->fresh();
+                            $ok = $fresh->approval_status === 'approved'
+                                && $fresh->availability_status === 'online'
+                                && ! $fresh->is_suspended
+                                && $fresh->hasActivePackage()
+                                && $fresh->current_lat && $fresh->current_lng;
+
+                            Notification::make()
+                                ->success()
+                                ->title($ok ? '✅ Sürücü artık radarda görünür' : '⚠ Hâlâ bir sorun var, tanıyı tekrar aç')
+                                ->body($ok
+                                    ? 'Yolcu radar sayfasını (Yolculuk Yap) yenilesin, bu sürücü çıkar.'
+                                    : 'Ekranı tekrar aç ve kırmızıları gör.')
+                                ->persistent()
+                                ->send();
+                        }),
                     Action::make('force_ready_for_test')
                         ->label('⚡ Test için TAM HAZIRLA')
                         ->icon(\Filament\Support\Icons\Heroicon::OutlinedBoltSlash)
@@ -422,5 +486,89 @@ class DriversTable
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * Sürücünün radar/dispatch şartlarının HTML tanı raporu.
+     * 5 şart var — tümü YEŞİL olmalı ki sürücü radarda görünsün.
+     */
+    private static function buildDiagnosticHtml(Driver $d): string
+    {
+        $d = $d->loadMissing('user');
+
+        $checks = [
+            [
+                'ok'    => $d->approval_status === 'approved',
+                'label' => 'Onay durumu',
+                'okMsg' => 'Onaylı ✓',
+                'badMsg'=> 'Durum: ' . $d->approval_status . ' — Sürücü onaylanmalı.',
+            ],
+            [
+                'ok'    => $d->availability_status === 'online',
+                'label' => 'Müsaitlik',
+                'okMsg' => 'Çevrim içi (Müsait) ✓',
+                'badMsg'=> 'Durum: ' . $d->availability_status . ' — Sürücü panelinde "Müsait" yapmalı VEYA burada online\'a çekmeli.',
+            ],
+            [
+                'ok'    => ! $d->is_suspended,
+                'label' => 'Askı durumu',
+                'okMsg' => 'Askıda değil ✓',
+                'badMsg'=> 'Sürücü askıda: ' . ($d->suspension_reason ?: 'sebep yok'),
+            ],
+            [
+                'ok'    => $d->hasActivePackage(),
+                'label' => 'Aktif paket',
+                'okMsg' => 'Paket geçerli · Bitiş: ' . ($d->package_active_until?->format('d.m.Y H:i') ?? '—'),
+                'badMsg'=> $d->package_active_until
+                    ? 'Paket süresi dolmuş: ' . $d->package_active_until->format('d.m.Y H:i')
+                    : 'Paket yok — sürücü paket almalı veya admin panel test paketi versin.',
+            ],
+            [
+                'ok'    => ! empty($d->current_lat) && ! empty($d->current_lng),
+                'label' => 'GPS Konumu',
+                'okMsg' => 'Konum: ' . $d->current_lat . ', ' . $d->current_lng
+                    . ' (' . ($d->last_location_updated_at?->diffForHumans() ?? '—') . ')',
+                'badMsg'=> 'Konum yok — sürücü panelde tarayıcıya konum izni vermeli. Ya da admin default İzmir konumu atayabilir.',
+            ],
+        ];
+
+        $html = '<div style="font-family: system-ui,sans-serif; font-size: 14px; line-height: 1.6;">';
+        $html .= '<div style="margin-bottom: 12px; padding: 10px 14px; background: rgba(59,130,246,0.08); border-left: 3px solid #3b82f6; border-radius: 6px;">';
+        $html .= '<strong>Sürücü:</strong> ' . e($d->user?->name ?? 'Bilinmiyor')
+              . ' · <strong>Telefon:</strong> ' . e($d->user?->phone ?? '—')
+              . ' · <strong>ID:</strong> #' . $d->id;
+        $html .= '</div>';
+
+        $allOk = true;
+        foreach ($checks as $c) {
+            if (! $c['ok']) $allOk = false;
+            $icon    = $c['ok'] ? '✅' : '❌';
+            $color   = $c['ok'] ? '#10b981' : '#ef4444';
+            $bg      = $c['ok'] ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)';
+            $message = $c['ok'] ? $c['okMsg'] : $c['badMsg'];
+            $html .= '<div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; margin-bottom: 6px; background: ' . $bg . '; border-left: 3px solid ' . $color . '; border-radius: 6px;">';
+            $html .= '<div style="font-size: 18px;">' . $icon . '</div>';
+            $html .= '<div style="flex: 1;">';
+            $html .= '<div style="font-weight: 600; color: ' . $color . ';">' . e($c['label']) . '</div>';
+            $html .= '<div style="color: #6b7280; font-size: 13px;">' . e($message) . '</div>';
+            $html .= '</div></div>';
+        }
+
+        $html .= '<div style="margin-top: 16px; padding: 12px 14px; background: ' . ($allOk ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)') . '; border-radius: 8px; text-align: center; font-weight: 600;">';
+        $html .= $allOk
+            ? '🎉 Tüm şartlar tamam — sürücü radarda görünüyor. Radar yenilenmediyse yolcu tarafında sayfayı F5 yapın.'
+            : '⚠ Yukarıdaki kırmızıları düzeltmek için modalın altındaki turuncu "Sorunları otomatik düzelt" butonuna bas.';
+        $html .= '</div>';
+
+        // Ek not: kadın yolcu filtresi
+        if ($d->women_passengers_only) {
+            $html .= '<div style="margin-top: 10px; padding: 10px 14px; background: rgba(236,72,153,0.08); border-left: 3px solid #ec4899; border-radius: 6px; font-size: 13px;">';
+            $html .= '💡 <strong>Bilgi:</strong> Bu sürücüde "Sadece kadın yolcu al" açık. Yalnızca cinsiyet: kadın olan müşteriler bu sürücüyü Hızlı Seç ekranında görebilir. Radar sayfasında herkese görünür.';
+            $html .= '</div>';
+        }
+
+        $html .= '</div>';
+
+        return $html;
     }
 }
