@@ -205,8 +205,10 @@ class DriverController extends Controller
             );
         }
 
+        // Sürücü YOLCUNUN teklifini kabul eder → o fiyattan anlaşma
+        $agreed = $req->customer_offer_fare !== null ? (float) $req->customer_offer_fare : null;
         try {
-            $this->service->accept($req, $driver);
+            $this->service->accept($req, $driver, $agreed);
         } catch (\RuntimeException $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 409);
         }

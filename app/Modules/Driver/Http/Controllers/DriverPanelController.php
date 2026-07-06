@@ -507,9 +507,10 @@ class DriverPanelController extends Controller
             ]);
         }
 
-        // Normal akış (status=pending, doğrudan accept)
+        // Normal akış (status=pending, doğrudan accept) — sürücü YOLCUNUN teklifini kabul eder
+        $agreed = $req->customer_offer_fare !== null ? (float) $req->customer_offer_fare : null;
         try {
-            $this->service->accept($req, $driver);
+            $this->service->accept($req, $driver, $agreed);
         } catch (\RuntimeException $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 409);
         }

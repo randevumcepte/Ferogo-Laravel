@@ -182,21 +182,34 @@
                                 <div class="text-base font-bold" id="offer-duration">—</div>
                             </div>
                             <div class="bg-white/[0.03] rounded-xl p-3 border border-white/5">
-                                <div class="text-[9px] uppercase tracking-wider text-zinc-500">Net</div>
+                                <div class="text-[9px] uppercase tracking-wider text-zinc-500">Yolcu teklifi</div>
                                 <div class="text-base font-bold text-brand" id="offer-fare">—</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex gap-2">
-                        <button id="offer-reject"
-                                class="flex-1 px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-semibold text-zinc-300 transition">
-                            Reddet
-                        </button>
+                    <div class="space-y-2">
+                        <div class="flex gap-2">
+                            <button id="offer-reject"
+                                    class="flex-1 px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-semibold text-zinc-300 transition">
+                                Reddet
+                            </button>
+                            <button id="offer-counter"
+                                    class="flex-1 px-4 py-3 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/30 text-sm font-semibold text-amber-200 transition">
+                                Karşı Teklif
+                            </button>
+                        </div>
                         <button id="offer-accept"
-                                class="flex-1 px-4 py-3 rounded-2xl bg-brand hover:bg-brand-600 text-black text-sm font-extrabold transition shadow-lg shadow-brand/30">
-                            Kabul Et
+                                class="w-full px-4 py-3 rounded-2xl bg-brand hover:bg-brand-600 text-black text-sm font-extrabold transition shadow-lg shadow-brand/30">
+                            Kabul Et · <span id="offer-accept-price">—</span> ₺
                         </button>
+                        {{-- Karşı teklif stepper — "Karşı Teklif"e basınca açılır --}}
+                        <div id="offer-counter-row" class="hidden pt-2 flex items-center gap-2">
+                            <button id="offer-cminus" type="button" class="w-10 h-10 shrink-0 rounded-lg bg-white/5 border border-white/10 text-white text-xl font-bold leading-none select-none">−</button>
+                            <div class="flex-1 text-center text-xl font-extrabold text-amber-300 tabular-nums leading-none"><span id="offer-camount">—</span> ₺</div>
+                            <button id="offer-cplus" type="button" class="w-10 h-10 shrink-0 rounded-lg bg-white/5 border border-white/10 text-white text-xl font-bold leading-none select-none">+</button>
+                            <button id="offer-csend" type="button" class="px-3 h-10 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm shrink-0">Gönder</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -305,6 +318,9 @@
         const AVAIL_URL = '{{ route('driver.api.availability') }}';
         const ACCEPT_URL = (id) => '{{ url('/surucu-paneli/api/offers') }}/' + encodeURIComponent(id) + '/accept';
         const REJECT_URL = (id) => '{{ url('/surucu-paneli/api/offers') }}/' + encodeURIComponent(id) + '/reject';
+        const COUNTER_URL = (id) => '{{ url('/surucu-paneli/api/offers') }}/' + encodeURIComponent(id) + '/counter';
+        const NEG_BAND = 0.40;  // backend PRICE_BAND ile aynı
+        const NEG_STEP = 10;
         const MSG_URL     = '{{ route('driver.api.message') }}';
         const DONE_URL    = '{{ route('driver.api.complete') }}';
         const ARRIVED_URL = '{{ route('driver.api.arrived') }}';
@@ -443,18 +459,37 @@
             idleCard.classList.toggle('hidden', name !== 'idle');
         }
 
+        let offerNegBase = null;      // karşı teklif sınırları için baz (sistem önerisi)
+        let offerCounterAmount = null; // sürücünün karşı teklif tutarı
+
+        function offerBounds(base) {
+            if (!base) return [null, null];
+            return [Math.round(base * (1 - NEG_BAND)), Math.round(base * (1 + NEG_BAND))];
+        }
+
         function renderOffer(o) {
             $('offer-customer').textContent = o.customer_name;
             $('offer-pickup').textContent = o.pickup_address;
             $('offer-dropoff').textContent = o.dropoff_address;
             $('offer-distance').textContent = `${o.distance_km.toFixed(1)} km`;
             $('offer-duration').textContent = `${o.duration_minutes} dk`;
-            $('offer-fare').textContent = o.estimated_fare ? `₺${Math.round(o.estimated_fare)}` : '—';
 
-            // Yeni offer geldiyse — sürekli bip + countdown reset
+            // Yolcunun teklifi (pazarlık) — yoksa tahmini ücret
+            const n = o.negotiation || {};
+            const custOffer = (n.customer_offer_fare != null) ? n.customer_offer_fare
+                : (o.estimated_fare != null ? o.estimated_fare : null);
+            $('offer-fare').textContent = custOffer != null ? `₺${Math.round(custOffer)}` : '—';
+            $('offer-accept-price').textContent = custOffer != null ? Math.round(custOffer) : '—';
+
+            // Yeni offer geldiyse — sürekli bip + countdown reset + karşı teklif steppera baz
             if (o.public_id !== lastOfferId) {
                 lastOfferId = o.public_id;
                 startOfferBeep();
+
+                offerNegBase = n.suggested_fare || custOffer || null;
+                offerCounterAmount = custOffer != null ? Math.round(custOffer) : offerNegBase;
+                $('offer-camount').textContent = offerCounterAmount != null ? offerCounterAmount : '—';
+                $('offer-counter-row').classList.add('hidden');
 
                 $('offer-accept').onclick = async () => {
                     stopOfferBeep();
@@ -479,6 +514,39 @@
                         });
                     } catch (_) {}
                     finally { $('offer-reject').disabled = false; pollNow(); }
+                };
+
+                // Karşı teklif — stepper aç/kapat
+                $('offer-counter').onclick = () => {
+                    $('offer-counter-row').classList.toggle('hidden');
+                };
+                $('offer-cminus').onclick = () => {
+                    const [min] = offerBounds(offerNegBase);
+                    if (min == null) return;
+                    offerCounterAmount = Math.max(min, (offerCounterAmount == null ? offerNegBase : offerCounterAmount) - NEG_STEP);
+                    $('offer-camount').textContent = offerCounterAmount;
+                };
+                $('offer-cplus').onclick = () => {
+                    const [, max] = offerBounds(offerNegBase);
+                    if (max == null) return;
+                    offerCounterAmount = Math.min(max, (offerCounterAmount == null ? offerNegBase : offerCounterAmount) + NEG_STEP);
+                    $('offer-camount').textContent = offerCounterAmount;
+                };
+                $('offer-csend').onclick = async () => {
+                    if (offerCounterAmount == null) return;
+                    stopOfferBeep();
+                    $('offer-csend').disabled = true;
+                    try {
+                        const res = await fetch(COUNTER_URL(o.public_id), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                            body: JSON.stringify({ amount: offerCounterAmount }),
+                        });
+                        const data = await res.json();
+                        if (!data.ok) alert(data.message || 'Karşı teklif gönderilemedi.');
+                        else $('offer-counter-row').classList.add('hidden');
+                    } catch (_) { alert('Bağlantı hatası.'); }
+                    finally { $('offer-csend').disabled = false; pollNow(); }
                 };
             }
 
