@@ -129,14 +129,18 @@
                 </div>
 
                 {{-- Live stat counters --}}
-                <div id="hero-stats" class="mt-10 sm:mt-14 flex items-stretch justify-center gap-4 sm:gap-8">
-                    <div class="flex-1 max-w-[180px] rounded-2xl bg-white/5 border border-white/10 px-4 py-5 sm:px-8 sm:py-6 backdrop-blur-sm">
-                        <div class="text-3xl sm:text-5xl font-extrabold text-brand tracking-tight tabular-nums js-counter" data-target="23534" data-suffix="+">0</div>
-                        <div class="mt-1 text-[11px] sm:text-xs text-zinc-400 uppercase tracking-widest">Yolcu</div>
+                <div id="hero-stats" class="mt-10 sm:mt-14 flex flex-wrap items-stretch justify-center gap-3 sm:gap-5">
+                    <div class="group flex flex-col items-center justify-center w-[150px] sm:w-[200px] rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 hover:border-brand/40 px-5 py-5 sm:px-8 sm:py-7 backdrop-blur-sm transition-colors duration-300 shadow-lg shadow-black/20">
+                        <div class="flex items-baseline whitespace-nowrap text-4xl sm:text-5xl font-extrabold text-brand tracking-tight tabular-nums leading-none drop-shadow-[0_2px_10px_rgba(212,175,55,0.25)]">
+                            <span class="js-counter" data-target="23534">0</span><span class="text-brand/70 ml-0.5">+</span>
+                        </div>
+                        <div class="mt-2.5 text-[11px] sm:text-xs text-zinc-400 uppercase tracking-[0.2em] font-medium">Yolcu</div>
                     </div>
-                    <div class="flex-1 max-w-[180px] rounded-2xl bg-white/5 border border-white/10 px-4 py-5 sm:px-8 sm:py-6 backdrop-blur-sm">
-                        <div class="text-3xl sm:text-5xl font-extrabold text-brand tracking-tight tabular-nums js-counter" data-target="2376" data-suffix="+">0</div>
-                        <div class="mt-1 text-[11px] sm:text-xs text-zinc-400 uppercase tracking-widest">Araç</div>
+                    <div class="group flex flex-col items-center justify-center w-[150px] sm:w-[200px] rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 hover:border-brand/40 px-5 py-5 sm:px-8 sm:py-7 backdrop-blur-sm transition-colors duration-300 shadow-lg shadow-black/20">
+                        <div class="flex items-baseline whitespace-nowrap text-4xl sm:text-5xl font-extrabold text-brand tracking-tight tabular-nums leading-none drop-shadow-[0_2px_10px_rgba(212,175,55,0.25)]">
+                            <span class="js-counter" data-target="2376">0</span><span class="text-brand/70 ml-0.5">+</span>
+                        </div>
+                        <div class="mt-2.5 text-[11px] sm:text-xs text-zinc-400 uppercase tracking-[0.2em] font-medium">Araç</div>
                     </div>
                 </div>
 
