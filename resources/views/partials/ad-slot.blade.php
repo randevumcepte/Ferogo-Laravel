@@ -69,11 +69,26 @@
             </div>
         </div>
     </a>
+@elseif ($compact)
+    {{-- Boş alan — dar sidebar için DİKEY (portre): görsel alanı üstte, yazı altta --}}
+    <div class="ad-slot ad-slot--empty rounded-3xl border-2 border-dashed border-brand/60 bg-gradient-to-b from-brand/[0.12] to-transparent shadow-[0_12px_45px_-12px_rgba(240,192,64,0.3)] p-4 flex flex-col gap-3 {{ $slotClass }}">
+        <div class="w-full h-40 rounded-2xl border-2 border-dashed border-brand/40 bg-brand/[0.06] flex flex-col items-center justify-center gap-1.5 text-brand/70">
+            <svg class="w-9 h-9 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"></path></svg>
+            <div class="text-[11px] font-bold uppercase tracking-wider">Görsel Alanı</div>
+            <div class="text-[10px] text-brand/50">1200 × 628 px</div>
+        </div>
+        <div class="text-center pb-1">
+            <div class="text-[10px] uppercase tracking-[0.3em] text-brand/80 mb-1">★ Reklam Alanı ★</div>
+            <div class="text-brand font-extrabold text-base">REKLAM ALANINIZ</div>
+            <div class="text-xs text-zinc-300 mt-1">{{ $slotLabel }}</div>
+            <div class="text-[11px] text-zinc-500 mt-0.5">{{ $slotSeg }}</div>
+        </div>
+    </div>
 @else
-    {{-- Aktif reklam yok — süper adminden doldurulabilir boş alan --}}
-    <div class="ad-slot ad-slot--empty relative rounded-3xl border-2 border-dashed border-brand/60 bg-gradient-to-br from-brand/[0.12] to-transparent text-center shadow-[0_12px_45px_-12px_rgba(240,192,64,0.3)] {{ $compact ? 'p-5' : 'p-8' }} {{ $slotClass }}">
+    {{-- Aktif reklam yok — geniş (yatay) boş alan --}}
+    <div class="ad-slot ad-slot--empty relative rounded-3xl border-2 border-dashed border-brand/60 bg-gradient-to-br from-brand/[0.12] to-transparent text-center shadow-[0_12px_45px_-12px_rgba(240,192,64,0.3)] p-8 {{ $slotClass }}">
         <div class="text-[11px] uppercase tracking-[0.3em] text-brand/80 mb-2">★ Reklam Alanı ★</div>
-        <div class="text-brand font-extrabold {{ $compact ? 'text-base' : 'text-lg sm:text-2xl' }}">REKLAM ALANINIZ</div>
+        <div class="text-brand font-extrabold text-lg sm:text-2xl">REKLAM ALANINIZ</div>
         <div class="text-sm text-zinc-300 mt-1.5">{{ $slotLabel }}</div>
         <div class="text-[11px] text-zinc-500 mt-2">{{ $slotSeg }}</div>
     </div>
