@@ -4,7 +4,7 @@
     Kullanım:
         @include('partials.ad-slot', ['placement' => 'home_banner'])
         @include('partials.ad-slot', ['placement' => 'radar_map', 'class' => 'mb-8'])
-        @include('partials.ad-slot', ['placement' => 'radar_sidebar', 'compact' => true]) {{-- dar kolon --}}
+        @include('partials.ad-slot', ['placement' => 'radar_sidebar', 'compact' => true])   (dar kolon)
 
     compact=true → dikey dizilim (görsel üstte), dar sidebar kolonları için.
     Görsel varsa gösterilir; yoksa "Görsel Alanı" yer tutucusu. Önerilen görsel: 1200×628 px.
