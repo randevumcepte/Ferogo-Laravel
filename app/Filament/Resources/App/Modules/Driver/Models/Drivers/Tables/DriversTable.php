@@ -285,6 +285,78 @@ class DriversTable
                                 ->persistent()
                                 ->send();
                         }),
+                    Action::make('force_ready_for_test')
+                        ->label('⚡ Test için TAM HAZIRLA')
+                        ->icon(\Filament\Support\Icons\Heroicon::OutlinedBoltSlash)
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Sürücüyü test için tam hazırla')
+                        ->modalDescription('Bu buton her şeyi yapar: onay + belgeler + askı kaldır + 30 günlük paket + çevrim içi. Sürücü anında radarda görünür ve talep alabilir.')
+                        ->action(function (Driver $d) {
+                            $now = now();
+                            $expires = $now->copy()->addDays(30);
+
+                            // 1) Test paketi
+                            $pkg = DriverPackage::create([
+                                'driver_id'         => $d->id,
+                                'type'              => 'monthly',
+                                'duration_hours'    => 30 * 24,
+                                'price'             => 0.00,
+                                'starts_at'         => $now,
+                                'expires_at'        => $expires,
+                                'status'            => 'active',
+                                'payment_provider'  => 'manual_test',
+                                'payment_reference' => 'TEST-' . $now->format('YmdHis'),
+                                'paid_at'           => $now,
+                            ]);
+
+                            // 2) Belgeleri onayla (yüklenmiş olanları — yoksa yine de dispatch'e engel değil)
+                            $docCols = [
+                                'license_file_path'         => 'license_approved_at',
+                                'src_file_path'             => 'src_approved_at',
+                                'psychotechnic_file_path'   => 'psychotechnic_approved_at',
+                                'criminal_record_file_path' => 'criminal_record_approved_at',
+                                'insurance_file_path'       => 'insurance_approved_at',
+                                'inspection_file_path'      => 'inspection_approved_at',
+                            ];
+                            $docUpdate = [];
+                            foreach ($docCols as $fileCol => $approvedCol) {
+                                if ($d->{$fileCol} && empty($d->{$approvedCol})) {
+                                    $docUpdate[$approvedCol] = $now;
+                                }
+                            }
+
+                            // 3) Ana driver güncellemesi — onay, paket cache, askı temizle, ONLINE yap
+                            $d->update(array_merge($docUpdate, [
+                                'approval_status'      => 'approved',
+                                'approved_at'          => $d->approved_at ?? $now,
+                                'is_suspended'         => false,
+                                'suspended_at'         => null,
+                                'suspension_reason'    => null,
+                                'package_active_until' => $expires,
+                                'availability_status'  => 'online',
+                                'last_location_updated_at' => $now,
+                            ]));
+
+                            // 4) Konum boşsa İzmir Konak varsayılanı (radar için şart)
+                            if (empty($d->current_lat) || empty($d->current_lng)) {
+                                $d->update([
+                                    'current_lat' => 38.4192,
+                                    'current_lng' => 27.1287,
+                                ]);
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title('⚡ Sürücü test için TAM hazır')
+                                ->body(
+                                    'Paket #' . $pkg->id . ' · Bitiş: ' . $expires->format('d.m.Y') . "\n"
+                                    . 'Onay: ✓ · Askı: ✗ · Belgeler: ' . count($docUpdate) . ' onay · Online: ✓' . "\n"
+                                    . 'Konum: ' . $d->fresh()->current_lat . ', ' . $d->fresh()->current_lng
+                                )
+                                ->persistent()
+                                ->send();
+                        }),
                     Action::make('grant_test_package')
                         ->label('Test paketi ver (30 gün)')
                         ->icon(\Filament\Support\Icons\Heroicon::OutlinedGift)
