@@ -28,10 +28,10 @@ class DriverChangeRequestsTable
                 TextColumn::make('type')
                     ->label('Tür')
                     ->badge()
-                    ->formatStateUsing(fn (string $s): string => match ($s) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'vehicle' => 'Araç',
                         'profile_critical' => 'Profil',
-                        default => $s,
+                        default => $state,
                     }),
 
                 TextColumn::make('payload')
@@ -68,17 +68,17 @@ class DriverChangeRequestsTable
                 TextColumn::make('status')
                     ->label('Durum')
                     ->badge()
-                    ->color(fn (string $s): string => match ($s) {
+                    ->color(fn (string $state): string => match ($state) {
                         'pending'  => 'warning',
                         'approved' => 'success',
                         'rejected' => 'danger',
                         default    => 'gray',
                     })
-                    ->formatStateUsing(fn (string $s): string => match ($s) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'pending'  => 'Beklemede',
                         'approved' => 'Onaylandı',
                         'rejected' => 'Reddedildi',
-                        default    => $s,
+                        default    => $state,
                     }),
 
                 TextColumn::make('created_at')
