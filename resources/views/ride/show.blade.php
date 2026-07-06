@@ -687,6 +687,23 @@
                     </div>
                 </div>
 
+                {{-- Fiyat teklifi (pazarlık) — bırakış seçilince görünür --}}
+                <div id="qm-offer-block" class="hidden p-4 rounded-xl bg-brand/[0.06] border border-brand/25">
+                    <div class="flex items-center justify-between mb-2.5">
+                        <span class="text-[10px] uppercase tracking-[0.2em] text-brand/80 font-bold">Teklifin</span>
+                        <span class="text-[10px] text-zinc-500">Sistem önerisi: <span id="qm-offer-suggested" class="text-zinc-300 font-semibold">—</span></span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button type="button" id="qm-offer-minus" class="w-12 h-12 shrink-0 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-2xl font-bold leading-none flex items-center justify-center transition select-none">−</button>
+                        <div class="flex-1 text-center">
+                            <div class="text-3xl font-extrabold text-brand tabular-nums leading-none"><span id="qm-offer-amount">—</span> <span class="text-lg">₺</span></div>
+                            <div class="text-[10px] text-zinc-500 mt-1.5" id="qm-offer-range">—</div>
+                        </div>
+                        <button type="button" id="qm-offer-plus" class="w-12 h-12 shrink-0 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-2xl font-bold leading-none flex items-center justify-center transition select-none">+</button>
+                    </div>
+                    <p class="text-[10px] text-zinc-500 mt-2.5 leading-relaxed">Fiyatı sen belirle. Sürücü kabul edebilir ya da karşı teklif verebilir; anlaşınca yolculuk başlar.</p>
+                </div>
+
                 {{-- Customer — login değilse görünür, login ise hesap rozetiyle değiştirilir --}}
                 @if ($authedCustomer)
                     <div class="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
@@ -782,7 +799,43 @@
                 </h3>
                 <p class="text-sm text-zinc-400 mb-6">Üye sürücü cevap veriyor… <span id="qm-waiting-countdown" class="text-brand font-bold tabular-nums">60</span> sn</p>
 
-                <div class="p-3 rounded-xl bg-white/[0.03] border border-white/10 text-left mb-5">
+                {{-- Teklif özeti — pazarlık boyunca senin fiyatın --}}
+                <div id="qm-waiting-offer" class="hidden p-3 rounded-xl bg-brand/[0.06] border border-brand/20 text-left mb-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] uppercase tracking-wider text-brand/80">Teklifin</span>
+                        <span class="text-base font-bold text-brand tabular-nums"><span id="qm-waiting-offer-amount">—</span> ₺</span>
+                    </div>
+                </div>
+
+                {{-- Pazarlık: sürücü karşı teklif verince görünür --}}
+                <div id="qm-neg-panel" class="hidden p-4 rounded-2xl bg-amber-500/10 border border-amber-400/30 text-left mb-4">
+                    <div class="text-[11px] uppercase tracking-[0.2em] text-amber-300 font-bold mb-3">Sürücü karşı teklif verdi</div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <div class="text-[10px] text-zinc-500">Senin teklifin</div>
+                            <div class="text-lg font-bold text-zinc-300 tabular-nums"><span id="qm-neg-mine">—</span> ₺</div>
+                        </div>
+                        <div class="text-2xl text-zinc-600">→</div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-amber-300/80">Sürücünün fiyatı</div>
+                            <div class="text-2xl font-extrabold text-amber-300 tabular-nums"><span id="qm-neg-driver">—</span> ₺</div>
+                        </div>
+                    </div>
+                    <button type="button" id="qm-neg-accept" class="w-full px-4 py-3 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition mb-2">Kabul Et ve Başla</button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="qm-neg-counter" class="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium text-sm transition">Karşı Teklif</button>
+                        <button type="button" id="qm-neg-cancel" class="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 font-medium text-sm transition">Vazgeç</button>
+                    </div>
+                    {{-- Karşı teklif stepper (Karşı Teklif'e basınca açılır) --}}
+                    <div id="qm-neg-counter-row" class="hidden mt-3 pt-3 border-t border-white/10 flex items-center gap-2">
+                        <button type="button" id="qm-neg-minus" class="w-10 h-10 shrink-0 rounded-lg bg-white/5 border border-white/10 text-white text-xl font-bold leading-none select-none">−</button>
+                        <div class="flex-1 text-center text-xl font-extrabold text-brand tabular-nums leading-none"><span id="qm-neg-amount">—</span> ₺</div>
+                        <button type="button" id="qm-neg-plus" class="w-10 h-10 shrink-0 rounded-lg bg-white/5 border border-white/10 text-white text-xl font-bold leading-none select-none">+</button>
+                        <button type="button" id="qm-neg-send" class="px-3 h-10 rounded-lg bg-brand hover:bg-brand-600 text-black font-bold text-sm shrink-0">Gönder</button>
+                    </div>
+                </div>
+
+                <div id="qm-waiting-progress-box" class="p-3 rounded-xl bg-white/[0.03] border border-white/10 text-left mb-5">
                     <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Aday sırası</div>
                     <div class="text-xs text-zinc-300" id="qm-waiting-progress">1 / —</div>
                 </div>
@@ -913,6 +966,10 @@
                         <div class="flex items-start gap-2.5">
                             <div class="w-2 h-2 rounded-sm bg-white mt-1.5"></div>
                             <div class="flex-1 text-zinc-300 truncate" id="qm-accepted-dropoff">—</div>
+                        </div>
+                        <div id="qm-accepted-fare-row" class="hidden flex items-center justify-between pt-2 mt-1 border-t border-white/10">
+                            <span class="text-[10px] uppercase tracking-wider text-zinc-500">Anlaşılan ücret</span>
+                            <span class="text-base font-extrabold text-brand tabular-nums"><span id="qm-accepted-fare">—</span> ₺</span>
                         </div>
                     </div>
                 </div>
@@ -1714,6 +1771,8 @@
     // ===== QUICK SELECT MODAL =====
     const RIDE_REQ_URL    = '{{ route('ride_requests.store') }}';
     const RIDE_REQ_SHOW   = (id) => '{{ url('/api/ride-requests') }}/' + encodeURIComponent(id);
+    const RIDE_REQ_COUNTER      = (id) => '{{ url('/api/ride-requests') }}/' + encodeURIComponent(id) + '/counter';
+    const RIDE_REQ_ACCEPT_PRICE = (id) => '{{ url('/api/ride-requests') }}/' + encodeURIComponent(id) + '/accept-price';
     const OTP_SEND_URL    = '{{ route('phone.send_otp') }}';
     const OTP_VERIFY_URL  = '{{ route('phone.verify_otp') }}';
     const LOGIN_URL       = '{{ route('customer.login') }}?return=/yolculuk-yapin';
@@ -2223,6 +2282,7 @@
             qmFareDistance.textContent = '—';
             qmFareDuration.textContent = '—';
             qmFareTotal.textContent = '—';
+            setSuggestedFare(null);
             return;
         }
         // Düz mesafe + %20 yol uzunluğu payı
@@ -2231,18 +2291,64 @@
         const mins = Math.max(5, Math.round(km * 2.2 + 3));
 
         // Hızlı yerel tahmin (backend'e gitmeden)
+        const slug = (selectedRealDriver && selectedRealDriver.vehicle_class_slug)
+            || (selectedDriver && selectedDriver.vSlug) || 'easy';
         const rates = {
             easy:     { base: 50,  perKm: 22, min: 150 },
             platinum: { base: 100, perKm: 35, min: 250 },
             vip:      { base: 200, perKm: 55, min: 500 },
         };
-        const r = rates[selectedDriver.vSlug] || rates.easy;
+        const r = rates[slug] || rates.easy;
         const calc = Math.max(r.min, r.base + km * r.perKm);
 
         qmFareDistance.textContent = `${km.toFixed(1)} km`;
         qmFareDuration.textContent = `${mins} dk`;
         qmFareTotal.textContent = `₺${Math.round(calc)}`;
+        // Pazarlık: sistem önerisini güncelle → teklif stepper'ı bu değere sıfırlanır
+        setSuggestedFare(calc);
     }
+
+    // ===== Fiyat teklifi (pazarlık) — stepper =====
+    const NEG_BAND = 0.40;   // backend RideRequestService::PRICE_BAND ile aynı (±%40)
+    const NEG_STEP = 10;     // ₺ adım
+    let suggestedFare = null;   // sistem önerisi (çapa)
+    let customerOffer = null;   // yolcunun teklifi
+    const offerBlock       = document.getElementById('qm-offer-block');
+    const offerAmountEl    = document.getElementById('qm-offer-amount');
+    const offerSuggestedEl = document.getElementById('qm-offer-suggested');
+    const offerRangeEl     = document.getElementById('qm-offer-range');
+
+    function offerBounds(base) {
+        const b = base || suggestedFare;
+        if (!b) return [null, null];
+        return [Math.round(b * (1 - NEG_BAND)), Math.round(b * (1 + NEG_BAND))];
+    }
+    function renderOfferUI() {
+        if (!suggestedFare) { offerBlock.classList.add('hidden'); return; }
+        offerBlock.classList.remove('hidden');
+        const [min, max] = offerBounds();
+        customerOffer = Math.min(max, Math.max(min, Math.round(customerOffer == null ? suggestedFare : customerOffer)));
+        offerAmountEl.textContent = customerOffer;
+        offerSuggestedEl.textContent = `₺${Math.round(suggestedFare)}`;
+        offerRangeEl.textContent = `₺${min} – ₺${max} arası serbest`;
+    }
+    function setSuggestedFare(v) {
+        suggestedFare = (v && v > 0) ? Math.round(v) : null;
+        customerOffer = suggestedFare;   // yeni rota → teklifi öneriye sıfırla
+        renderOfferUI();
+    }
+    document.getElementById('qm-offer-minus').addEventListener('click', () => {
+        if (!suggestedFare) return;
+        const [min] = offerBounds();
+        customerOffer = Math.max(min, (customerOffer == null ? suggestedFare : customerOffer) - NEG_STEP);
+        renderOfferUI();
+    });
+    document.getElementById('qm-offer-plus').addEventListener('click', () => {
+        if (!suggestedFare) return;
+        const [, max] = offerBounds();
+        customerOffer = Math.min(max, (customerOffer == null ? suggestedFare : customerOffer) + NEG_STEP);
+        renderOfferUI();
+    });
 
     // Pending submit payload — OTP doğrulama sonrası gönderilmek üzere saklanır.
     let pendingPayload = null;
@@ -2277,6 +2383,8 @@
             distance_km:           parseFloat(km.toFixed(2)),
             duration_minutes:      mins,
             estimated_fare:        Math.round(estFare),
+            suggested_fare:        Math.round(suggestedFare || estFare),
+            customer_offer_fare:   Math.round(customerOffer == null ? (suggestedFare || estFare) : customerOffer),
             preferred_driver_id:   selectedRealDriver.id,
             fallback_driver_ids:   fallbacks,
             fingerprint:           deviceFingerprint,
@@ -2555,6 +2663,95 @@
         closeQuickModal();
     });
 
+    // ===== PAZARLIK (fiyat) — bekleme ekranı =====
+    let negBase = null;          // karşı teklif sınırları için baz (sistem önerisi)
+    let negCounterAmount = null; // yolcunun karşı teklif tutarı
+
+    async function postNeg(url, body) {
+        const csrf = document.querySelector('meta[name="csrf-token"]').content;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+            body: body ? JSON.stringify(body) : null,
+        });
+        let data = null; try { data = await res.json(); } catch (_) {}
+        return { ok: res.ok, data };
+    }
+
+    function renderWaitingOffer(n) {
+        const box = document.getElementById('qm-waiting-offer');
+        const amt = n && (n.current_price != null ? n.current_price : n.customer_offer_fare);
+        if (amt != null) {
+            document.getElementById('qm-waiting-offer-amount').textContent = Math.round(amt);
+            box.classList.remove('hidden');
+        } else {
+            box.classList.add('hidden');
+        }
+    }
+
+    function renderNegotiation(s) {
+        const n = s.negotiation;
+        renderWaitingOffer(n);
+        const panel = document.getElementById('qm-neg-panel');
+        const progressBox = document.getElementById('qm-waiting-progress-box');
+        if (n && n.state === 'driver_countered' && n.driver_counter_fare != null) {
+            document.getElementById('qm-neg-mine').textContent = Math.round(n.customer_offer_fare != null ? n.customer_offer_fare : 0);
+            document.getElementById('qm-neg-driver').textContent = Math.round(n.driver_counter_fare);
+            negBase = n.suggested_fare || n.driver_counter_fare;
+            negCounterAmount = Math.round(n.customer_offer_fare != null ? n.customer_offer_fare : (n.suggested_fare || n.driver_counter_fare));
+            document.getElementById('qm-neg-amount').textContent = negCounterAmount;
+            document.getElementById('qm-neg-counter-row').classList.add('hidden');
+            // Tur bittiyse yalnızca Kabul/Vazgeç — karşı teklif kapanır
+            document.getElementById('qm-neg-counter').style.display = (n.rounds_left > 0) ? '' : 'none';
+            panel.classList.remove('hidden');
+            progressBox.classList.add('hidden');
+        } else {
+            panel.classList.add('hidden');
+            document.getElementById('qm-neg-counter-row').classList.add('hidden');
+            progressBox.classList.remove('hidden');
+        }
+    }
+
+    // Kabul Et ve Başla → sürücünün fiyatını kabul et
+    document.getElementById('qm-neg-accept').addEventListener('click', async () => {
+        if (!activeRequestId) return;
+        const btn = document.getElementById('qm-neg-accept');
+        btn.disabled = true; btn.textContent = 'Başlatılıyor…';
+        const { ok, data } = await postNeg(RIDE_REQ_ACCEPT_PRICE(activeRequestId), null);
+        btn.disabled = false; btn.textContent = 'Kabul Et ve Başla';
+        if (ok && data && data.success && data.status) applyStatus(data.status);
+        else pollStatusOnce();
+    });
+
+    // Karşı Teklif → stepper'ı aç/kapat
+    document.getElementById('qm-neg-counter').addEventListener('click', () => {
+        document.getElementById('qm-neg-counter-row').classList.toggle('hidden');
+    });
+    document.getElementById('qm-neg-minus').addEventListener('click', () => {
+        const [min] = offerBounds(negBase);
+        negCounterAmount = Math.max(min, (negCounterAmount == null ? negBase : negCounterAmount) - NEG_STEP);
+        document.getElementById('qm-neg-amount').textContent = negCounterAmount;
+    });
+    document.getElementById('qm-neg-plus').addEventListener('click', () => {
+        const [, max] = offerBounds(negBase);
+        negCounterAmount = Math.min(max, (negCounterAmount == null ? negBase : negCounterAmount) + NEG_STEP);
+        document.getElementById('qm-neg-amount').textContent = negCounterAmount;
+    });
+    document.getElementById('qm-neg-send').addEventListener('click', async () => {
+        if (!activeRequestId || negCounterAmount == null) return;
+        const btn = document.getElementById('qm-neg-send');
+        btn.disabled = true; btn.textContent = '…';
+        await postNeg(RIDE_REQ_COUNTER(activeRequestId), { amount: negCounterAmount });
+        btn.disabled = false; btn.textContent = 'Gönder';
+        document.getElementById('qm-neg-counter-row').classList.add('hidden');
+        document.getElementById('qm-neg-panel').classList.add('hidden');
+        pollStatusOnce();
+    });
+    // Vazgeç → mevcut iptal akışı
+    document.getElementById('qm-neg-cancel').addEventListener('click', () => {
+        document.getElementById('qm-waiting-cancel').click();
+    });
+
     // ===== STATUS POLLING =====
     function startStatusPolling() {
         if (statusPollHandle) clearInterval(statusPollHandle);
@@ -2594,6 +2791,9 @@
                 if (remaining <= 0) clearInterval(waitingCountdownHandle);
             }, 1000);
 
+            renderWaitingOffer(s.negotiation);
+            document.getElementById('qm-neg-panel').classList.add('hidden');
+            document.getElementById('qm-waiting-progress-box').classList.remove('hidden');
             showStage('waiting');
             return;
         }
@@ -2638,6 +2838,7 @@
                 if (remaining <= 0) clearInterval(waitingCountdownHandle);
             }, 1000);
 
+            renderNegotiation(s);
             showStage('waiting');
         } else if (s.status === 'accepted') {
             if (waitingCountdownHandle) { clearInterval(waitingCountdownHandle); waitingCountdownHandle = null; }
@@ -2791,6 +2992,15 @@
         document.getElementById('qm-accepted-trips').textContent = `${drv.trips || 0} yolculuk`;
         document.getElementById('qm-accepted-pickup').textContent = qmPickupInput.value.trim();
         document.getElementById('qm-accepted-dropoff').textContent = qmDropoffInput.value.trim();
+        // Anlaşılan ücret (pazarlık sonucu)
+        const agreed = s.negotiation && (s.negotiation.agreed_fare != null ? s.negotiation.agreed_fare : s.negotiation.current_price);
+        const fareRow = document.getElementById('qm-accepted-fare-row');
+        if (agreed != null) {
+            document.getElementById('qm-accepted-fare').textContent = Math.round(agreed);
+            fareRow.classList.remove('hidden');
+        } else {
+            fareRow.classList.add('hidden');
+        }
     }
 
     function startChatPolling() {
