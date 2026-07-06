@@ -35,7 +35,7 @@ class DriverPackagesTable
                 TextColumn::make('status')
                     ->label('Durum')
                     ->badge()
-                    ->color(fn (string $s): string => match ($s) {
+                    ->color(fn (string $state): string => match ($state) {
                         'active'   => 'success',
                         'expired'  => 'gray',
                         'pending'  => 'warning',
@@ -43,13 +43,13 @@ class DriverPackagesTable
                         'refunded' => 'info',
                         default    => 'gray',
                     })
-                    ->formatStateUsing(fn (string $s): string => match ($s) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'active'   => 'Aktif',
                         'expired'  => 'Süresi doldu',
                         'pending'  => 'Bekliyor',
                         'failed'   => 'Başarısız',
                         'refunded' => 'İade',
-                        default    => $s,
+                        default    => $state,
                     }),
 
                 TextColumn::make('starts_at')

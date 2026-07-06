@@ -55,17 +55,17 @@ class DriverPayoutsTable
                 TextColumn::make('status')
                     ->label('Durum')
                     ->badge()
-                    ->color(fn (string $s): string => match ($s) {
+                    ->color(fn (string $state): string => match ($state) {
                         'paid'    => 'success',
                         'pending' => 'warning',
                         'failed'  => 'danger',
                         default   => 'gray',
                     })
-                    ->formatStateUsing(fn (string $s): string => match ($s) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'paid'    => 'Ödendi',
                         'pending' => 'Bekliyor',
                         'failed'  => 'Başarısız',
-                        default   => $s,
+                        default   => $state,
                     }),
 
                 TextColumn::make('paid_at')

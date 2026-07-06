@@ -51,7 +51,7 @@ class RideRequestsTable
                 TextColumn::make('status')
                     ->label('Durum')
                     ->badge()
-                    ->color(fn (string $s): string => match ($s) {
+                    ->color(fn (string $state): string => match ($state) {
                         'pending'   => 'warning',
                         'accepted'  => 'success',
                         'rejected'  => 'gray',
@@ -59,13 +59,13 @@ class RideRequestsTable
                         'cancelled' => 'gray',
                         default     => 'gray',
                     })
-                    ->formatStateUsing(fn (string $s): string => match ($s) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'pending'   => 'Bekliyor',
                         'accepted'  => 'Kabul edildi',
                         'rejected'  => 'Reddedildi',
                         'expired'   => 'Süresi doldu',
                         'cancelled' => 'İptal',
-                        default     => $s,
+                        default     => $state,
                     }),
 
                 TextColumn::make('offer_expires_at')

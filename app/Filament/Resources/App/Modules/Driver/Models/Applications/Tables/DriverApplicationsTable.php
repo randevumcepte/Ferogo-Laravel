@@ -44,12 +44,12 @@ class DriverApplicationsTable
                 TextColumn::make('gender')
                     ->label('Cinsiyet')
                     ->badge()
-                    ->color(fn (?string $s): string => match ($s) {
+                    ->color(fn (?string $state): string => match ($state) {
                         'female' => 'danger',
                         'male'   => 'info',
                         default  => 'gray',
                     })
-                    ->formatStateUsing(fn (?string $s): string => match ($s) {
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
                         'female' => '👩 Kadın',
                         'male'   => '👨 Erkek',
                         default  => '—',
@@ -65,12 +65,12 @@ class DriverApplicationsTable
 
                 TextColumn::make('experience_band')
                     ->label('Deneyim')
-                    ->formatStateUsing(fn (?string $s): string => match ($s) {
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
                         'under_1' => '<1 yıl',
                         '1_to_3'  => '1-3 yıl',
                         '3_to_5'  => '3-5 yıl',
                         '5_plus'  => '5+ yıl',
-                        default   => $s ?? '—',
+                        default   => $state ?? '—',
                     }),
 
                 TextColumn::make('vehicle_info')
@@ -87,19 +87,19 @@ class DriverApplicationsTable
                 TextColumn::make('status')
                     ->label('Durum')
                     ->badge()
-                    ->color(fn (string $s): string => match ($s) {
+                    ->color(fn (string $state): string => match ($state) {
                         'pending'   => 'warning',
                         'contacted' => 'info',
                         'approved'  => 'success',
                         'rejected'  => 'danger',
                         default     => 'gray',
                     })
-                    ->formatStateUsing(fn (string $s): string => match ($s) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'pending'   => 'Beklemede',
                         'contacted' => 'İletişime geçildi',
                         'approved'  => 'Onaylandı',
                         'rejected'  => 'Reddedildi',
-                        default     => $s,
+                        default     => $state,
                     }),
 
                 TextColumn::make('created_at')

@@ -46,19 +46,19 @@ class NoShowReportsTable
                 TextColumn::make('resolution')
                     ->label('Karar')
                     ->badge()
-                    ->color(fn (string $s): string => match ($s) {
+                    ->color(fn (string $state): string => match ($state) {
                         'confirmed'      => 'success',
                         'refunded'       => 'info',
                         'pending_review' => 'warning',
                         'disputed'       => 'danger',
                         default          => 'gray',
                     })
-                    ->formatStateUsing(fn (string $s): string => match ($s) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'confirmed'      => 'Onaylandı',
                         'refunded'       => 'İade edildi',
                         'pending_review' => 'İnceleniyor',
                         'disputed'       => 'İtiraz',
-                        default          => $s,
+                        default          => $state,
                     }),
 
                 TextColumn::make('created_at')

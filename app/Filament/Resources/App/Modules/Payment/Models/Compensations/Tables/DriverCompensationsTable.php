@@ -26,11 +26,11 @@ class DriverCompensationsTable
                 TextColumn::make('reason')
                     ->label('Sebep')
                     ->badge()
-                    ->formatStateUsing(fn (?string $s): string => match ($s) {
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
                         'no_show'          => 'Müşteri gelmedi',
                         'customer_cancel'  => 'Yolcu iptali',
                         'system_error'     => 'Sistem hatası',
-                        default            => $s ?? '—',
+                        default            => $state ?? '—',
                     }),
 
                 TextColumn::make('amount')
@@ -42,19 +42,19 @@ class DriverCompensationsTable
                 TextColumn::make('status')
                     ->label('Durum')
                     ->badge()
-                    ->color(fn (string $s): string => match ($s) {
+                    ->color(fn (string $state): string => match ($state) {
                         'paid'     => 'success',
                         'pending'  => 'warning',
                         'approved' => 'info',
                         'rejected' => 'danger',
                         default    => 'gray',
                     })
-                    ->formatStateUsing(fn (string $s): string => match ($s) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'paid'     => 'Ödendi',
                         'pending'  => 'Bekliyor',
                         'approved' => 'Onaylandı',
                         'rejected' => 'Reddedildi',
-                        default    => $s,
+                        default    => $state,
                     }),
 
                 TextColumn::make('ride_id')
