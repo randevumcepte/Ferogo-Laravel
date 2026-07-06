@@ -92,8 +92,196 @@
     <div class="drift-1 absolute top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-brand/10 blur-[120px] pointer-events-none"></div>
     <div class="drift-2 absolute top-[40rem] -right-32 w-[32rem] h-[32rem] rounded-full bg-brand/15 blur-[140px] pointer-events-none"></div>
 
+    {{-- ============ APPLICATION FORM (en üstte) ============ --}}
+    <section id="basvuru" class="relative px-6 pt-8 md:pt-12 pb-16">
+        <div class="max-w-3xl mx-auto">
+
+            <div class="text-center mb-8 md:mb-10">
+                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-3">Başvuru</div>
+                <h1 class="display-font text-4xl md:text-6xl text-white mb-4">2 dakika. Aynı gün cevap.</h1>
+                <p class="text-base md:text-lg text-zinc-400 max-w-xl mx-auto">
+                    Aşağıdaki formu doldur, ekip içinden bir kişi 24 saat içinde seninle iletişime geçsin.
+                </p>
+            </div>
+
+            @if(session('application_success'))
+                <div class="mb-8 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">✓</div>
+                    <div>
+                        <div class="text-emerald-200 font-semibold mb-1">Başvurun alındı.</div>
+                        <div class="text-sm text-emerald-100/80">24 saat içinde telefonla seni arayacağız. Hazırda dur.</div>
+                    </div>
+                </div>
+            @endif
+
+            @if($errors->any())
+                <div class="mb-8 p-5 rounded-2xl bg-red-500/10 border border-red-500/30">
+                    <div class="text-red-200 font-semibold mb-2">Lütfen şunları düzelt:</div>
+                    <ul class="list-disc list-inside text-sm text-red-100/80 space-y-1">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('driver.apply.store') }}" class="bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-10 space-y-8">
+                @csrf
+
+                {{-- Section: kişisel --}}
+                <div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Kişisel</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ad Soyad</label>
+                            <input type="text" name="full_name" value="{{ old('full_name') }}" required maxlength="120" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mehmet Yılmaz">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Telefon</label>
+                            <input type="tel" name="phone" value="{{ old('phone') }}" required maxlength="32" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="0532 000 00 00">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">E-posta <span class="text-zinc-600">(opsiyonel)</span></label>
+                            <input type="email" name="email" value="{{ old('email') }}" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="mehmet@ornek.com">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şehir</label>
+                            <select name="city_id" class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                <option value="">Seçiniz</option>
+                                @foreach($cities as $city)
+                                    <option value="{{ $city->id }}" {{ old('city_id') == $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Doğum yılı</label>
+                            <input type="number" name="birth_year" value="{{ old('birth_year') }}" min="1940" max="{{ date('Y') - 18 }}" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="1990">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Cinsiyet</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="check-pill cursor-pointer">
+                                    <input type="radio" name="gender" value="male" class="sr-only peer" {{ old('gender') === 'male' ? 'checked' : '' }} required>
+                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
+                                        <span class="text-lg">👨</span>
+                                        <span class="text-sm font-medium">Erkek</span>
+                                    </div>
+                                </label>
+                                <label class="check-pill cursor-pointer">
+                                    <input type="radio" name="gender" value="female" class="sr-only peer" {{ old('gender') === 'female' ? 'checked' : '' }} required>
+                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
+                                        <span class="text-lg">👩</span>
+                                        <span class="text-sm font-medium">Kadın</span>
+                                    </div>
+                                </label>
+                            </div>
+                            <p class="text-[11px] text-zinc-500 mt-2">Kadın sürücülerimize "sadece kadın yolcu" opsiyonu sunulur.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Section: profesyonel --}}
+                <div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Sürüş profili</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ehliyet sınıfı</label>
+                            <select name="license_class" class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                @foreach(['B' => 'B', 'D1' => 'D1', 'D' => 'D', 'E' => 'E'] as $val => $label)
+                                    <option value="{{ $val }}" {{ old('license_class', 'B') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Deneyim</label>
+                            <select name="experience_band" class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                @foreach(['under_1' => '1 yıldan az', '1_to_3' => '1-3 yıl', '3_to_5' => '3-5 yıl', '5_plus' => '5 yıl ve üzeri'] as $val => $label)
+                                    <option value="{{ $val }}" {{ old('experience_band', '1_to_3') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="check-pill cursor-pointer block max-w-sm">
+                            <input type="checkbox" name="has_src" value="1" class="sr-only peer" {{ old('has_src') ? 'checked' : '' }}>
+                            <div class="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
+                                <div class="w-5 h-5 rounded-md border-2 border-current flex items-center justify-center text-xs">✓</div>
+                                <span class="text-sm font-medium">SRC-2 belgem var</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-400 mb-2">Aracın <span class="text-zinc-600">(marka, model, yıl)</span></label>
+                        <input type="text" name="vehicle_info" value="{{ old('vehicle_info') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mercedes Vito 2021">
+                        <p class="text-xs text-zinc-500 mt-2">Bakımlı, sigara içilmeyen, son 7 yıl içinde üretilmiş araç.</p>
+                    </div>
+                </div>
+
+                {{-- Section: not --}}
+                <div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Eklemek istediğin</div>
+                    <textarea name="notes" rows="4" maxlength="1000" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 resize-none" placeholder="Bizimle paylaşmak istediğin bir şey varsa...">{{ old('notes') }}</textarea>
+                </div>
+
+                {{-- Vergi Sorumluluğu Bilgilendirme --}}
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 md:p-5">
+                    <div class="flex items-start gap-3">
+                        <div class="text-xl shrink-0">📋</div>
+                        <div class="text-xs md:text-sm text-zinc-300 leading-relaxed">
+                            <div class="font-semibold text-amber-200 mb-1.5">Vergi Sorumluluğu Bilgilendirmesi</div>
+                            <p>
+                                Ferxgo bir <strong>paylaşımlı yolculuk platformudur</strong>; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
+                                Gelir İdaresi Başkanlığı'nın 7 Ağustos 2024 tarihli kararı uyarınca paylaşımlı yolculuk faaliyetinden elde edilen kazanç
+                                <strong>üye sürücünün ticari kazancıdır</strong> ve vergi yükümlülüğü tamamen üye sürücüye aittir.
+                                Ferxgo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Onaylar --}}
+                <div class="space-y-3">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="kvkk" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
+                        <span class="text-sm text-zinc-400 leading-relaxed">
+                            Kişisel verilerimin başvuru değerlendirme amacıyla işlenmesini ve benimle iletişim kurulmasını kabul ediyorum.
+                            <a href="{{ route('legal.kvkk') }}" target="_blank" class="text-brand hover:underline">KVKK Aydınlatma Metni</a>
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="terms" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
+                        <span class="text-sm text-zinc-400 leading-relaxed">
+                            <a href="{{ route('legal.terms') }}" target="_blank" class="text-brand hover:underline">Hizmet Şartları</a> ve
+                            <a href="{{ route('legal.ride-sharing') }}" target="_blank" class="text-brand hover:underline">Paylaşımlı Yolculuk modelini</a>
+                            okudum, anladım. Ferxgo'nun aracı hizmet sağlayıcı olduğunu, vergi sorumluluğunun bana ait olduğunu kabul ediyorum.
+                        </span>
+                    </label>
+                </div>
+
+                {{-- Submit --}}
+                <button type="submit" class="group w-full inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-lg transition-all shadow-2xl shadow-brand/30 hover:shadow-brand/50">
+                    Başvurumu Gönder
+                    <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                </button>
+
+                <p class="text-xs text-zinc-500 text-center">
+                    Telefonla görüşmek istersen → <a href="tel:+908503403039" class="text-brand hover:underline font-semibold">0850 340 3039</a>
+                </p>
+            </form>
+
+            <div class="mt-6 text-center">
+                <a href="#neden-ferxgo" class="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-brand transition">
+                    Ne kazanacağını öğren
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                </a>
+            </div>
+        </div>
+    </section>
+
     {{-- ============ HERO ============ --}}
-    <section class="relative px-6 pt-12 md:pt-20 pb-24">
+    <section id="neden-ferxgo" class="relative px-6 pt-12 md:pt-20 pb-24" style="scroll-margin-top: 80px;">
         <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
 
             {{-- Left: copy --}}
@@ -378,188 +566,6 @@
             </div>
         </div>
     </section>
-
-    {{-- ============ APPLICATION FORM ============ --}}
-    <section id="basvuru" class="relative px-6 py-20 md:py-28">
-        <div class="max-w-3xl mx-auto">
-
-            <div class="text-center mb-12">
-                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Başvuru</div>
-                <h2 class="display-font text-4xl md:text-6xl text-white mb-5">2 dakika. Aynı gün cevap.</h2>
-                <p class="text-lg text-zinc-400 max-w-xl mx-auto">
-                    Aşağıdaki formu doldur, ekip içinden bir kişi 24 saat içinde seninle iletişime geçsin.
-                </p>
-            </div>
-
-            @if(session('application_success'))
-                <div class="mb-8 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">✓</div>
-                    <div>
-                        <div class="text-emerald-200 font-semibold mb-1">Başvurun alındı.</div>
-                        <div class="text-sm text-emerald-100/80">24 saat içinde telefonla seni arayacağız. Hazırda dur.</div>
-                    </div>
-                </div>
-            @endif
-
-            @if($errors->any())
-                <div class="mb-8 p-5 rounded-2xl bg-red-500/10 border border-red-500/30">
-                    <div class="text-red-200 font-semibold mb-2">Lütfen şunları düzelt:</div>
-                    <ul class="list-disc list-inside text-sm text-red-100/80 space-y-1">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <form method="POST" action="{{ route('driver.apply.store') }}" class="bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-10 space-y-8">
-                @csrf
-
-                {{-- Section: kişisel --}}
-                <div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Kişisel</div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ad Soyad</label>
-                            <input type="text" name="full_name" value="{{ old('full_name') }}" required maxlength="120" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mehmet Yılmaz">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Telefon</label>
-                            <input type="tel" name="phone" value="{{ old('phone') }}" required maxlength="32" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="0532 000 00 00">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">E-posta <span class="text-zinc-600">(opsiyonel)</span></label>
-                            <input type="email" name="email" value="{{ old('email') }}" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="mehmet@ornek.com">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şehir</label>
-                            <select name="city_id" class="form-input w-full rounded-xl px-4 py-3 text-white">
-                                <option value="">Seçiniz</option>
-                                @foreach($cities as $city)
-                                    <option value="{{ $city->id }}" {{ old('city_id') == $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Doğum yılı</label>
-                            <input type="number" name="birth_year" value="{{ old('birth_year') }}" min="1940" max="{{ date('Y') - 18 }}" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="1990">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Cinsiyet</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label class="check-pill cursor-pointer">
-                                    <input type="radio" name="gender" value="male" class="sr-only peer" {{ old('gender') === 'male' ? 'checked' : '' }} required>
-                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
-                                        <span class="text-lg">👨</span>
-                                        <span class="text-sm font-medium">Erkek</span>
-                                    </div>
-                                </label>
-                                <label class="check-pill cursor-pointer">
-                                    <input type="radio" name="gender" value="female" class="sr-only peer" {{ old('gender') === 'female' ? 'checked' : '' }} required>
-                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
-                                        <span class="text-lg">👩</span>
-                                        <span class="text-sm font-medium">Kadın</span>
-                                    </div>
-                                </label>
-                            </div>
-                            <p class="text-[11px] text-zinc-500 mt-2">Kadın sürücülerimize "sadece kadın yolcu" opsiyonu sunulur.</p>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Section: profesyonel --}}
-                <div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Sürüş profili</div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ehliyet sınıfı</label>
-                            <select name="license_class" class="form-input w-full rounded-xl px-4 py-3 text-white">
-                                @foreach(['B' => 'B', 'D1' => 'D1', 'D' => 'D', 'E' => 'E'] as $val => $label)
-                                    <option value="{{ $val }}" {{ old('license_class', 'B') == $val ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Deneyim</label>
-                            <select name="experience_band" class="form-input w-full rounded-xl px-4 py-3 text-white">
-                                @foreach(['under_1' => '1 yıldan az', '1_to_3' => '1-3 yıl', '3_to_5' => '3-5 yıl', '5_plus' => '5 yıl ve üzeri'] as $val => $label)
-                                    <option value="{{ $val }}" {{ old('experience_band', '1_to_3') == $val ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mb-5">
-                        <label class="check-pill cursor-pointer block max-w-sm">
-                            <input type="checkbox" name="has_src" value="1" class="sr-only peer" {{ old('has_src') ? 'checked' : '' }}>
-                            <div class="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
-                                <div class="w-5 h-5 rounded-md border-2 border-current flex items-center justify-center text-xs">✓</div>
-                                <span class="text-sm font-medium">SRC-2 belgem var</span>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-zinc-400 mb-2">Aracın <span class="text-zinc-600">(marka, model, yıl)</span></label>
-                        <input type="text" name="vehicle_info" value="{{ old('vehicle_info') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mercedes Vito 2021">
-                        <p class="text-xs text-zinc-500 mt-2">Bakımlı, sigara içilmeyen, son 7 yıl içinde üretilmiş araç.</p>
-                    </div>
-                </div>
-
-                {{-- Section: not --}}
-                <div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Eklemek istediğin</div>
-                    <textarea name="notes" rows="4" maxlength="1000" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 resize-none" placeholder="Bizimle paylaşmak istediğin bir şey varsa...">{{ old('notes') }}</textarea>
-                </div>
-
-                {{-- Vergi Sorumluluğu Bilgilendirme (Martı dili / Maliye 7.8.2024 kararı uyumu) --}}
-                <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 md:p-5">
-                    <div class="flex items-start gap-3">
-                        <div class="text-xl shrink-0">📋</div>
-                        <div class="text-xs md:text-sm text-zinc-300 leading-relaxed">
-                            <div class="font-semibold text-amber-200 mb-1.5">Vergi Sorumluluğu Bilgilendirmesi</div>
-                            <p>
-                                Ferxgo bir <strong>paylaşımlı yolculuk platformudur</strong>; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
-                                Gelir İdaresi Başkanlığı'nın 7 Ağustos 2024 tarihli kararı uyarınca paylaşımlı yolculuk faaliyetinden elde edilen kazanç
-                                <strong>üye sürücünün ticari kazancıdır</strong> ve vergi yükümlülüğü tamamen üye sürücüye aittir.
-                                Ferxgo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Onaylar --}}
-                <div class="space-y-3">
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" name="kvkk" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
-                        <span class="text-sm text-zinc-400 leading-relaxed">
-                            Kişisel verilerimin başvuru değerlendirme amacıyla işlenmesini ve benimle iletişim kurulmasını kabul ediyorum.
-                            <a href="{{ route('legal.kvkk') }}" target="_blank" class="text-brand hover:underline">KVKK Aydınlatma Metni</a>
-                        </span>
-                    </label>
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" name="terms" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
-                        <span class="text-sm text-zinc-400 leading-relaxed">
-                            <a href="{{ route('legal.terms') }}" target="_blank" class="text-brand hover:underline">Hizmet Şartları</a> ve
-                            <a href="{{ route('legal.ride-sharing') }}" target="_blank" class="text-brand hover:underline">Paylaşımlı Yolculuk modelini</a>
-                            okudum, anladım. Ferxgo'nun aracı hizmet sağlayıcı olduğunu, vergi sorumluluğunun bana ait olduğunu kabul ediyorum.
-                        </span>
-                    </label>
-                </div>
-
-                {{-- Submit --}}
-                <button type="submit" class="group w-full inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-lg transition-all shadow-2xl shadow-brand/30 hover:shadow-brand/50">
-                    Başvurumu Gönder
-                    <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                </button>
-
-                <p class="text-xs text-zinc-500 text-center">
-                    Telefonla görüşmek istersen → <a href="tel:+908503403039" class="text-brand hover:underline font-semibold">0850 340 3039</a>
-                </p>
-            </form>
-        </div>
-    </section>
-
     {{-- ============ FINAL CTA STRIP ============ --}}
     <section class="relative px-4 sm:px-6 py-12 sm:py-16">
         <div class="max-w-5xl mx-auto">
