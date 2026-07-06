@@ -10,6 +10,7 @@ use App\Modules\Booking\Services\CustomerTrustService;
 use App\Modules\Booking\Services\FavoriteDriverService;
 use App\Modules\Booking\Services\NoShowService;
 use App\Modules\Booking\Services\RideRequestService;
+use App\Modules\Booking\Support\NegotiationPayload;
 use App\Modules\Driver\Models\Driver;
 use App\Modules\Pricing\Services\FareCalculator;
 use App\Modules\Vehicle\Models\VehicleClass;
@@ -32,6 +33,8 @@ use Illuminate\Validation\Rule;
  */
 class CustomerRideController extends Controller
 {
+    use NegotiationPayload;
+
     public function __construct(
         private RideRequestService $service,
         private CustomerTrustService $trustService,
@@ -97,7 +100,7 @@ class CustomerRideController extends Controller
         $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
             try {
                 $response = Http::withHeaders([
-                    'User-Agent'      => 'Ferogo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
+                    'User-Agent'      => 'Ferxgo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
                     'Accept-Language' => 'tr,en',
                 ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
                     'q'              => $q,
@@ -382,6 +385,8 @@ class CustomerRideController extends Controller
             'distance_km'           => ['required', 'numeric', 'min:0', 'max:500'],
             'duration_minutes'      => ['required', 'integer', 'min:1', 'max:600'],
             'estimated_fare'        => ['nullable', 'numeric', 'min:0'],
+            'suggested_fare'        => ['nullable', 'numeric', 'min:0'],
+            'customer_offer_fare'   => ['nullable', 'numeric', 'min:0'],
             'preferred_driver_id'   => ['required', 'integer', 'exists:drivers,id'],
             'fallback_driver_ids'   => ['nullable', 'array', 'max:5'],
             'fallback_driver_ids.*' => ['integer', 'exists:drivers,id'],
@@ -471,6 +476,8 @@ class CustomerRideController extends Controller
             'distance_km'          => (float) $validated['distance_km'],
             'duration_minutes'     => (int) $validated['duration_minutes'],
             'estimated_fare'       => isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null,
+            'suggested_fare'       => isset($validated['suggested_fare']) ? (float) $validated['suggested_fare'] : (isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null),
+            'customer_offer_fare'  => isset($validated['customer_offer_fare']) ? (float) $validated['customer_offer_fare'] : null,
             'candidate_driver_ids' => $orderedCandidates,
             'phone_verified_at'    => now(),
             'verification_token'   => null,
@@ -519,6 +526,41 @@ class CustomerRideController extends Controller
         return response()->json([
             'ok'     => true,
             'status' => $this->statusPayload($req),
+        ]);
+    }
+
+    /**
+     * POST /api/v1/customer/ride-requests/{publicId}/counter
+     * Body: { amount } — müşteri sürücünün karşı teklifine yeni fiyat verir.
+     */
+    public function counter(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $req    = $this->ownedRequest($publicId);
+        $result = $this->service->customerCounter($req, (float) $validated['amount']);
+
+        return response()->json(array_merge(['ok' => $result['ok']], $result), $result['ok'] ? 200 : 422);
+    }
+
+    /**
+     * POST /api/v1/customer/ride-requests/{publicId}/accept-price
+     * Müşteri sürücünün karşı teklifini kabul eder → yolculuk başlar.
+     */
+    public function acceptPrice(string $publicId): JsonResponse
+    {
+        $req    = $this->ownedRequest($publicId);
+        $result = $this->service->customerAcceptCounter($req);
+
+        if (! $result['ok']) {
+            return response()->json(['ok' => false, 'message' => $result['message'] ?? 'İşlem yapılamadı.'], 422);
+        }
+
+        return response()->json([
+            'ok'     => true,
+            'status' => $this->statusPayload($result['request']),
         ]);
     }
 
@@ -676,6 +718,8 @@ class CustomerRideController extends Controller
             'arrived_at'            => $req->driver_arrived_at?->toIso8601String(),
             'customer_confirmed_at' => $req->customer_confirmed_at?->toIso8601String(),
             'no_show_at'            => $req->no_show_at?->toIso8601String(),
+            // Fiyat pazarlığı bloğu (inDrive tarzı)
+            'negotiation'           => $this->negotiationPayload($req),
         ];
 
         if ($req->offered_driver_id) {

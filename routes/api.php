@@ -57,6 +57,9 @@ Route::middleware(['auth:sanctum', 'device', 'role:customer', 'ability:customer:
         Route::get('ride-requests/{publicId}',                                             [CustomerRideController::class, 'showRequest']);
         Route::post('ride-requests/{publicId}/cancel',                                     [CustomerRideController::class, 'cancelRequest']);
         Route::post('ride-requests/{publicId}/confirm',                                    [CustomerRideController::class, 'confirmRequest']);
+        // Fiyat pazarlığı: müşteri karşı teklif / kabul
+        Route::middleware('throttle:30,1')->post('ride-requests/{publicId}/counter',       [CustomerRideController::class, 'counter']);
+        Route::post('ride-requests/{publicId}/accept-price',                               [CustomerRideController::class, 'acceptPrice']);
         Route::get('ride-requests/{publicId}/messages',                                    [CustomerRideController::class, 'messages']);
         Route::middleware('throttle:30,1')->post('ride-requests/{publicId}/messages',      [CustomerRideController::class, 'sendMessage']);
 
@@ -78,6 +81,7 @@ Route::middleware(['auth:sanctum', 'device', 'role:driver', 'ability:driver:*'])
 
         // Teklifler
         Route::post('offers/{publicId}/accept',  [DriverController::class, 'acceptOffer']);
+        Route::middleware('throttle:30,1')->post('offers/{publicId}/counter', [DriverController::class, 'counterOffer']);
         Route::post('offers/{publicId}/reject',  [DriverController::class, 'rejectOffer']);
 
         // Aktif yolculuk

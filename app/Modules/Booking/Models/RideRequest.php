@@ -33,6 +33,13 @@ class RideRequest extends Model
         'distance_km',
         'duration_minutes',
         'estimated_fare',
+        // ─── Fiyat pazarlığı ───
+        'suggested_fare',
+        'customer_offer_fare',
+        'driver_counter_fare',
+        'agreed_fare',
+        'negotiation_state',
+        'negotiation_round',
         'status',
         'candidate_driver_ids',
         'current_candidate_index',
@@ -70,6 +77,11 @@ class RideRequest extends Model
         'dropoff_lng'           => 'decimal:7',
         'distance_km'           => 'decimal:2',
         'estimated_fare'        => 'decimal:2',
+        'suggested_fare'        => 'decimal:2',
+        'customer_offer_fare'   => 'decimal:2',
+        'driver_counter_fare'   => 'decimal:2',
+        'agreed_fare'           => 'decimal:2',
+        'negotiation_round'     => 'integer',
         'candidate_driver_ids'  => 'array',
         'offer_expires_at'      => 'datetime',
         'accepted_at'           => 'datetime',
@@ -131,6 +143,34 @@ class RideRequest extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(RideMessage::class)->orderBy('id');
+    }
+
+    public function priceOffers(): HasMany
+    {
+        return $this->hasMany(RidePriceOffer::class)->orderBy('id');
+    }
+
+    /** Yolcu, sürücünün karşı teklifini bekliyor mu? (top yolcuda) */
+    public function isAwaitingCustomerPrice(): bool
+    {
+        return $this->negotiation_state === 'driver_countered';
+    }
+
+    /** Sürücü, yolcunun teklifini bekliyor mu? (top sürücüde) */
+    public function isAwaitingDriverPrice(): bool
+    {
+        return $this->negotiation_state === 'customer_offered';
+    }
+
+    /** Bu talepte masadaki güncel ücret (pazarlığın son değeri). */
+    public function currentPrice(): ?float
+    {
+        $val = $this->agreed_fare
+            ?? ($this->negotiation_state === 'driver_countered' ? $this->driver_counter_fare : null)
+            ?? $this->customer_offer_fare
+            ?? $this->estimated_fare;
+
+        return $val !== null ? (float) $val : null;
     }
 
     public function isPending(): bool

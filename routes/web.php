@@ -97,6 +97,9 @@ Route::prefix('api/ride-requests')->name('ride_requests.')->group(function () {
     Route::get('/{publicId}',            [RideRequestController::class, 'show'])->name('show');
     Route::post('/{publicId}/cancel',    [RideRequestController::class, 'cancel'])->name('cancel');
     Route::post('/{publicId}/confirm',   [RideRequestController::class, 'confirm'])->name('confirm');
+    // Fiyat pazarlığı: müşteri sürücünün karşı teklifine yeni fiyat / kabul
+    Route::post('/{publicId}/counter',      [RideRequestController::class, 'counter'])->name('counter');
+    Route::post('/{publicId}/accept-price', [RideRequestController::class, 'acceptPrice'])->name('accept_price');
     // Faz 3: müşteri havuz fallback sürücüsünü onay/red
     Route::post('/{publicId}/reconfirm', [RideRequestController::class, 'reconfirm'])->name('reconfirm');
     // Faz 6: müşteri ride başlangıcında sürücü/araç görsel doğrulaması
@@ -158,6 +161,7 @@ Route::get('/surucu-paneli/api/state',                       [DriverPanelControl
 Route::post('/surucu-paneli/api/availability',               [DriverPanelController::class, 'setAvailability'])->name('driver.api.availability');
 Route::post('/surucu-paneli/api/women-only',                 [DriverPanelController::class, 'setWomenOnly'])->name('driver.api.women_only');
 Route::post('/surucu-paneli/api/offers/{publicId}/accept',   [DriverPanelController::class, 'acceptOffer'])->name('driver.api.accept');
+Route::post('/surucu-paneli/api/offers/{publicId}/counter',  [DriverPanelController::class, 'counterOffer'])->name('driver.api.counter');
 Route::post('/surucu-paneli/api/offers/{publicId}/reject',   [DriverPanelController::class, 'rejectOffer'])->name('driver.api.reject');
 Route::post('/surucu-paneli/api/active/message',             [DriverPanelController::class, 'sendMessage'])->name('driver.api.message');
 Route::post('/surucu-paneli/api/active/complete',            [DriverPanelController::class, 'completeRide'])->name('driver.api.complete');

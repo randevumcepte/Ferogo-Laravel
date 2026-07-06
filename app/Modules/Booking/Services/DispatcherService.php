@@ -3,6 +3,7 @@
 namespace App\Modules\Booking\Services;
 
 use App\Modules\Booking\Models\RideMessage;
+use App\Modules\Booking\Models\RidePriceOffer;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Driver\Models\Driver;
 use Illuminate\Support\Facades\DB;
@@ -143,10 +144,15 @@ class DispatcherService
                 return true;
             }
 
+            // Havuza yayılırken pazarlığı yolcunun MASADAKİ teklifine sıfırla:
+            // 1:1'de seçilen sürücünün karşı teklifi havuza taşınmaz, herkes yolcunun
+            // güncel fiyatına (customer_offer_fare) cevap verir.
             RideRequest::where('id', $req->id)
                 ->update([
                     'pool_candidate_driver_ids' => $candidates,
                     'offer_expires_at'          => now()->addSeconds(self::POOL_OFFER_TTL_SECONDS),
+                    'negotiation_state'         => 'customer_offered',
+                    'driver_counter_fare'       => null,
                     'updated_at'                => now(),
                 ]);
 
@@ -181,7 +187,7 @@ class DispatcherService
             return false;
         }
 
-        // Atomik claim
+        // Atomik claim — pool sürücüsü yolcunun MASADAKİ fiyatını kabul etti
         $claimed = RideRequest::where('id', $req->id)
             ->where('status', 'pool_expanded')
             ->whereNull('accepted_driver_id')
@@ -189,6 +195,7 @@ class DispatcherService
                 'status'                => 'awaiting_customer_reconfirm',
                 'reconfirm_required_at' => now(),
                 'accepted_driver_id'    => $driver->id,
+                'negotiation_state'     => 'customer_offered',
                 'offer_expires_at'      => now()->addSeconds(self::RECONFIRM_TTL_SECONDS),
                 'updated_at'            => now(),
             ]);
@@ -196,6 +203,8 @@ class DispatcherService
         if ($claimed === 0) {
             return false;
         }
+
+        $this->logPoolOffer($req, $driver->id, 'accept', $req->customer_offer_fare !== null ? (float) $req->customer_offer_fare : null);
 
         // Sistem mesajı
         RideMessage::create([
@@ -205,6 +214,62 @@ class DispatcherService
         ]);
 
         return true;
+    }
+
+    /**
+     * Havuzdaki bir sürücü, yolcunun fiyatına karşı teklif verir.
+     * İlk karşı teklif veren "kilidi" alır → müşteri onayına düşer (fiyatı da onaylar).
+     */
+    public function counterByPoolDriver(RideRequest $req, Driver $driver, float $amount): bool
+    {
+        $req = $req->fresh();
+        if ($req->status !== 'pool_expanded') return false;
+
+        $candidates = $req->pool_candidate_driver_ids ?? [];
+        if (! in_array($driver->id, $candidates, true)) return false;
+        if (! $driver->isDispatchable()) return false;
+
+        $amount = round(max(0.0, $amount), 2);
+
+        // Atomik claim — ilk cevaplayan alır
+        $claimed = RideRequest::where('id', $req->id)
+            ->where('status', 'pool_expanded')
+            ->whereNull('accepted_driver_id')
+            ->update([
+                'status'                => 'awaiting_customer_reconfirm',
+                'reconfirm_required_at' => now(),
+                'accepted_driver_id'    => $driver->id,
+                'driver_counter_fare'   => $amount,
+                'negotiation_state'     => 'driver_countered',
+                'offer_expires_at'      => now()->addSeconds(self::RECONFIRM_TTL_SECONDS),
+                'updated_at'            => now(),
+            ]);
+
+        if ($claimed === 0) {
+            return false;
+        }
+
+        $this->logPoolOffer($req, $driver->id, 'counter', $amount);
+
+        RideMessage::create([
+            'ride_request_id' => $req->id,
+            'sender'          => 'system',
+            'body'            => 'Yakındaki bir üye sürücü ' . number_format($amount, 2, ',', '.') . ' ₺ teklif etti. Onayınız bekleniyor.',
+        ]);
+
+        return true;
+    }
+
+    private function logPoolOffer(RideRequest $req, int $driverId, string $type, ?float $amount): void
+    {
+        RidePriceOffer::create([
+            'ride_request_id' => $req->id,
+            'driver_id'       => $driverId,
+            'actor'           => 'driver',
+            'type'            => $type,
+            'amount'          => $amount,
+            'round'           => (int) $req->negotiation_round,
+        ]);
     }
 
     /**

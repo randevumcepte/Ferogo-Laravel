@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Modules\Booking\Models\RideMessage;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Booking\Services\CustomerTrustService;
+use App\Modules\Booking\Services\DispatcherService;
 use App\Modules\Booking\Services\NoShowService;
 use App\Modules\Booking\Services\RideRequestService;
+use App\Modules\Booking\Support\NegotiationPayload;
 use App\Modules\Driver\Models\Driver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,8 @@ use Illuminate\Validation\Rule;
  */
 class DriverController extends Controller
 {
+    use NegotiationPayload;
+
     public function __construct(
         private RideRequestService $service,
         private NoShowService $noShowService,
@@ -190,6 +194,17 @@ class DriverController extends Controller
 
         $req = RideRequest::where('public_id', $publicId)->firstOrFail();
 
+        // Havuz teklifi ise dispatcher üzerinden (müşteri reconfirm akışı başlar)
+        if ($req->status === 'pool_expanded') {
+            $ok = app(DispatcherService::class)->acceptByPoolDriver($req, $driver);
+            return response()->json(
+                $ok
+                    ? ['ok' => true, 'awaiting_customer_reconfirm' => true]
+                    : ['ok' => false, 'message' => 'Bu talep artık geçerli değil.'],
+                $ok ? 200 : 409
+            );
+        }
+
         try {
             $this->service->accept($req, $driver);
         } catch (\RuntimeException $e) {
@@ -197,6 +212,36 @@ class DriverController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * POST /api/v1/driver/offers/{publicId}/counter
+     * Body: { amount } — sürücü yolcunun teklifine karşı fiyat verir.
+     */
+    public function counterOffer(Request $request, string $publicId): JsonResponse
+    {
+        $driver = $this->currentDriver($request);
+        if (! $driver) return response()->json(['ok' => false], 404);
+
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $req = RideRequest::where('public_id', $publicId)->firstOrFail();
+
+        // Havuz teklifi ise dispatcher üzerinden (ilk cevaplayan kilidi alır)
+        if ($req->status === 'pool_expanded') {
+            $ok = app(DispatcherService::class)->counterByPoolDriver($req, $driver, (float) $validated['amount']);
+            return response()->json(
+                $ok
+                    ? ['ok' => true, 'awaiting_customer_reconfirm' => true]
+                    : ['ok' => false, 'message' => 'Bu talep artık geçerli değil.'],
+                $ok ? 200 : 409
+            );
+        }
+
+        $result = $this->service->driverCounter($req, $driver, (float) $validated['amount']);
+        return response()->json(array_merge(['ok' => $result['ok']], $result), $result['ok'] ? 200 : 422);
     }
 
     /**
@@ -365,6 +410,8 @@ class DriverController extends Controller
             'estimated_fare'    => $req->estimated_fare ? (float) $req->estimated_fare : null,
             'expires_at'        => $req->offer_expires_at?->toIso8601String(),
             'seconds_remaining' => max(0, (int) round(now()->diffInSeconds($req->offer_expires_at, false))),
+            // Fiyat pazarlığı — sürücü yolcunun teklifini görür, counter atabilir
+            'negotiation'       => $this->negotiationPayload($req),
         ];
     }
 

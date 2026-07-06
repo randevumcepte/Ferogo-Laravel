@@ -11,6 +11,7 @@ use App\Modules\Booking\Services\FavoriteDriverService;
 use App\Modules\Booking\Services\NoShowService;
 use App\Modules\Booking\Services\PhoneVerificationService;
 use App\Modules\Booking\Services\RideRequestService;
+use App\Modules\Booking\Support\NegotiationPayload;
 use App\Modules\Driver\Models\Driver;
 use App\Modules\Vehicle\Models\VehicleClass;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,8 @@ use Illuminate\Validation\Rule;
 
 class RideRequestController extends Controller
 {
+    use NegotiationPayload;
+
     public function __construct(
         private RideRequestService $service,
         private CustomerTrustService $trustService,
@@ -131,7 +134,7 @@ class RideRequestController extends Controller
                 'label'  => 'Onaylı Sürücü',
                 'icon'   => '✓',
                 'valid'  => $driver->approval_status === 'approved',
-                'detail' => 'Ferogo tarafından doğrulanmış.',
+                'detail' => 'Ferxgo tarafından doğrulanmış.',
             ],
             [
                 'key'    => 'license',
@@ -305,6 +308,8 @@ class RideRequestController extends Controller
                 'distance_km'           => ['required', 'numeric', 'min:0', 'max:500'],
                 'duration_minutes'      => ['required', 'integer', 'min:1', 'max:600'],
                 'estimated_fare'        => ['nullable', 'numeric', 'min:0'],
+                'suggested_fare'        => ['nullable', 'numeric', 'min:0'],
+                'customer_offer_fare'   => ['nullable', 'numeric', 'min:0'],
                 'preferred_driver_id'   => ['required', 'integer', 'exists:drivers,id'],
                 'fallback_driver_ids'   => ['nullable', 'array', 'max:5'],
                 'fallback_driver_ids.*' => ['integer', 'exists:drivers,id'],
@@ -442,6 +447,8 @@ class RideRequestController extends Controller
             'distance_km'          => (float) $validated['distance_km'],
             'duration_minutes'     => (int) $validated['duration_minutes'],
             'estimated_fare'       => isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null,
+            'suggested_fare'       => isset($validated['suggested_fare']) ? (float) $validated['suggested_fare'] : (isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null),
+            'customer_offer_fare'  => isset($validated['customer_offer_fare']) ? (float) $validated['customer_offer_fare'] : null,
             'candidate_driver_ids' => $orderedCandidates,
             'phone_verified_at'    => now(),
             'verification_token'   => $validated['verification_token'] ?? null,
@@ -488,6 +495,41 @@ class RideRequestController extends Controller
         return response()->json([
             'success' => true,
             'status'  => $this->statusPayload($req),
+        ]);
+    }
+
+    /**
+     * POST /api/ride-requests/{publicId}/counter — müşteri sürücünün karşı teklifine yeni fiyat verir.
+     * Body: { amount }
+     */
+    public function counter(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $req    = RideRequest::where('public_id', $publicId)->firstOrFail();
+        $result = $this->service->customerCounter($req, (float) $validated['amount']);
+
+        return response()->json(array_merge(['success' => $result['ok']], $result), $result['ok'] ? 200 : 422);
+    }
+
+    /**
+     * POST /api/ride-requests/{publicId}/accept-price — müşteri sürücünün karşı teklifini kabul eder.
+     * Anlaşma → yolculuk başlar.
+     */
+    public function acceptPrice(string $publicId): JsonResponse
+    {
+        $req    = RideRequest::where('public_id', $publicId)->firstOrFail();
+        $result = $this->service->customerAcceptCounter($req);
+
+        if (! $result['ok']) {
+            return response()->json(['success' => false, 'message' => $result['message'] ?? 'İşlem yapılamadı.'], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'status'  => $this->statusPayload($result['request']),
         ]);
     }
 
@@ -705,6 +747,8 @@ class RideRequestController extends Controller
             'arrived_at'            => $req->driver_arrived_at?->toIso8601String(),
             'customer_confirmed_at' => $req->customer_confirmed_at?->toIso8601String(),
             'no_show_at'            => $req->no_show_at?->toIso8601String(),
+            // Fiyat pazarlığı bloğu (inDrive tarzı)
+            'negotiation'           => $this->negotiationPayload($req),
         ];
 
         // Privacy seviyesi: müşteri sürücüyü onayladıktan SONRA tam bilgi açılır
