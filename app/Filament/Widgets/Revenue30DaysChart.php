@@ -13,7 +13,7 @@ class Revenue30DaysChart extends ChartWidget
 {
     protected ?string $heading = 'Son 30 Gün — Günlük Ciro';
 
-    protected static ?string $pollingInterval = '5m';
+    protected ?string $pollingInterval = '5m';
 
     protected int|string|array $columnSpan = 2;
 

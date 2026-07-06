@@ -15,7 +15,7 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class SafetyAlerts extends BaseWidget
 {
-    protected static ?string $pollingInterval = '15s';
+    protected ?string $pollingInterval = '15s';
 
     protected int|string|array $columnSpan = 'full';
 

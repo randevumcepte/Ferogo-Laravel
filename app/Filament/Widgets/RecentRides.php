@@ -14,7 +14,7 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class RecentRides extends BaseWidget
 {
-    protected static ?string $pollingInterval = '30s';
+    protected ?string $pollingInterval = '30s';
 
     protected int|string|array $columnSpan = 'full';
 

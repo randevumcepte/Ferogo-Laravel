@@ -15,7 +15,7 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class FleetHealthAlerts extends BaseWidget
 {
-    protected static ?string $pollingInterval = '5m';
+    protected ?string $pollingInterval = '5m';
 
     protected int|string|array $columnSpan = 'full';
 

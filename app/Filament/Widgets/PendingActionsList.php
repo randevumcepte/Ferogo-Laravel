@@ -16,7 +16,7 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class PendingActionsList extends BaseWidget
 {
-    protected static ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '60s';
 
     protected int|string|array $columnSpan = 'full';
 
