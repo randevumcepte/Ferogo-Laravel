@@ -415,6 +415,9 @@
         })();
     </script>
 
+    {{-- Açılır pencere (popup) reklamı — aktif popup varsa gösterilir --}}
+    @include('partials.ad-popup')
+
     @stack('scripts')
 </body>
 </html>
