@@ -125,6 +125,9 @@
         @endif
     </section>
 
+    {{-- Reklam alanı: Sponsorlu Bildirim --}}
+    @include('partials.ad-slot', ['placement' => 'sponsored_notification'])
+
     {{-- ===== Aktif Yolculuk — zengin kart ===== --}}
     @if ($activeRequest || $activeRide)
         @php
