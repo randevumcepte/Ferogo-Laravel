@@ -24,6 +24,8 @@ class Advertisement extends Model
         'ride_tracking'          => 'Yolculuk Takip (Platin)',
         'radar_map'              => 'Radar / Harita',
         'radar_sidebar'          => 'Radar Sürücü Listesi Altı',
+        'driver_apply'           => 'Sürücü Başvuru — Üst',
+        'driver_apply_bottom'    => 'Sürücü Başvuru — Alt',
         'driver_panel'           => 'Sürücü Paneli',
         'sponsored_notification' => 'Sponsorlu Bildirim',
     ];
@@ -34,6 +36,8 @@ class Advertisement extends Model
         'ride_tracking'          => 'Platin · esir dikkat anı',
         'radar_map'              => 'Orta segment',
         'radar_sidebar'          => 'Sürücü listesi yanı · sürekli görünür',
+        'driver_apply'           => 'Sürücü başvuru · form üstü',
+        'driver_apply_bottom'    => 'Sürücü başvuru · form altı',
         'driver_panel'           => 'Gün boyu açık',
         'sponsored_notification' => 'Push bildirimi',
     ];

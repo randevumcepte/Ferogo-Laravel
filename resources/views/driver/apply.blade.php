@@ -104,6 +104,9 @@
                 </p>
             </div>
 
+            {{-- Reklam alanı: Sürücü başvuru üstü --}}
+            @include('partials.ad-slot', ['placement' => 'driver_apply', 'class' => 'mb-8'])
+
             @if(session('application_success'))
                 <div class="mb-8 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3">
                     <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">✓</div>
@@ -270,6 +273,9 @@
                     Telefonla görüşmek istersen → <a href="tel:+908503403039" class="text-brand hover:underline font-semibold">0850 340 3039</a>
                 </p>
             </form>
+
+            {{-- Reklam alanı: Sürücü başvuru altı --}}
+            @include('partials.ad-slot', ['placement' => 'driver_apply_bottom', 'class' => 'mt-8'])
 
             <div class="mt-6 text-center">
                 <a href="#neden-ferxgo" class="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-brand transition">
