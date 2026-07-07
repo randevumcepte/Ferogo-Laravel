@@ -36,8 +36,8 @@
         <div class="flex items-stretch {{ $compact ? 'flex-col' : 'flex-col sm:flex-row min-h-[10.5rem]' }}">
             {{-- Görsel / görsel alanı --}}
             <div class="shrink-0 relative {{ $compact ? 'w-full' : 'sm:w-64 lg:w-72' }}">
-                @if ($ad->image_url)
-                    <img src="{{ $ad->image_url }}" alt="{{ $ad->title }}"
+                @if ($ad->image_src)
+                    <img src="{{ $ad->image_src }}" alt="{{ $ad->title }}"
                          class="w-full object-cover group-hover:scale-105 transition duration-500 {{ $compact ? 'h-32' : 'h-48 sm:h-full' }}" loading="lazy">
                 @else
                     {{-- Görsel henüz yok: reklamverenin görselinin geleceği alan --}}

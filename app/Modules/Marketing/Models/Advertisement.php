@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Reklam / Sponsorluk alanı.
@@ -28,6 +29,7 @@ class Advertisement extends Model
         'driver_apply_bottom'    => 'Sürücü Başvuru — Alt',
         'driver_panel'           => 'Sürücü Paneli',
         'sponsored_notification' => 'Sponsorlu Bildirim',
+        'popup'                  => 'Açılır Pencere (Popup)',
     ];
 
     /** Slot segment/açıklaması (boş alan görselinde gösterilir) */
@@ -40,6 +42,7 @@ class Advertisement extends Model
         'driver_apply_bottom'    => 'Sürücü başvuru · form altı',
         'driver_panel'           => 'Gün boyu açık',
         'sponsored_notification' => 'Push bildirimi',
+        'popup'                  => 'Tüm sayfalar · açılır pencere',
     ];
 
     /** Hedef sektörler (sunum: Slayt 12) */
@@ -102,6 +105,26 @@ class Advertisement extends Model
             ->orderBy('sort_order')
             ->orderByDesc('id')
             ->first();
+    }
+
+    /**
+     * Gösterilecek görselin gerçek URL'i.
+     * image_url ya harici bir URL (http…) ya da 'ads' diskine yüklenmiş dosyanın
+     * göreli yolu olabilir; her iki durumu da tam URL'e çevirir.
+     */
+    public function getImageSrcAttribute(): ?string
+    {
+        $value = $this->image_url;
+
+        if (! $value) {
+            return null;
+        }
+
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+
+        return Storage::disk('ads')->url($value);
     }
 
     public function placementLabel(): string
