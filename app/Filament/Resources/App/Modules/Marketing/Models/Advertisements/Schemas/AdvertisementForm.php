@@ -72,10 +72,11 @@ class AdvertisementForm
                 ->visibility('public')
                 ->imageEditor()
                 ->imageEditorAspectRatios(['1.91:1', '16:9', null])
-                ->maxSize(2048) // KB
+                ->maxSize(1024) // KB — büyük dosya sonsuz dönmesin, net uyarı versin
                 ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                 ->visible(fn ($get): bool => $get('image_source') === 'upload')
-                ->helperText('Önerilen ölçü: 1200×628 px (yatay 1.91:1 oran). JPG / PNG / WebP, max ~2 MB. '
+                ->helperText('Önerilen: 1200×628 px, JPG formatı, max ~1 MB. '
+                    . 'PNG dosyaları çok büyük olabilir; yükleme takılırsa görseli JPG olarak kaydedip tekrar deneyin. '
                     . 'Yükledikten sonra kırpma aracıyla oranı ayarlayabilirsiniz. Boş bırakılırsa marka kartı (★) gösterilir.'),
 
             TextInput::make('image_url')
