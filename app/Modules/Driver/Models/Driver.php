@@ -150,6 +150,12 @@ class Driver extends Model
      */
     public function hasActivePackage(): bool
     {
+        // Test/QA modu: config('services.driver.enforce_packages') = false ise
+        // paket zorunluluğunu tamamen bypass et. Prod'da mutlaka true olmalı.
+        if (! config('services.driver.enforce_packages', true)) {
+            return true;
+        }
+
         return $this->package_active_until !== null
             && $this->package_active_until->isFuture();
     }

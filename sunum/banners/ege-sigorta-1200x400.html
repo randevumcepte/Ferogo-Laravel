@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1200px; height:400px; overflow:hidden; }
+  body {
+    font-family:"Arial Black","Segoe UI",Arial,sans-serif;
+    background:
+      radial-gradient(120% 140% at 88% 15%, #262010 0%, #14110a 42%, #0a0a0a 70%, #000 100%);
+    position:relative;
+    color:#fff;
+  }
+  .frame { position:absolute; inset:16px; border:2px solid rgba(242,201,76,.35); border-radius:26px; box-shadow:0 0 60px rgba(242,201,76,.12) inset; }
+  .wrap { position:absolute; inset:0; display:flex; align-items:center; padding:56px 60px; }
+  .left { width:58%; }
+  .kicker { color:#EDBA3E; font-size:20px; font-weight:800; letter-spacing:4px; text-transform:uppercase; margin-bottom:14px; }
+  .head { font-size:52px; line-height:1.05; font-weight:900; letter-spacing:-1px; }
+  .head .g { color:#F2C94C; }
+  .sub { margin-top:14px; font-family:"Segoe UI",Arial,sans-serif; font-weight:600; font-size:22px; color:#d8d8d8; }
+  .cta { margin-top:30px; display:inline-flex; align-items:center; gap:12px; background:linear-gradient(180deg,#F2C94C,#E0A82E); color:#111; font-size:22px; font-weight:900; padding:16px 34px; border-radius:999px; box-shadow:0 10px 30px rgba(242,201,76,.35); }
+  .cta .arw { font-size:24px; }
+  /* Sağ görsel alanı: dairesel altın rozet + %20 */
+  .right { position:absolute; right:0; top:0; height:100%; width:44%; }
+  .glow { position:absolute; right:-90px; top:50%; transform:translateY(-50%); width:520px; height:520px; border-radius:50%;
+          background:radial-gradient(circle at 50% 50%, rgba(242,201,76,.30) 0%, rgba(242,201,76,.06) 45%, transparent 70%); }
+  .badge { position:absolute; right:70px; top:50%; transform:translateY(-50%) rotate(-8deg);
+           width:230px; height:230px; border-radius:36px;
+           background:linear-gradient(160deg,#1c1c1c,#0d0d0d); border:2px solid rgba(242,201,76,.5);
+           box-shadow:0 20px 60px rgba(0,0,0,.6), 0 0 0 8px rgba(242,201,76,.06);
+           display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .badge .pct { font-size:96px; font-weight:900; color:#F2C94C; line-height:.9; letter-spacing:-2px; }
+  .badge .ind { font-family:"Segoe UI",Arial,sans-serif; font-size:26px; font-weight:800; color:#fff; letter-spacing:2px; text-transform:uppercase; }
+  .badge .shield { position:absolute; top:-22px; right:-18px; width:56px; height:56px; border-radius:50%;
+                   background:linear-gradient(180deg,#F2C94C,#E0A82E); color:#111; font-family:"Segoe UI"; font-size:30px; font-weight:900;
+                   display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px rgba(0,0,0,.5); }
+  .sponsor { position:absolute; top:26px; right:34px; z-index:5; background:linear-gradient(180deg,#F2C94C,#E0A82E); color:#111;
+             font-family:"Segoe UI"; font-size:13px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
+             padding:8px 16px; border-radius:999px; }
+  .brand { position:absolute; left:60px; bottom:30px; font-family:"Arial Black"; font-size:20px; letter-spacing:-1px; opacity:.9; }
+  .brand .x { color:#EDBA3E; font-style:italic; } .brand .w { color:#fff; }
+</style>
+</head>
+<body>
+  <div class="frame"></div>
+  <div class="sponsor">★ Sponsorlu</div>
+  <div class="right">
+    <div class="glow"></div>
+    <div class="badge">
+      <div class="shield">✓</div>
+      <div class="pct">%20</div>
+      <div class="ind">İndirim</div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="left">
+      <div class="kicker">Ege Sigorta</div>
+      <div class="head">Trafik + Kasko<br><span class="g">tek pakette</span></div>
+      <div class="sub">Aracın için dakikalar içinde teklif al, hemen poliçeni oluştur.</div>
+      <div class="cta">Teklif Al <span class="arw">→</span></div>
+    </div>
+  </div>
+  <div class="brand"><span class="w">Fer</span><span class="x">X</span><span class="w">Go</span></div>
+</body>
+</html>

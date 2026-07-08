@@ -18,6 +18,17 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    /*
+     * Sürücü ekosistemi ayarları.
+     *
+     *   enforce_packages=false yapmak → sürücü aktif paket olmadan da
+     *   müsait olabilir, radar'a düşer, iş kabul eder. Test/QA için.
+     *   Prod'da HER ZAMAN true olmalı — .env'de DRIVER_ENFORCE_PACKAGES=true.
+     */
+    'driver' => [
+        'enforce_packages' => env('DRIVER_ENFORCE_PACKAGES', true),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

@@ -58,8 +58,9 @@ class RideRequestController extends Controller
             ->withCount('favoritedByUsers as favorite_count')
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
-            ->whereNotNull('package_active_until')
-            ->where('package_active_until', '>', now())
+            ->when(config('services.driver.enforce_packages', true), fn ($q) => $q
+                ->whereNotNull('package_active_until')
+                ->where('package_active_until', '>', now()))
             ->whereNotNull('current_lat')
             ->whereNotNull('current_lng')
             ->limit(50)
@@ -81,8 +82,9 @@ class RideRequestController extends Controller
         $totalOnline = Driver::query()
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
-            ->whereNotNull('package_active_until')
-            ->where('package_active_until', '>', now())
+            ->when(config('services.driver.enforce_packages', true), fn ($q) => $q
+                ->whereNotNull('package_active_until')
+                ->where('package_active_until', '>', now()))
             ->count();
 
         return response()->json([
@@ -418,8 +420,9 @@ class RideRequestController extends Controller
             ->whereIn('id', $candidates)
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
-            ->whereNotNull('package_active_until')
-            ->where('package_active_until', '>', now())
+            ->when(config('services.driver.enforce_packages', true), fn ($q) => $q
+                ->whereNotNull('package_active_until')
+                ->where('package_active_until', '>', now()))
             ->when(! $customerIsFemale, fn ($q) => $q->where('women_passengers_only', false))
             ->pluck('id')
             ->all();
