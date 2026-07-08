@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="UTF-8"><title>FERXGO — Medya Kiti</title>
+<style>
+  @page { size: A4 portrait; margin: 0; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--gold:#EDBA3E;--gold2:#E0A82E;--muted:#b8b8b8}
+  body{font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page{width:210mm;height:297mm;background:radial-gradient(120% 80% at 80% 0%,#1c1c1c,#0a0a0a 55%,#000);padding:14mm 14mm 12mm;position:relative;display:flex;flex-direction:column}
+  .logo{font-family:"Arial Black",Arial,sans-serif;font-weight:900;font-size:30pt;letter-spacing:-1px}
+  .logo .w{color:#fff}.logo .g{color:var(--gold)}
+  .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--gold);padding-bottom:4mm;margin-bottom:5mm}
+  .top .t{color:var(--gold);font-size:11pt;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+  .lead{font-size:12pt;color:#eaeaea;line-height:1.5;margin-bottom:5mm}
+  .lead b{color:var(--gold)}
+  .stats{display:flex;gap:4mm;margin-bottom:6mm}
+  .stat{flex:1;background:linear-gradient(180deg,#181818,#101010);border:1px solid #2a2a2a;border-radius:10px;padding:5mm 3mm;text-align:center}
+  .stat b{display:block;color:var(--gold);font-size:22pt;font-weight:800;line-height:1}
+  .stat span{display:block;color:var(--muted);font-size:8.5pt;letter-spacing:1px;text-transform:uppercase;margin-top:2mm}
+  h2{color:var(--gold);font-size:12pt;letter-spacing:2px;text-transform:uppercase;margin:2mm 0 3mm}
+  table{width:100%;border-collapse:collapse;font-size:10pt;margin-bottom:5mm}
+  th{background:linear-gradient(180deg,var(--gold),var(--gold2));color:#111;text-align:left;padding:2.5mm 3mm;font-weight:800;font-size:9.5pt}
+  td{padding:2.4mm 3mm;border-bottom:1px solid #242424;color:#ededed}
+  tr:nth-child(even) td{background:#131313}
+  .tier{font-weight:800;color:var(--gold)}
+  .pkgs{display:flex;gap:4mm;margin-bottom:5mm}
+  .pkg{flex:1;background:#131313;border:1px solid #2a2a2a;border-radius:10px;padding:4mm}
+  .pkg.hot{border-color:var(--gold);box-shadow:0 0 0 1px rgba(237,186,62,.3) inset}
+  .pkg .n{color:var(--gold);font-weight:800;font-size:11pt;margin-bottom:2mm}
+  .pkg .d{color:#ddd;font-size:9pt;line-height:1.4}
+  .why{display:flex;gap:4mm;margin-bottom:5mm}
+  .why div{flex:1;font-size:9pt;color:#e8e8e8;line-height:1.4}
+  .why b{color:var(--gold);display:block;margin-bottom:1mm;font-size:9.5pt}
+  .cta{margin-top:auto;background:linear-gradient(90deg,rgba(237,186,62,.16),transparent);border-left:4px solid var(--gold);padding:4mm 5mm;border-radius:0 8px 8px 0}
+  .cta b{color:#fff;font-size:12pt}
+  .cta .c{color:var(--gold);font-weight:700;margin-top:1.5mm;font-size:10pt;letter-spacing:1px}
+  .foot{margin-top:4mm;color:#666;font-size:8pt;text-align:center;letter-spacing:1px}
+</style></head><body>
+<div class="page">
+  <div class="top">
+    <div class="logo"><span class="w">FER</span><span class="g">X</span><span class="g">GO</span></div>
+    <div class="t">Reklam & Sponsorluk · Medya Kiti</div>
+  </div>
+
+  <div class="lead">Markanız bir ilanda değil, <b>İzmir'in cebinde</b> yaşasın. FERXGO, İzmir'in paylaşımlı yolculuk uygulaması — reklamınız araç bekleyen, yolda olan, karar veren gerçek kitlenin önünde.</div>
+
+  <div class="stats">
+    <div class="stat"><b>22.000</b><span>kayıtlı kullanıcı</span></div>
+    <div class="stat"><b>2 ay</b><span>bu büyümenin süresi</span></div>
+    <div class="stat"><b>~3M</b><span>aylık gösterim</span></div>
+    <div class="stat"><b>%100</b><span>ölçülebilir</span></div>
+  </div>
+
+  <h2>Reklam Alanlarımız</h2>
+  <table>
+    <tr><th>Alan</th><th>Konum</th><th>Segment</th></tr>
+    <tr><td class="tier">💎 Yolculuk Takip</td><td>Araç beklerken — esir dikkat anı</td><td>Platin</td></tr>
+    <tr><td class="tier">🥇 Ana Sayfa Banner</td><td>Uygulamayı açan herkes</td><td>Altın</td></tr>
+    <tr><td class="tier">🥈 Radar / Harita</td><td>Sürücü ararken</td><td>Gümüş</td></tr>
+    <tr><td class="tier">🥈 Radar Liste Altı</td><td>Sürücü listesi — sürekli görünür</td><td>Gümüş</td></tr>
+    <tr><td class="tier">🎯 Açılır Pencere</td><td>Kampanya / dönemsel</td><td>Kampanya</td></tr>
+    <tr><td class="tier">🚗 Sürücü Sayfası</td><td>Aday sürücüler</td><td>Niş</td></tr>
+  </table>
+
+  <h2>Paket Seçenekleri</h2>
+  <div class="pkgs">
+    <div class="pkg"><div class="n">Rotasyon</div><div class="d">Seçtiğiniz alanda dönüşümlü yayın. Esnek ve erişilebilir giriş.</div></div>
+    <div class="pkg"><div class="n">Tekellik</div><div class="d">O alanda <b style="color:#fff">tek marka sizsiniz</b> — rakibiniz görünemez.</div></div>
+    <div class="pkg hot"><div class="n">🏆 Ana Sponsor</div><div class="d">6 alanın <b style="color:#fff">tamamı tekel</b> + sponsorlu bildirim + logonuz her yerde + öncelikli aylık rapor. İzmir'de markanızın bayrağı.</div></div>
+  </div>
+
+  <h2>Neden FERXGO?</h2>
+  <div class="why">
+    <div><b>Esir dikkat</b>Billboard 2 saniyede geçer; bizde yolcu ekrana kilitli.</div>
+    <div><b>Gelen müşteri</b>Tıklanabilir — gören değil, arayan/gelen müşteri.</div>
+    <div><b>Ölçülebilir</b>Kaç gösterim, kaç tıklama — aylık rapor. Billboard veremez.</div>
+    <div><b>Tek sponsor</b>Sektörünüzde rakibinize kapıyı kapatırsınız.</div>
+  </div>
+
+  <div class="cta">
+    <b>Sektörünüzde tek sponsor olmadan rakibiniz almasın.</b>
+    <div class="c">Değeri masada konuşalım · İLETİŞİME GEÇİN · 0850 840 13 77</div>
+  </div>
+  <div class="foot">FERXGO · İzmir Paylaşımlı Yolculuk Platformu · ferxgo.com.tr</div>
+</div>
+</body></html>

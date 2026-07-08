@@ -96,9 +96,6 @@
             </a>
         </section>
 
-        {{-- Reklam alanı: Sürücü Paneli (gün boyu açık) --}}
-        @include('partials.ad-slot', ['placement' => 'driver_panel'])
-
         {{-- ===== Kadın sürücü güvenliği: "Sadece kadın yolcu al" (yalnızca kadın sürücüler) ===== --}}
         @if ($driver->user->gender === 'female')
         <section class="rounded-3xl border border-rose-400/30 bg-rose-500/[0.06] p-5">

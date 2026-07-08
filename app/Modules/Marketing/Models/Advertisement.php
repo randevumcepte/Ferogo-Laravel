@@ -12,8 +12,10 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Reklam / Sponsorluk alanı.
  *
- * Sunumdaki "REKLAM ALANLARI" slaytının veri karşılığı: her uygulama slotu (placement)
- * için tek aktif reklam gösterilir. Süper admin panelinden yönetilir.
+ * Sunumdaki "REKLAM ALANLARI" slaytının veri karşılığı. Her uygulama slotu (placement)
+ * için birden çok aktif reklam olabilir; gösterimde ağırlıklı ROTASYON uygulanır
+ * (share of voice). is_exclusive=true olan reklam o slotta TEK gösterilir (tekellik/takeover).
+ * Süper admin panelinden yönetilir.
  */
 class Advertisement extends Model
 {
@@ -87,6 +89,8 @@ class Advertisement extends Model
         'cta_text',
         'is_active',
         'sort_order',
+        'rotation_weight',
+        'is_exclusive',
         'starts_at',
         'ends_at',
         'impressions',
@@ -96,6 +100,8 @@ class Advertisement extends Model
     protected $casts = [
         'is_active'  => 'boolean',
         'image_only' => 'boolean',
+        'is_exclusive' => 'boolean',
+        'rotation_weight' => 'integer',
         'starts_at'  => 'datetime',
         'ends_at'    => 'datetime',
         'impressions' => 'integer',
@@ -116,15 +122,56 @@ class Advertisement extends Model
             ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
     }
 
-    /** Bir slot için gösterilecek aktif reklam (yoksa null → boş alan gösterilir) */
+    /**
+     * Bir slot için gösterilecek aktif reklam (yoksa null → boş alan gösterilir).
+     *
+     * Kural:
+     *  1. O slotta TEKELLİK (is_exclusive) reklamı varsa → rotasyon yok, o gösterilir.
+     *     (Tekellik / Takeover / Ana Sponsor paketleri bu şekilde çalışır.)
+     *  2. Aksi halde tüm aktif reklamlar arasında rotation_weight ile AĞIRLIKLI RASTGELE
+     *     bir reklam gösterilir → her sayfa açılışında sıra döner (share of voice).
+     */
     public static function activeFor(string $placement): ?self
     {
-        return static::query()
+        $ads = static::query()
             ->where('placement', $placement)
             ->live()
             ->orderBy('sort_order')
             ->orderByDesc('id')
-            ->first();
+            ->get();
+
+        if ($ads->isEmpty()) {
+            return null;
+        }
+
+        // 1) Tekellik varsa rotasyona sokmadan onu göster
+        $exclusive = $ads->firstWhere('is_exclusive', true);
+        if ($exclusive) {
+            return $exclusive;
+        }
+
+        // 2) Ağırlıklı rastgele seçim (rotasyon / share of voice)
+        $totalWeight = (int) $ads->sum(fn (self $ad) => max(1, (int) $ad->rotation_weight));
+        if ($totalWeight <= 0) {
+            return $ads->first();
+        }
+
+        $pick = random_int(1, $totalWeight);
+        $acc = 0;
+        foreach ($ads as $ad) {
+            $acc += max(1, (int) $ad->rotation_weight);
+            if ($pick <= $acc) {
+                return $ad;
+            }
+        }
+
+        return $ads->first();
+    }
+
+    /** Bir slottaki aktif reklam sayısı (admin/rapor için) */
+    public static function rotationCountFor(string $placement): int
+    {
+        return static::query()->where('placement', $placement)->live()->count();
     }
 
     /**

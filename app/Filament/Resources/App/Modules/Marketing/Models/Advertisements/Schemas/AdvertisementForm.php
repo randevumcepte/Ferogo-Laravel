@@ -93,7 +93,23 @@ class AdvertisementForm
                 ->label('Sıra')
                 ->numeric()
                 ->default(0)
-                ->helperText('Aynı alanda birden fazla reklam varsa küçük sıra önce yayınlanır.'),
+                ->helperText('Tekellik reklamlarında ve boş alan sırasında küçük sıra önce gelir.'),
+
+            TextInput::make('rotation_weight')
+                ->label('Rotasyon Ağırlığı (gösterim payı)')
+                ->numeric()
+                ->minValue(1)
+                ->default(1)
+                ->helperText('Aynı alanda birden çok reklam dönerken bu reklamın gösterim payı. '
+                    . '1 = normal. 3 = eşit ağırlıklı bir reklamın 3 katı sıklıkta çıkar. '
+                    . 'Daha çok ödeyen sponsora daha yüksek pay verebilirsin.'),
+
+            Toggle::make('is_exclusive')
+                ->label('Tekellik (bu alanda TEK bu reklam)')
+                ->helperText('AÇIK: bu reklam alanı yalnızca bu markaya aittir — rotasyon durur, '
+                    . 'başka reklam bu alanda görünmez. Tekellik / Takeover / Ana Sponsor paketleri için. '
+                    . 'KAPALI: reklam diğerleriyle rotasyonda döner (paylaşımlı).')
+                ->default(false),
 
             Toggle::make('is_active')
                 ->label('Aktif')

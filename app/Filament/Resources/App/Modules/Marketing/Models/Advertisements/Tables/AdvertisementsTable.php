@@ -44,6 +44,12 @@ class AdvertisementsTable
                     ->color('gray')
                     ->formatStateUsing(fn (?string $state): string => $state ? (Advertisement::SECTORS[$state] ?? $state) : '—'),
 
+                TextColumn::make('mode')
+                    ->label('Tür')
+                    ->badge()
+                    ->state(fn (Advertisement $r): string => $r->is_exclusive ? 'Tekel' : 'Rotasyon ×' . max(1, (int) $r->rotation_weight))
+                    ->color(fn (Advertisement $r): string => $r->is_exclusive ? 'warning' : 'gray'),
+
                 TextColumn::make('impressions')
                     ->label('Gösterim')
                     ->numeric()
