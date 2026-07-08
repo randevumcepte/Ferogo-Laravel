@@ -62,6 +62,14 @@ class AdvertisementsTable
                     ->sortable()
                     ->alignEnd(),
 
+                TextColumn::make('ctr')
+                    ->label('CTR')
+                    ->state(fn (Advertisement $record): string => (int) $record->impressions > 0
+                        ? round((int) $record->clicks / (int) $record->impressions * 100, 1) . '%'
+                        : '—')
+                    ->alignEnd()
+                    ->color('gray'),
+
                 IconColumn::make('is_active')
                     ->label('Aktif')
                     ->boolean(),
