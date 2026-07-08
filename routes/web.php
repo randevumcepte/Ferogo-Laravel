@@ -202,6 +202,7 @@ Route::post('/surucu-paneli/api/document',                   [DriverPanelControl
 Route::post('/surucu-paneli/api/document/delete',            [DriverPanelController::class, 'deleteDocument'])->name('driver.api.document.delete');
 Route::get('/surucu-paneli/api/state',                       [DriverPanelController::class, 'state'])->name('driver.api.state');
 Route::post('/surucu-paneli/api/availability',               [DriverPanelController::class, 'setAvailability'])->name('driver.api.availability');
+Route::post('/surucu-paneli/api/location',                   [DriverPanelController::class, 'updateLocation'])->name('driver.api.location');
 Route::post('/surucu-paneli/api/women-only',                 [DriverPanelController::class, 'setWomenOnly'])->name('driver.api.women_only');
 Route::post('/surucu-paneli/api/offers/{publicId}/accept',   [DriverPanelController::class, 'acceptOffer'])->name('driver.api.accept');
 Route::post('/surucu-paneli/api/offers/{publicId}/counter',  [DriverPanelController::class, 'counterOffer'])->name('driver.api.counter');

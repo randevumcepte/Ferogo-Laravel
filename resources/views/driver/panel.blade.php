@@ -316,6 +316,7 @@
 
         const STATE_URL = '{{ route('driver.api.state') }}';
         const AVAIL_URL = '{{ route('driver.api.availability') }}';
+        const LOCATION_URL = '{{ route('driver.api.location') }}';
         const ACCEPT_URL = (id) => '{{ url('/surucu-paneli/api/offers') }}/' + encodeURIComponent(id) + '/accept';
         const REJECT_URL = (id) => '{{ url('/surucu-paneli/api/offers') }}/' + encodeURIComponent(id) + '/reject';
         const COUNTER_URL = (id) => '{{ url('/surucu-paneli/api/offers') }}/' + encodeURIComponent(id) + '/counter';
@@ -386,9 +387,62 @@
             if (navigator.vibrate) navigator.vibrate(0);
         }
 
+        // === CANLI KONUM TAKİBİ ===
+        // Sürücü online/yolculukta iken tarayıcı GPS'i backend'e push edilir.
+        // Böylece nerede olursa olsun canlı konum yakalanır: radarda doğru marker + gerçek mesafe/ETA.
+        // Sürücüden manuel "konum güncelle" istenmez — watchPosition arka planda halleder.
+        let geoWatchId = null;
+        let lastLocSentAt = 0;
+
+        function pushLocation(lat, lng) {
+            fetch(LOCATION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: JSON.stringify({ lat, lng }),
+                keepalive: true,
+            }).catch(() => {});
+        }
+
+        function onGeoPosition(pos) {
+            const now = Date.now();
+            // watchPosition çok sık tetikleyebilir — en fazla 20 sn'de bir gönder (backend zaten 5 sn throttle'lı)
+            if (now - lastLocSentAt < 20000) return;
+            lastLocSentAt = now;
+            pushLocation(pos.coords.latitude, pos.coords.longitude);
+        }
+
+        function startLocationTracking() {
+            if (geoWatchId !== null || !('geolocation' in navigator)) return;
+            // İlk konumu hemen gönder — online olur olmaz radara düşsün (throttle beklemeden)
+            navigator.geolocation.getCurrentPosition(
+                (pos) => { lastLocSentAt = Date.now(); pushLocation(pos.coords.latitude, pos.coords.longitude); },
+                () => {},
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
+            );
+            // Sonra sürekli izle
+            geoWatchId = navigator.geolocation.watchPosition(
+                onGeoPosition,
+                (err) => { console.warn('[geo] konum alınamadı:', err && err.message); },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 }
+            );
+        }
+
+        function stopLocationTracking() {
+            if (geoWatchId !== null) {
+                navigator.geolocation.clearWatch(geoWatchId);
+                geoWatchId = null;
+            }
+        }
+
+        function syncLocationTracking(status) {
+            if (status === 'online' || status === 'busy') startLocationTracking();
+            else stopLocationTracking();
+        }
+
         // === AVAILABILITY TOGGLE ===
         function renderAvailability(status) {
             availBtn.dataset.status = status;
+            syncLocationTracking(status);
             if (status === 'busy') {
                 availDot.className = 'w-2 h-2 rounded-full bg-amber-400';
                 availLabel.textContent = 'Yolculukta';

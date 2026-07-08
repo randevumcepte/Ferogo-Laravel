@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 
 class DriverPanelController extends Controller
@@ -459,6 +460,37 @@ class DriverPanelController extends Controller
         }
 
         return response()->json(['ok' => true, 'status' => $driver->fresh()->availability_status]);
+    }
+
+    /**
+     * POST /surucu-paneli/api/location — web panel canlı GPS güncellemesi.
+     * Sürücü online iken tarayıcıdan periyodik gönderilir (mobil updateLocation'ın web karşılığı).
+     * current_lat/lng güncel tutulur ki radar haritasında doğru yerde görünsün + mesafe/ETA gerçek hesaplansın.
+     */
+    public function updateLocation(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver();
+        if (! $driver) return response()->json(['ok' => false], 401);
+
+        $validated = $request->validate([
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lng' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        // Rate limit: konum 5 sn'den hızlı güncellenmesin (pil + sunucu koruması)
+        $rl = 'driver_loc:' . $driver->id;
+        if (RateLimiter::tooManyAttempts($rl, 1)) {
+            return response()->json(['ok' => true, 'throttled' => true]);
+        }
+        RateLimiter::hit($rl, 5);
+
+        $driver->update([
+            'current_lat'              => (float) $validated['lat'],
+            'current_lng'              => (float) $validated['lng'],
+            'last_location_updated_at' => now(),
+        ]);
+
+        return response()->json(['ok' => true]);
     }
 
     /**
