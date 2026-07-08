@@ -70,14 +70,16 @@ class AdvertisementForm
                 ->disk('ads')
                 ->directory('ads')
                 ->visibility('public')
-                ->imageEditor()
-                ->imageEditorAspectRatios(['1.91:1', '16:9', null])
-                ->maxSize(1024) // KB — büyük dosya sonsuz dönmesin, net uyarı versin
+                // Görseli tarayıcıda YÜKLEMEDEN ÖNCE küçült: dosya küçülür, sunucu/nginx
+                // limitine takılmaz, "Boyut hesaplanıyor"da sonsuz dönme biter.
+                ->imageResizeMode('contain')
+                ->imageResizeTargetWidth('1600')
+                ->imageResizeTargetHeight('1600')
+                ->maxSize(8192) // KB — küçültme sonrası zaten çok altında kalır
                 ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                 ->visible(fn ($get): bool => $get('image_source') === 'upload')
-                ->helperText('Önerilen: 1200×628 px, JPG formatı, max ~1 MB. '
-                    . 'PNG dosyaları çok büyük olabilir; yükleme takılırsa görseli JPG olarak kaydedip tekrar deneyin. '
-                    . 'Yükledikten sonra kırpma aracıyla oranı ayarlayabilirsiniz. Boş bırakılırsa marka kartı (★) gösterilir.'),
+                ->helperText('İstediğin boyutta yükleyebilirsin — tarayıcı otomatik küçültür (en fazla 1600 px). '
+                    . 'JPG / PNG / WebP. Sitede oran korunarak gösterilir. Boş bırakılırsa marka kartı (★) gösterilir.'),
 
             TextInput::make('image_url')
                 ->label('Görsel URL')
