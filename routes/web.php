@@ -225,6 +225,7 @@ Route::view('/hizmet-sartlari',     'legal.terms')->name('legal.terms');
 Route::view('/kvkk-aydinlatma',     'legal.kvkk')->name('legal.kvkk');
 Route::view('/mesafeli-satis',      'legal.distance-sales')->name('legal.distance-sales');
 Route::view('/cerez-politikasi',    'legal.cookies')->name('legal.cookies');
+Route::view('/gizlilik-guvenlik',   'legal.privacy-security')->name('legal.privacy-security');
 Route::view('/paylasimli-yolculuk', 'legal.ride-sharing')->name('legal.ride-sharing');
 
 // Hukuki onay audit log endpoint'i (click-wrap consent kaydı)

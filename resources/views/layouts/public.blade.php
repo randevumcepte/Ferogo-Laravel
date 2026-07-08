@@ -137,6 +137,7 @@
                     <li><a href="{{ route('legal.kvkk') }}" class="hover:text-white transition">KVKK Aydınlatma Metni</a></li>
                     <li><a href="{{ route('legal.distance-sales') }}" class="hover:text-white transition">Mesafeli Satış Sözleşmesi</a></li>
                     <li><a href="{{ route('legal.cookies') }}" class="hover:text-white transition">Çerez Politikası</a></li>
+                    <li><a href="{{ route('legal.privacy-security') }}" class="hover:text-white transition">Gizlilik ve Güvenlik Politikası</a></li>
                     <li class="pt-2 border-t border-white/5">📞 0850 340 3039 · 💬 WhatsApp</li>
                 </ul>
             </div>
