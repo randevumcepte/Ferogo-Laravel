@@ -21,7 +21,10 @@ class AdvertisementForm
                 ->label('Reklam Alanı')
                 ->options(Advertisement::PLACEMENTS)
                 ->required()
-                ->helperText('Uygulamada reklamın görüneceği yer. Her alanda aynı anda tek reklam yayınlanır.'),
+                ->live()
+                ->helperText(fn ($get): string => $get('placement')
+                    ? '📐 Bu alan için önerilen görsel ölçüsü: ' . Advertisement::dimensionsFor($get('placement'))
+                    : 'Reklamın görüneceği yer. Seçince o alanın önerilen görsel ölçüsü burada yazacak.'),
 
             Select::make('sector')
                 ->label('Sektör')
@@ -78,8 +81,9 @@ class AdvertisementForm
                 ->maxSize(8192) // KB — küçültme sonrası zaten çok altında kalır
                 ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                 ->visible(fn ($get): bool => $get('image_source') === 'upload')
-                ->helperText('İstediğin boyutta yükleyebilirsin — tarayıcı otomatik küçültür (en fazla 1600 px). '
-                    . 'JPG / PNG / WebP. Sitede oran korunarak gösterilir. Boş bırakılırsa marka kartı (★) gösterilir.'),
+                ->helperText(fn ($get): string => '📐 Önerilen ölçü: ' . Advertisement::dimensionsFor($get('placement'))
+                    . '. İstediğin boyutta yükleyebilirsin — tarayıcı otomatik küçültür. JPG / PNG / WebP. '
+                    . 'Boş bırakılırsa marka kartı (★) gösterilir.'),
 
             TextInput::make('image_url')
                 ->label('Görsel URL')
@@ -87,8 +91,14 @@ class AdvertisementForm
                 ->maxLength(255)
                 ->placeholder('https://... .jpg')
                 ->visible(fn ($get): bool => $get('image_source') === 'url')
-                ->helperText('Önerilen ölçü: 1200×628 px (yatay 1.91:1 oran). JPG veya PNG, max ~300 KB. '
-                    . 'Sitede sol tarafta kırpılarak gösterilir. Boş bırakılırsa marka kartı (★) gösterilir.'),
+                ->helperText(fn ($get): string => '📐 Önerilen ölçü: ' . Advertisement::dimensionsFor($get('placement'))
+                    . '. Boş bırakılırsa marka kartı (★) gösterilir.'),
+
+            Toggle::make('image_only')
+                ->label('Tam görsel (metin ve buton gösterme)')
+                ->helperText('Açık: yüklediğin görsel TÜM alanı kaplar, kırpılmaz, üstüne yazı/buton binmez '
+                    . '(görselin kendisi tam reklamdır). Kapalı: solda görsel + sağda başlık/açıklama/buton.')
+                ->default(false),
 
             TextInput::make('link_url')
                 ->label('Tıklanınca Gidilecek Adres')

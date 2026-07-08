@@ -26,21 +26,27 @@
 
             {{-- Görsel --}}
             @if ($popupAd->image_src)
-                <img src="{{ $popupAd->image_src }}" alt="{{ $popupAd->title }}" class="w-full h-52 object-cover">
+                <a href="{{ $popupAd->link_url ? route('ad.click', $popupAd) : '#' }}"
+                   @if ($popupAd->link_url) target="_blank" rel="noopener sponsored" @endif class="block">
+                    <img src="{{ $popupAd->image_src }}" alt="{{ $popupAd->title }}"
+                         class="w-full {{ $popupAd->image_only ? 'h-auto' : 'h-52 object-cover' }}">
+                </a>
             @else
                 <div class="w-full h-40 bg-gradient-to-br from-brand/35 to-brand-700/20 flex items-center justify-center text-6xl font-black text-brand/80">★</div>
             @endif
 
             {{-- İçerik --}}
             <div class="p-6 text-center">
-                <span class="inline-block text-[10px] font-extrabold uppercase tracking-widest text-black bg-brand px-2.5 py-1 rounded-full mb-3">★ Sponsorlu</span>
-                @if ($popupAd->sponsor_name)
-                    <div class="text-xs font-bold uppercase tracking-[0.2em] text-brand mb-1">{{ $popupAd->sponsor_name }}</div>
-                @endif
-                <div class="text-xl font-extrabold text-white leading-tight">{{ $popupAd->title }}</div>
-                @if ($popupAd->description)
-                    <p class="text-sm text-zinc-300/90 mt-2">{{ $popupAd->description }}</p>
-                @endif
+                @unless ($popupAd->image_only)
+                    <span class="inline-block text-[10px] font-extrabold uppercase tracking-widest text-black bg-brand px-2.5 py-1 rounded-full mb-3">★ Sponsorlu</span>
+                    @if ($popupAd->sponsor_name)
+                        <div class="text-xs font-bold uppercase tracking-[0.2em] text-brand mb-1">{{ $popupAd->sponsor_name }}</div>
+                    @endif
+                    <div class="text-xl font-extrabold text-white leading-tight">{{ $popupAd->title }}</div>
+                    @if ($popupAd->description)
+                        <p class="text-sm text-zinc-300/90 mt-2">{{ $popupAd->description }}</p>
+                    @endif
+                @endunless
 
                 <a href="{{ $popupAd->link_url ? route('ad.click', $popupAd) : '#' }}"
                    @if ($popupAd->link_url) target="_blank" rel="noopener sponsored" @endif

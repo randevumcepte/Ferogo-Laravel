@@ -45,6 +45,27 @@ class Advertisement extends Model
         'popup'                  => 'Tüm sayfalar · açılır pencere',
     ];
 
+    /**
+     * Her alan için ÖNERİLEN görsel ölçüsü (px). "Tam görsel" modunda görsel
+     * kırpılmadan tüm alanı kaplar; bu ölçüler en iyi görünüm içindir.
+     */
+    public const PLACEMENT_DIMENSIONS = [
+        'home_banner'            => '1200 × 400 px (3:1 yatay)',
+        'ride_tracking'          => '1200 × 400 px (3:1 yatay)',
+        'radar_map'              => '1200 × 400 px (3:1 yatay)',
+        'radar_sidebar'          => '800 × 800 px (kare)',
+        'driver_apply'           => '1200 × 400 px (3:1 yatay)',
+        'driver_apply_bottom'    => '1200 × 400 px (3:1 yatay)',
+        'driver_panel'           => '1200 × 400 px (3:1 yatay)',
+        'sponsored_notification' => '1200 × 300 px (4:1 ince yatay)',
+        'popup'                  => '1000 × 1000 px (kare)',
+    ];
+
+    public static function dimensionsFor(?string $placement): string
+    {
+        return self::PLACEMENT_DIMENSIONS[$placement] ?? '1200 × 400 px';
+    }
+
     /** Hedef sektörler (sunum: Slayt 12) */
     public const SECTORS = [
         'sigorta'          => 'Sigorta',
@@ -64,6 +85,7 @@ class Advertisement extends Model
         'sponsor_name',
         'description',
         'image_url',
+        'image_only',
         'link_url',
         'cta_text',
         'is_active',
@@ -76,6 +98,7 @@ class Advertisement extends Model
 
     protected $casts = [
         'is_active'  => 'boolean',
+        'image_only' => 'boolean',
         'starts_at'  => 'datetime',
         'ends_at'    => 'datetime',
         'impressions' => 'integer',
