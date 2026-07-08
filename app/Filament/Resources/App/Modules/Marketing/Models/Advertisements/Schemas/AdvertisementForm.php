@@ -96,9 +96,9 @@ class AdvertisementForm
 
             Toggle::make('image_only')
                 ->label('Tam görsel (metin ve buton gösterme)')
-                ->helperText('Açık: yüklediğin görsel TÜM alanı kaplar, kırpılmaz, üstüne yazı/buton binmez '
-                    . '(görselin kendisi tam reklamdır). Kapalı: solda görsel + sağda başlık/açıklama/buton.')
-                ->default(false),
+                ->helperText('AÇIK (önerilen): yüklediğin görsel TÜM alanı kaplar, kırpılmaz, üstüne yazı/buton binmez '
+                    . '(görselin kendisi tam reklamdır). KAPALI: solda görsel + sağda başlık/açıklama/buton.')
+                ->default(true),
 
             TextInput::make('link_url')
                 ->label('Tıklanınca Gidilecek Adres')
