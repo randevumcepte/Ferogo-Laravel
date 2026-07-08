@@ -274,6 +274,9 @@
                 </p>
             </form>
 
+            {{-- Reklam alanı: Sürücü Olun — Alt (formun altı, ayrı yönetilir) --}}
+            @include('partials.ad-slot', ['placement' => 'driver_apply_bottom', 'class' => 'mt-8'])
+
             <div class="mt-6 text-center">
                 <a href="#neden-ferxgo" class="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-brand transition">
                     Ne kazanacağını öğren
