@@ -28,6 +28,7 @@
 @if ($ad && $ad->image_only && $ad->image_src)
     {{-- TAM GÖRSEL: görsel tüm alanı kaplar, kırpılmaz --}}
     <a href="{{ $ad->link_url ? route('ad.click', $ad) : '#' }}"
+       data-adid="{{ $ad->id }}" data-adplace="{{ $placement }}"
        @if ($ad->link_url) target="_blank" rel="noopener sponsored" @endif
        class="ad-slot group relative block overflow-hidden rounded-3xl border-2 border-brand/40 hover:border-brand/70 shadow-[0_14px_50px_-14px_rgba(240,192,64,0.5)] hover:-translate-y-0.5 transition duration-300 {{ $slotClass }}">
         <span class="absolute top-3 right-3 z-10 inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-black bg-brand/95 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-lg shadow-black/30">
@@ -38,6 +39,7 @@
 @elseif ($ad)
     {{-- SPLIT: solda görsel + sağda metin/buton --}}
     <a href="{{ $ad->link_url ? route('ad.click', $ad) : '#' }}"
+       data-adid="{{ $ad->id }}" data-adplace="{{ $placement }}"
        @if ($ad->link_url) target="_blank" rel="noopener sponsored" @endif
        class="ad-slot group relative block overflow-hidden rounded-3xl border-2 border-brand/50 bg-gradient-to-br from-brand/[0.16] via-brand/[0.05] to-transparent shadow-[0_14px_50px_-14px_rgba(240,192,64,0.5)] hover:border-brand/75 hover:-translate-y-0.5 transition duration-300 {{ $slotClass }}">
 
@@ -107,3 +109,48 @@
         <div class="text-[11px] text-brand/60 mt-2">📐 Önerilen görsel: {{ $slotDims }}</div>
     </div>
 @endif
+
+@once
+<script>
+/* FERXGO reklam takibi: gösterim beacon'ı (görünürlük) + tıklamaya kaba konum ekleme.
+   Yeni konum izni İSTEMEZ — yalnızca zaten verilmiş izni sessizce okur. */
+(function(){
+  if (window.__ferxgoAdTrack) return; window.__ferxgoAdTrack = true;
+  var EP = "{{ route('ad.event') }}";
+  function geo(){ var g = window.__ferxgoGeo; return (g && g.lat && g.lng) ? {lat:g.lat,lng:g.lng} : {}; }
+  function beacon(el){
+    if (el.__seen) return; el.__seen = true;
+    var body = Object.assign({ad: parseInt(el.getAttribute('data-adid'),10), type:'impression'}, geo());
+    try { fetch(EP,{method:'POST',keepalive:true,headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body)}); } catch(e){}
+  }
+  function clickGeo(){
+    var g = geo(); if(!g.lat) return;
+    document.querySelectorAll('a[data-adid]').forEach(function(a){
+      try{ var u=new URL(a.href, location.origin); if(!u.searchParams.has('la')){ u.searchParams.set('la',g.lat); u.searchParams.set('ln',g.lng); a.href=u.toString(); } }catch(e){}
+    });
+  }
+  function observe(){
+    clickGeo();
+    var els = document.querySelectorAll('[data-adid]');
+    if ('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(en){ en.forEach(function(e){ if(e.isIntersecting){ beacon(e.target); io.unobserve(e.target); } }); }, {threshold:0.5});
+      els.forEach(function(el){ io.observe(el); });
+    } else { els.forEach(beacon); }
+  }
+  function silentGeo(){
+    if (window.__ferxgoGeo || !navigator.geolocation) return;
+    if (navigator.permissions && navigator.permissions.query){
+      navigator.permissions.query({name:'geolocation'}).then(function(p){
+        if (p.state === 'granted'){
+          navigator.geolocation.getCurrentPosition(function(pos){
+            window.__ferxgoGeo={lat:+pos.coords.latitude.toFixed(4),lng:+pos.coords.longitude.toFixed(4)}; clickGeo();
+          }, function(){}, {maximumAge:600000,timeout:3000});
+        }
+      }).catch(function(){});
+    }
+  }
+  function init(){ silentGeo(); observe(); }
+  if (document.readyState !== 'loading') init(); else document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+@endonce

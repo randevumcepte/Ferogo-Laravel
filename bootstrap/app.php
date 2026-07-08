@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // hash imzalar, biz hash_equals() ile doğruluyoruz (PayTRGateway::verifyNotification).
         $middleware->validateCsrfTokens(except: [
             'api/paytr/bildirim',
+            'reklam/olay', // reklam gösterim beacon'ı — durum değiştirmez, sadece analitik yazar
         ]);
 
         // Auth fail durumunda /api/* HTML login'e değil JSON 401'e gider.

@@ -113,6 +113,12 @@ class Advertisement extends Model
         return $this->belongsTo(Tenant::class);
     }
 
+    /** Detaylı olay kayıtları (gösterim/tıklama) — raporların kaynağı */
+    public function events()
+    {
+        return $this->hasMany(AdEvent::class);
+    }
+
     /** Yayında olan (aktif + tarih penceresi içinde) reklamlar */
     public function scopeLive(Builder $query): Builder
     {

@@ -27,6 +27,7 @@
             {{-- Görsel --}}
             @if ($popupAd->image_src)
                 <a href="{{ $popupAd->link_url ? route('ad.click', $popupAd) : '#' }}"
+                   data-adid="{{ $popupAd->id }}" data-adplace="popup"
                    @if ($popupAd->link_url) target="_blank" rel="noopener sponsored" @endif class="block">
                     <img src="{{ $popupAd->image_src }}" alt="{{ $popupAd->title }}"
                          class="w-full {{ $popupAd->image_only ? 'h-auto' : 'h-52 object-cover' }}">
@@ -49,6 +50,7 @@
                 @endunless
 
                 <a href="{{ $popupAd->link_url ? route('ad.click', $popupAd) : '#' }}"
+                   data-adid="{{ $popupAd->id }}" data-adplace="popup"
                    @if ($popupAd->link_url) target="_blank" rel="noopener sponsored" @endif
                    class="mt-5 w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-extrabold transition shadow-lg shadow-brand/30">
                     {{ $popupAd->cta_text ?: 'Fiyat Al' }}
@@ -70,7 +72,16 @@
             var key = 'ad_popup_dismissed_' + el.dataset.adId;
             try { if (sessionStorage.getItem(key)) return; } catch (e) {}
 
-            function show() { el.classList.remove('hidden'); el.classList.add('flex'); }
+            function show() {
+                el.classList.remove('hidden'); el.classList.add('flex');
+                if (!el.__seen) {
+                    el.__seen = true;
+                    var g = window.__ferxgoGeo || {};
+                    var body = { ad: parseInt(el.dataset.adId, 10), type: 'impression' };
+                    if (g.lat && g.lng) { body.lat = g.lat; body.lng = g.lng; }
+                    try { fetch("{{ route('ad.event') }}", { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(body) }); } catch (e) {}
+                }
+            }
             function hide() {
                 el.classList.add('hidden');
                 el.classList.remove('flex');

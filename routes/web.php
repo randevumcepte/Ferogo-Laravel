@@ -11,19 +11,54 @@ use App\Modules\Driver\Http\Controllers\DriverPanelController;
 use App\Modules\Driver\Http\Controllers\DriverReservationController;
 use App\Modules\Legal\Http\Controllers\LegalConsentController;
 use App\Modules\Marketing\Models\Advertisement;
+use App\Modules\Marketing\Models\AdEvent;
 use App\Modules\Payment\Http\Controllers\DriverPackageController;
 use App\Modules\Security\Http\Controllers\SecurityIncidentController;
 use App\Modules\Security\Http\Controllers\PanicAlertController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
 
-// Reklam tıklama takibi: tıklamayı sayar, sponsorun adresine yönlendirir.
-Route::get('/reklam/{advertisement}', function (Advertisement $advertisement) {
+// Reklam tıklama takibi: tıklamayı sayar + detaylı olay kaydı yazar, sponsorun adresine yönlendirir.
+// Opsiyonel ?la=&ln= (uygulamanın bildiği konum) ilçe kırılımı için kullanılır.
+Route::get('/reklam/{advertisement}', function (Advertisement $advertisement, Request $request) {
     $advertisement->increment('clicks');
 
-    return redirect()->away($advertisement->link_url ?: url('/'));
+    [$anonId, $cookie] = AdEvent::anonId($request);
+    $lat = is_numeric($request->query('la')) ? (float) $request->query('la') : null;
+    $lng = is_numeric($request->query('ln')) ? (float) $request->query('ln') : null;
+    try {
+        AdEvent::record($advertisement, 'click', $request, $lat, $lng, $anonId);
+    } catch (\Throwable $e) {
+        // analitik yazımı başarısız olsa da yönlendirme çalışsın
+    }
+
+    return redirect()->away($advertisement->link_url ?: url('/'))->withCookie($cookie);
 })->name('ad.click');
+
+// Gösterim beacon'ı: reklam ekranda görününce JS buraya POST atar (görünürlük + kaba konum).
+// CSRF muaf (bootstrap/app.php) — durum değiştirmez, sadece analitik yazar.
+Route::post('/reklam/olay', function (Request $request) {
+    $data = $request->validate([
+        'ad'  => ['required', 'integer'],
+        'type' => ['nullable', 'in:impression'],
+        'lat' => ['nullable', 'numeric'],
+        'lng' => ['nullable', 'numeric'],
+    ]);
+    $ad = Advertisement::find($data['ad']);
+    if (! $ad) {
+        return response()->json(['ok' => false], 404);
+    }
+    [$anonId, $cookie] = AdEvent::anonId($request);
+    try {
+        AdEvent::record($ad, 'impression', $request, $data['lat'] ?? null, $data['lng'] ?? null, $anonId);
+    } catch (\Throwable $e) {
+        // sessizce geç
+    }
+    return response()->json(['ok' => true])->withCookie($cookie);
+})->name('ad.event');
 
 // ─────────────────────────────────────────────────────────
 // SEO — sitemap.xml (yalnızca herkese açık, indekslenebilir sayfalar)
