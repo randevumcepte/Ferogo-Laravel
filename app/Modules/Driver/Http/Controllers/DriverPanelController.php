@@ -362,11 +362,15 @@ class DriverPanelController extends Controller
 
         // Paket durumu — panel "Paket gerekli" uyarısı için kullanır.
         // Carbon sürüm farkı yaratmamak için kalan süreyi timestamp'ten hesaplıyoruz.
+        // Test modu (enforce_packages=false) → banner hiç çıkmasın, remaining=∞.
         $hasPackage   = $driver->hasActivePackage();
         $packageUntil = $driver->package_active_until;
-        $remainingMinutes = ($hasPackage && $packageUntil)
-            ? (int) max(0, floor(($packageUntil->getTimestamp() - now()->getTimestamp()) / 60))
-            : 0;
+        $enforcePackages = (bool) config('services.driver.enforce_packages', true);
+        $remainingMinutes = ! $enforcePackages
+            ? 999_999 // test modunda: gerçek paket olsa olmasa "60 dk'dan az" banner'ı çıkmasın
+            : (($hasPackage && $packageUntil)
+                ? (int) max(0, floor(($packageUntil->getTimestamp() - now()->getTimestamp()) / 60))
+                : 0);
 
         return response()->json([
             'authenticated' => true,

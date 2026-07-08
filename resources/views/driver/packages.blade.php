@@ -70,6 +70,17 @@
                     </div>
                 </div>
             </section>
+        @elseif (! config('services.driver.enforce_packages', true))
+            {{-- Test / QA modu: paket zorunluluğu geçici olarak kapalı --}}
+            <section class="rounded-3xl border border-emerald-500/30 bg-emerald-500/[0.06] p-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">🧪</div>
+                    <div>
+                        <div class="font-bold text-emerald-200">Test modu aktif</div>
+                        <div class="text-xs text-emerald-300/80 mt-0.5">Şu an paket zorunluluğu geçici olarak kapalı. Paket olmadan da müsait olabilir, iş kabul edebilirsin.</div>
+                    </div>
+                </div>
+            </section>
         @else
             <section class="rounded-3xl border border-red-500/30 bg-red-500/[0.06] p-5">
                 <div class="flex items-center gap-3">
