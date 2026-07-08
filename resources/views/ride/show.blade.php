@@ -1325,6 +1325,13 @@
             </div>
         </div>
     </section>
+
+    {{-- Reklam alanı: Radar / Harita — sayfa ALTI (üsttekiyle AYNI reklam, tek kayıt) --}}
+    <section class="px-6 pb-16 md:pb-24">
+        <div class="max-w-7xl mx-auto">
+            @include('partials.ad-slot', ['placement' => 'radar_map'])
+        </div>
+    </section>
     @endunless
 
 </div>
