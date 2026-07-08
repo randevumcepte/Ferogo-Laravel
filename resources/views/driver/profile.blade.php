@@ -119,6 +119,34 @@
             </section>
 
             {{-- ===== Araç Bilgileri ===== --}}
+            @php
+                $classMeta = [
+                    'easy' => [
+                        'accent'   => 'from-zinc-700 to-zinc-900 text-white',
+                        'border'   => 'border-white/20',
+                        'icon'     => '🚗',
+                        'tagline'  => 'Ekonomik standart',
+                        'detail'   => 'Standart sedan veya MPV (Passat, Vito, Talisman vb.). Şehir içi ve havalimanı yolculukları için ekonomik seçenek. Klimalı, temiz, konforlu.',
+                        'examples' => 'Volkswagen Passat · Mercedes Vito · Renault Talisman · Skoda Superb',
+                    ],
+                    'platinum' => [
+                        'accent'   => 'from-zinc-200 to-zinc-400 text-zinc-900',
+                        'border'   => 'border-zinc-300/40',
+                        'icon'     => '👔',
+                        'tagline'  => 'Lüks sedan · iş seyahati',
+                        'detail'   => 'Üst segment iş sınıfı sedan. İş yolculukları, VIP misafir karşılama, kurumsal yolculuklar için ideal. Üst konfor + sessiz iç mekan.',
+                        'examples' => 'Mercedes E-Class · Audi A6 · BMW 5 Series',
+                    ],
+                    'vip' => [
+                        'accent'   => 'from-brand to-brand-600 text-black',
+                        'border'   => 'border-brand/60',
+                        'icon'     => '👑',
+                        'tagline'  => 'Premium · protokol',
+                        'detail'   => 'En üst sınıf lüks sedan/limuzin. Protokol görevleri, özel etkinlikler, üst düzey misafir ağırlama. Şık giyimli üye sürücü, üst sınıf içecek servisi.',
+                        'examples' => 'Mercedes S-Class · BMW 7 Series · Audi A8 · Maybach',
+                    ],
+                ];
+            @endphp
             @if ($vehicle)
             @if (isset($pendingVehicleRequest) && $pendingVehicleRequest)
                 <div class="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 text-sm text-yellow-200 flex items-start gap-3">
@@ -287,6 +315,96 @@
                         {{-- AJAX upload sonrası path'leri buraya yazılır, form ile birlikte gider --}}
                         <div id="new-photo-paths-container"></div>
                     </div>
+                </div>
+            </section>
+            @else
+            {{-- ===== İlk araç: henüz aracı yok → self-servis tanımla ===== --}}
+            <section class="bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden">
+                <div class="px-6 py-4 border-b border-white/10">
+                    <div class="text-[10px] uppercase tracking-[0.25em] text-brand">Adım 2</div>
+                    <h2 class="text-lg font-bold">Aracını Tanımla</h2>
+                    <p class="text-xs text-zinc-500 mt-1">Müşteri alabilmen için aracını tanımlaman gerekiyor. Kaydettiğinde doğrudan aktif olur.</p>
+                </div>
+
+                <div class="p-6 space-y-5">
+                    {{-- Araç sınıfı seçimi --}}
+                    @if (isset($vehicleClasses) && $vehicleClasses->count() > 0)
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500">Araç Sınıfı</label>
+                            <span class="text-[10px] text-zinc-500">Müşteriler bu sınıfa göre seçim yapar</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-{{ min($vehicleClasses->count(), 3) }} gap-3">
+                            @foreach ($vehicleClasses as $vc)
+                                @php
+                                    $selected = (int) old('vehicle_class_id', 0) === (int) $vc->id;
+                                    $meta = $classMeta[$vc->slug] ?? $classMeta['easy'];
+                                @endphp
+                                <div class="vehicle-class-option" data-slug="{{ $vc->slug }}">
+                                    <input type="radio"
+                                           id="vc-new-{{ $vc->id }}"
+                                           name="vehicle_class_id"
+                                           value="{{ $vc->id }}"
+                                           {{ $selected ? 'checked' : '' }}
+                                           class="peer sr-only">
+                                    <label for="vc-new-{{ $vc->id }}"
+                                           class="block cursor-pointer rounded-2xl border-2 {{ $meta['border'] }} bg-gradient-to-br {{ $meta['accent'] }} p-4 opacity-50 hover:opacity-80 transition peer-checked:opacity-100 peer-checked:ring-4 peer-checked:ring-brand/60 peer-checked:scale-[1.02]">
+                                        <div class="flex items-start justify-between gap-2 mb-2">
+                                            <div class="text-2xl">{{ $meta['icon'] }}</div>
+                                            <button type="button"
+                                                    class="vc-info-btn w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 text-current flex items-center justify-center text-xs font-bold transition shrink-0"
+                                                    data-slug="{{ $vc->slug }}"
+                                                    aria-label="Bilgi"
+                                                    title="Detay">
+                                                i
+                                            </button>
+                                        </div>
+                                        <div class="text-base font-extrabold tracking-tight">{{ $vc->name }}</div>
+                                        <div class="text-[11px] opacity-80 mt-0.5">{{ $meta['tagline'] }}</div>
+                                    </label>
+                                    <div class="vc-info-panel hidden mt-2 p-3 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-zinc-300 leading-relaxed" data-slug="{{ $vc->slug }}">
+                                        <div class="mb-2">{{ $meta['detail'] }}</div>
+                                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Örnek modeller</div>
+                                        <div class="text-[11px] text-zinc-400">{{ $meta['examples'] }}</div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Marka</label>
+                            <input type="text" name="vehicle_brand" value="{{ old('vehicle_brand') }}" maxlength="60" required
+                                   placeholder="Mercedes, Volkswagen, ..."
+                                   class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Model</label>
+                            <input type="text" name="vehicle_model" value="{{ old('vehicle_model') }}" maxlength="60" required
+                                   placeholder="Vito, Passat, ..."
+                                   class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Yıl</label>
+                            <input type="number" name="vehicle_year" value="{{ old('vehicle_year') }}" min="1990" max="2030" required
+                                   class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Renk</label>
+                            <input type="text" name="vehicle_color" value="{{ old('vehicle_color') }}" maxlength="30" required
+                                   class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none transition">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Plaka</label>
+                            <input type="text" name="vehicle_plate" value="{{ old('vehicle_plate') }}" maxlength="20" required
+                                   placeholder="35 ABC 123"
+                                   class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none transition uppercase">
+                        </div>
+                    </div>
+
+                    <p class="text-[11px] text-zinc-500">Araç fotoğraflarını, aracı kaydettikten sonra bu ekrandan ekleyebilirsin.</p>
                 </div>
             </section>
             @endif

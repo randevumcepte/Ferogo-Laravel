@@ -201,6 +201,42 @@ class DriverPanelController extends Controller
                     'Araç değişiklikleri onaya gönderildi. Süper admin onayladığında müşterilere görünür olur.'
                 );
             }
+        } elseif ($request->filled('vehicle_class_id') || $request->filled('vehicle_plate') || $request->filled('vehicle_brand')) {
+            // 2b) İLK ARAÇ — sürücünün henüz aracı yok. Başvuru onayı araç oluşturmuyor,
+            //     bu yüzden ilk aracı burada self-servis oluşturulur + sürücüye bağlanır (doğrudan aktif).
+            //     Sonraki DÜZENLEMELER yukarıdaki admin-onaylı change-request akışından geçer
+            //     (Easy'den VIP'e sessiz yükseltmeyi engellemek için).
+            $vehicleData = $request->validate([
+                'vehicle_class_id' => ['required', 'integer', 'exists:vehicle_classes,id'],
+                'vehicle_brand'    => ['required', 'string', 'max:60'],
+                'vehicle_model'    => ['required', 'string', 'max:60'],
+                'vehicle_year'     => ['required', 'integer', 'between:1990,2030'],
+                'vehicle_color'    => ['required', 'string', 'max:30'],
+                'vehicle_plate'    => ['required', 'string', 'max:20', 'unique:vehicles,plate'],
+            ], [], [
+                'vehicle_class_id' => 'araç sınıfı',
+                'vehicle_brand'    => 'marka',
+                'vehicle_model'    => 'model',
+                'vehicle_year'     => 'yıl',
+                'vehicle_color'    => 'renk',
+                'vehicle_plate'    => 'plaka',
+            ]);
+
+            $newVehicle = \App\Modules\Vehicle\Models\Vehicle::create([
+                'tenant_id'           => $driver->tenant_id,
+                'vehicle_class_id'    => $vehicleData['vehicle_class_id'],
+                'brand'               => $vehicleData['vehicle_brand'],
+                'model'               => $vehicleData['vehicle_model'],
+                'year_of_manufacture' => $vehicleData['vehicle_year'],
+                'color'               => $vehicleData['vehicle_color'],
+                'plate'               => strtoupper(trim($vehicleData['vehicle_plate'])),
+                'status'              => 'active',
+            ]);
+            $driver->update(['current_vehicle_id' => $newVehicle->id]);
+
+            return redirect()->route('driver.profile')->with('success',
+                'Aracın tanımlandı ✓ Artık "Müsait" olduğunda müşteri radarında görünebilirsin.'
+            );
         }
 
         return redirect()->route('driver.profile')->with('success', 'Profil güncellendi.');

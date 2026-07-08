@@ -63,6 +63,9 @@ class RideRequestController extends Controller
                 ->where('package_active_until', '>', now()))
             ->whereNotNull('current_lat')
             ->whereNotNull('current_lng')
+            // Aracı + aktif sınıfı olmayan sürücü müşteriye teklif edilemez (dispatcher da bunu arar).
+            // Aksi halde radarda "MÜSAİT" görünüp seçilince "vehicle_class_slug required" hatasıyla çıkmaza düşer.
+            ->whereHas('currentVehicle.vehicleClass', fn ($q) => $q->where('is_active', true))
             ->limit(50)
             ->get();
 
