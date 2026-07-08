@@ -247,8 +247,10 @@
             @endif
 
 
-            {{-- Reklam alanı: Radar / Harita --}}
-            @include('partials.ad-slot', ['placement' => 'radar_map', 'class' => 'mb-8'])
+            {{-- Reklam alanı: Radar / Harita — sadece bağımsız sayfada; müşteri paneli embed'inde gösterme --}}
+            @unless($embed)
+                @include('partials.ad-slot', ['placement' => 'radar_map', 'class' => 'mb-8'])
+            @endunless
 
             {{-- Section heading --}}
             <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
@@ -367,8 +369,10 @@
                         </p>
                     </div>
 
-                    {{-- Reklam alanı: Radar sürücü listesi altı (kompakt / dikey) --}}
-                    @include('partials.ad-slot', ['placement' => 'radar_sidebar', 'compact' => true, 'class' => 'mt-1'])
+                    {{-- Reklam alanı: Radar sürücü listesi altı — müşteri paneli embed'inde gösterme --}}
+                    @unless($embed)
+                        @include('partials.ad-slot', ['placement' => 'radar_sidebar', 'compact' => true, 'class' => 'mt-1'])
+                    @endunless
                 </div>
             </div>
         </div>

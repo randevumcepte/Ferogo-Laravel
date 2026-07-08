@@ -28,7 +28,6 @@ class Advertisement extends Model
         'driver_apply'           => 'Sürücü Başvuru (Banner)',
         'driver_apply_bottom'    => 'Sürücü Olun — Alt Reklam Alanı',
         'driver_panel'           => 'Sürücü Paneli',
-        'sponsored_notification' => 'Sponsorlu Bildirim',
         'popup'                  => 'Açılır Pencere (Popup)',
     ];
 
@@ -41,7 +40,6 @@ class Advertisement extends Model
         'driver_apply'           => 'Sürücü başvuru sayfası · geniş banner',
         'driver_apply_bottom'    => 'Sürücü başvuru · form altı',
         'driver_panel'           => 'Gün boyu açık',
-        'sponsored_notification' => 'Push bildirimi',
         'popup'                  => 'Tüm sayfalar · açılır pencere',
     ];
 
@@ -57,7 +55,6 @@ class Advertisement extends Model
         'driver_apply'           => '1200 × 400 px (3:1 yatay)',
         'driver_apply_bottom'    => '1200 × 400 px (3:1 yatay)',
         'driver_panel'           => '1200 × 400 px (3:1 yatay)',
-        'sponsored_notification' => '1200 × 300 px (4:1 ince yatay)',
         'popup'                  => '1000 × 1000 px (kare)',
     ];
 
