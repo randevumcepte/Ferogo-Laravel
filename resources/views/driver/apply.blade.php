@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
-@section('title', 'Üye Sürücü Olun · FerXGo · Kendi Yolculuğunun Sahibi Ol')
-@section('description', 'FerXGo paylaşımlı yolculuk platformuna üye sürücü olarak katıl. Esnek saatler, katkı payının tamamı senin, üyelik tabanlı şeffaf model. İzmir genelinde üye sürücü kayıtları açık.')
+@section('title', 'Üye Sürücü Olun · FerXGo · Aynı Yolun Yolcusuyla Buluş')
+@section('description', 'FerXGo paylaşımlı yolculuk platformuna bağımsız üye sürücü olarak katıl. Aynı güzergahtaki yolcularla buluş, yol masraflarını paylaş. Platform komisyon almaz; sabit üyelik ile erişirsin. FerXGo ticari taşımacılık değil, dijital eşleştirme hizmetidir.')
 
 @push('head')
 <style>
@@ -128,194 +128,13 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('driver.apply.store') }}" class="bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-10 space-y-8">
-                @csrf
-
-                {{-- ==== KATEGORİ SEÇİMİ (Otomobil / Sarı Taksi / Motosiklet) ==== --}}
-                @if(isset($categories) && $categories->count() > 0)
-                <div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Sürücü Kategorisi</div>
-                    <p class="text-xs text-zinc-500 mb-4">Hangi tür araçla paylaşımlı yolculuk yapacaksın? Kategoriye göre farklı belgeler gerekli olacak.</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        @foreach($categories as $cat)
-                            <label class="cursor-pointer relative group">
-                                <input type="radio" name="driver_category_id" value="{{ $cat->id }}" required
-                                       {{ old('driver_category_id') == $cat->id ? 'checked' : '' }}
-                                       data-slug="{{ $cat->slug }}"
-                                       class="sr-only peer category-radio">
-                                <div class="p-5 rounded-2xl border-2 border-white/10 bg-white/[0.02] peer-checked:border-brand peer-checked:bg-brand/10 transition text-center">
-                                    <div class="text-4xl mb-2">{{ $cat->emoji }}</div>
-                                    <div class="text-base font-bold text-white">{{ $cat->name }}</div>
-                                    <div class="text-[11px] text-zinc-500 mt-1">
-                                        Ehliyet: <span class="text-zinc-300 font-semibold">{{ $cat->required_license_class }}</span>
-                                        @if($cat->requires_src)  · SRC şart @endif
-                                        @if($cat->requires_helmet) · Kask şart @endif
-                                    </div>
-                                </div>
-                            </label>
-                        @endforeach
-                    </div>
-                    <div id="category-info" class="mt-3 hidden p-3 rounded-xl bg-brand/5 border border-brand/20 text-xs text-zinc-300"></div>
-                </div>
-                @endif
-
-                {{-- Section: kişisel --}}
-                <div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Kişisel</div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ad Soyad</label>
-                            <input type="text" name="full_name" value="{{ old('full_name') }}" required maxlength="120" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mehmet Yılmaz">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Telefon</label>
-                            <input type="tel" name="phone" value="{{ old('phone') }}" required maxlength="32" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="0532 000 00 00">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">E-posta</label>
-                            <input type="email" name="email" value="{{ old('email') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="mehmet@ornek.com">
-                            <p class="text-[11px] text-zinc-500 mt-1">Giriş için kullanacaksın.</p>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şifre</label>
-                            <input type="password" name="password" required minlength="6" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="En az 6 karakter">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şehir</label>
-                            <select name="city_id" class="form-input w-full rounded-xl px-4 py-3 text-white">
-                                <option value="">Seçiniz</option>
-                                @foreach($cities as $city)
-                                    <option value="{{ $city->id }}" {{ old('city_id') == $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Doğum yılı</label>
-                            <input type="number" name="birth_year" value="{{ old('birth_year') }}" min="1940" max="{{ date('Y') - 18 }}" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="1990">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Cinsiyet</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label class="check-pill cursor-pointer">
-                                    <input type="radio" name="gender" value="male" class="sr-only peer" {{ old('gender') === 'male' ? 'checked' : '' }} required>
-                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
-                                        <span class="text-lg">👨</span>
-                                        <span class="text-sm font-medium">Erkek</span>
-                                    </div>
-                                </label>
-                                <label class="check-pill cursor-pointer">
-                                    <input type="radio" name="gender" value="female" class="sr-only peer" {{ old('gender') === 'female' ? 'checked' : '' }} required>
-                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
-                                        <span class="text-lg">👩</span>
-                                        <span class="text-sm font-medium">Kadın</span>
-                                    </div>
-                                </label>
-                            </div>
-                            <p class="text-[11px] text-zinc-500 mt-2">Kadın sürücülerimize "sadece kadın yolcu" opsiyonu sunulur.</p>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Section: profesyonel --}}
-                <div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Sürüş profili</div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ehliyet sınıfı</label>
-                            <select name="license_class" class="form-input w-full rounded-xl px-4 py-3 text-white">
-                                @foreach(['B' => 'B', 'D1' => 'D1', 'D' => 'D', 'E' => 'E'] as $val => $label)
-                                    <option value="{{ $val }}" {{ old('license_class', 'B') == $val ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">Deneyim</label>
-                            <select name="experience_band" class="form-input w-full rounded-xl px-4 py-3 text-white">
-                                @foreach(['under_1' => '1 yıldan az', '1_to_3' => '1-3 yıl', '3_to_5' => '3-5 yıl', '5_plus' => '5 yıl ve üzeri'] as $val => $label)
-                                    <option value="{{ $val }}" {{ old('experience_band', '1_to_3') == $val ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mb-5">
-                        <label class="check-pill cursor-pointer block max-w-sm">
-                            <input type="checkbox" name="has_src" value="1" class="sr-only peer" {{ old('has_src') ? 'checked' : '' }}>
-                            <div class="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/10 text-zinc-300 transition">
-                                <div class="w-5 h-5 rounded-md border-2 border-current flex items-center justify-center text-xs">✓</div>
-                                <span class="text-sm font-medium">SRC-2 belgem var</span>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div class="bg-white/[0.02] border border-white/10 rounded-xl p-4 flex items-start gap-3">
-                        <div class="text-xl shrink-0">🚗</div>
-                        <div class="text-xs text-zinc-400 leading-relaxed">
-                            <div class="font-semibold text-zinc-200 mb-1">Araç bilgileri ve belgeler bir sonraki adımda</div>
-                            Ön kaydını tamamladığında hesabın açılır; araç bilgilerini (marka/model seçmeli),
-                            araç fotoğraflarını, ehliyet, selfie ve diğer belgeleri <strong>doğrulama ekranından</strong>
-                            adım adım yükleyeceksin. Tüm belgeler tamamlanınca inceleme ekibimiz başvurunu değerlendirir.
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Section: not --}}
-                <div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Eklemek istediğin</div>
-                    <textarea name="notes" rows="4" maxlength="1000" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 resize-none" placeholder="Bizimle paylaşmak istediğin bir şey varsa...">{{ old('notes') }}</textarea>
-                </div>
-
-                {{-- Sorumluluk Bilgilendirme --}}
-                <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 md:p-5">
-                    <div class="flex items-start gap-3">
-                        <div class="text-xl shrink-0">📋</div>
-                        <div class="text-xs md:text-sm text-zinc-300 leading-relaxed">
-                            <div class="font-semibold text-amber-200 mb-1.5">Sorumluluk Bilgilendirmesi</div>
-                            <p>
-                                FerXGo bir <strong>paylaşımlı yolculuk eşleştirme platformudur</strong>; ticari taşımacılık yapmaz, yolculuğun tarafı değildir ve üye sürücülerin işvereni değildir.
-                                Yolcunun ödediği katkı payı, yolculuğun <strong>yakıt ve amortisman gibi değişken giderlerine katkı</strong> niteliğindedir; doğrudan üye sürücüye aittir ve FerXGo bu ödemeden komisyon almaz.
-                                Paylaşımlı yolculuğa kendi aracınızla ve kendi takdirinizle katılırsınız; bu faaliyetten doğabilecek <strong>her türlü yasal ve mali yükümlülük tamamen üye sürücüye aittir</strong>, FerXGo bu yükümlülüklerin tarafı değildir.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Onaylar --}}
-                <div class="space-y-3">
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" name="kvkk" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
-                        <span class="text-sm text-zinc-400 leading-relaxed">
-                            Kişisel verilerimin başvuru değerlendirme amacıyla işlenmesini ve benimle iletişim kurulmasını kabul ediyorum.
-                            <a href="{{ route('legal.kvkk') }}" target="_blank" class="text-brand hover:underline">KVKK Aydınlatma Metni</a>
-                        </span>
-                    </label>
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" name="terms" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
-                        <span class="text-sm text-zinc-400 leading-relaxed">
-                            <a href="{{ route('legal.terms') }}" target="_blank" class="text-brand hover:underline">Hizmet Şartları</a> ve
-                            <a href="{{ route('legal.ride-sharing') }}" target="_blank" class="text-brand hover:underline">Paylaşımlı Yolculuk modelini</a>
-                            okudum, anladım. FerXGo'nun aracı hizmet sağlayıcı olduğunu, vergi sorumluluğunun bana ait olduğunu kabul ediyorum.
-                        </span>
-                    </label>
-                </div>
-
-                {{-- Submit --}}
-                <button type="submit" class="group w-full inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-lg transition-all shadow-2xl shadow-brand/30 hover:shadow-brand/50">
-                    Başvurumu Gönder
-                    <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                </button>
-
-                <p class="text-xs text-zinc-500 text-center">
-                    Telefonla görüşmek istersen → <a href="tel:+908503403039" class="text-brand hover:underline font-semibold">0850 340 3039</a>
-                </p>
-            </form>
 
             {{-- Reklam alanı: Sürücü Olun — Alt (formun altı, ayrı yönetilir) --}}
             @include('partials.ad-slot', ['placement' => 'driver_apply_bottom', 'class' => 'mt-8'])
 
             <div class="mt-6 text-center">
                 <a href="#neden-ferxgo" class="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-brand transition">
-                    Ne kazanacağını öğren
+                    Model nasıl işliyor, öğren
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
                 </a>
             </div>
@@ -330,19 +149,19 @@
             <div class="lg:col-span-7">
                 <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-zinc-300 mb-8 backdrop-blur-sm">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Şu an İzmir'de <span class="text-white font-semibold">37 sürücü</span> alımı yapılıyor
+                    İzmir'de <span class="text-white font-semibold">üye sürücü kaydı</span> açık
                 </div>
 
                 <h1 class="display-font text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-white mb-8">
-                    Direksiyona<br>
-                    geç,<br>
+                    Aynı yol,<br>
+                    paylaşılan<br>
                     <span class="relative inline-block">
-                        <span class="text-brand glow-text">kazan</span><span class="text-brand">.</span>
+                        <span class="text-brand glow-text">masraf</span><span class="text-brand">.</span>
                     </span>
                 </h1>
 
                 <p class="text-lg md:text-xl text-zinc-300 leading-relaxed mb-10 max-w-xl">
-                    İzmir'in en hızlı büyüyen paylaşımlı yolculuk platformuna üye sürücü olarak katıl. Esnek saatler, şeffaf katkı payı, üyelik tabanlı model — kendi yolculuğunun sahibi sen ol.
+                    İzmir'in büyüyen paylaşımlı yolculuk platformuna <strong>bağımsız üye sürücü</strong> olarak katıl. Aynı güzergahtaki yolcularla buluş, yol masraflarını paylaş. Esnek saatler, sabit üyelik, komisyonsuz katkı payı — kendi yolculuğunun sahibi sen ol.
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -369,42 +188,50 @@
                 </div>
             </div>
 
-            {{-- Right: floating earnings card --}}
+            {{-- Right: cost-sharing model card --}}
             <div class="lg:col-span-5 relative">
                 <div class="relative">
                     {{-- Decorative orb behind card --}}
                     <div class="absolute -inset-6 bg-brand/20 blur-3xl rounded-full"></div>
 
-                    {{-- Main earnings card --}}
+                    {{-- Model card --}}
                     <div class="relative stat-card border border-white/10 rounded-3xl p-7 md:p-9 shadow-2xl shadow-black/40">
                         <div class="flex items-start justify-between mb-6">
                             <div>
-                                <div class="text-xs uppercase tracking-widest text-zinc-400 mb-2">Bu hafta</div>
-                                <div class="text-sm text-zinc-500">Ortalama sürücü kazancı</div>
+                                <div class="text-xs uppercase tracking-widest text-zinc-400 mb-2">Masraf paylaşımı</div>
+                                <div class="text-sm text-zinc-500">Katkı payının sana kalan kısmı</div>
                             </div>
-                            <div class="px-2 py-1 rounded-md bg-emerald-500/15 text-emerald-300 text-xs font-bold ticker">↑ %18</div>
+                            <div class="px-2 py-1 rounded-md bg-brand/15 text-brand text-xs font-bold">Komisyonsuz</div>
                         </div>
 
-                        <div class="display-font text-6xl md:text-7xl text-white mb-1 tabular-nums">
-                            ₺<span id="counter-earnings">7.420</span>
+                        <div class="display-font text-7xl md:text-8xl text-white mb-1 tabular-nums">
+                            %100
                         </div>
-                        <div class="text-sm text-zinc-500 mb-6">42 saat aktif çalışma · İzmir</div>
+                        <div class="text-sm text-zinc-500 mb-6">Yolcunun katkı payını platform kesmez</div>
 
-                        {{-- Mini chart bars --}}
-                        <div class="flex items-end justify-between gap-1.5 h-20 mb-6">
-                            @foreach([42, 58, 35, 71, 49, 88, 95] as $i => $h)
-                                <div class="flex-1 rounded-t-md {{ $i === 6 ? 'bg-brand' : 'bg-zinc-700' }}" style="height: {{ $h }}%"></div>
-                            @endforeach
+                        <div class="space-y-3 mb-2">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-zinc-400">Platform komisyonu</span>
+                                <span class="font-bold text-brand">₺0</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-zinc-400">Katkı payını kim öder</span>
+                                <span class="font-semibold text-white">Doğrudan yolcu</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-zinc-400">Platforma erişim</span>
+                                <span class="font-semibold text-white">Sabit üyelik</span>
+                            </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3 pt-5 border-t border-white/5">
+                        <div class="grid grid-cols-2 gap-3 pt-5 mt-4 border-t border-white/5">
                             <div>
-                                <div class="text-xs text-zinc-500 mb-1">Sürücü payı</div>
-                                <div class="text-2xl font-bold text-brand">%100</div>
+                                <div class="text-xs text-zinc-500 mb-1">Çalışma şekli</div>
+                                <div class="text-lg font-bold text-brand">Bağımsız</div>
                             </div>
                             <div>
-                                <div class="text-xs text-zinc-500 mb-1">Ödeme</div>
-                                <div class="text-2xl font-bold text-white">Haftalık</div>
+                                <div class="text-xs text-zinc-500 mb-1">Saatler</div>
+                                <div class="text-lg font-bold text-white">Sana bağlı</div>
                             </div>
                         </div>
                     </div>
@@ -446,9 +273,9 @@
         <div class="max-w-6xl mx-auto">
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/5 rounded-3xl overflow-hidden border border-white/5">
                 @foreach([
-                    ['200+', 'Aktif sürücü'],
-                    ['₺28K', 'Aylık ortalama kazanç'],
-                    ['%100', 'Sürücü payı'],
+                    ['200+', 'Aktif üye sürücü'],
+                    ['₺0', 'Platform komisyonu'],
+                    ['%100', 'Katkı payı sana'],
                     ['4.9', 'Sürücü memnuniyeti'],
                 ] as $stat)
                     <div class="bg-black p-8 md:p-10 group hover:bg-zinc-950 transition">
@@ -467,10 +294,10 @@
                 <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Neden FerXGo</div>
                 <h2 class="display-font text-4xl md:text-6xl text-white mb-6">
                     Üç şey net:<br>
-                    <span class="text-zinc-500">kazanç,</span> esneklik, <span class="text-zinc-500">saygı.</span>
+                    <span class="text-zinc-500">paylaşım,</span> esneklik, <span class="text-zinc-500">saygı.</span>
                 </h2>
                 <p class="text-lg text-zinc-400 leading-relaxed">
-                    Sürücü olmak bir mecburiyet değil, bir tercih olmalı. Biz koşulları öyle kuruyoruz ki sen sadece direksiyona ve yolcuya odaklan.
+                    Üye sürücü olmak bir mecburiyet değil, bir tercih olmalı. Biz koşulları öyle kuruyoruz ki sen sadece yola ve yol arkadaşına odaklan.
                 </p>
             </div>
 
@@ -478,17 +305,17 @@
 
                 {{-- Big card --}}
                 <div class="bento-card md:col-span-2 md:row-span-2 rounded-3xl p-8 md:p-10 border border-white/5 relative overflow-hidden">
-                    <div class="absolute top-8 right-8 text-7xl opacity-10">💰</div>
+                    <div class="absolute top-8 right-8 text-7xl opacity-10">🤝</div>
                     <div class="relative">
-                        <div class="text-xs uppercase tracking-[0.2em] text-brand mb-4">01 · Kazanç</div>
-                        <h3 class="display-font text-3xl md:text-5xl text-white mb-4">Sektörün en yüksek sürücü payı</h3>
+                        <div class="text-xs uppercase tracking-[0.2em] text-brand mb-4">01 · Katkı payı</div>
+                        <h3 class="display-font text-3xl md:text-5xl text-white mb-4">Komisyon yok, katkı payı senin</h3>
                         <p class="text-zinc-400 leading-relaxed mb-6 max-w-md">
-                            Yolcunun ödediği katkı payının <strong>tamamı senin</strong>. FerXGo komisyon almaz; sabit dönemsel üyelik bedeli ile platforma erişirsin. Bahşişler tamamen sana aittir.
+                            Yolcunun ödediği yol katkı payının <strong>tamamı sana</strong> kalır — para doğrudan yolcudan sana geçer, FerXGo aradan komisyon almaz. Platforma yalnızca sabit, dönemsel bir üyelik bedeliyle erişirsin.
                         </p>
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="px-3 py-1 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold">%100 pay</span>
-                            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-semibold">Tip senin</span>
-                            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-semibold">Şeffaf bordro</span>
+                            <span class="px-3 py-1 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold">%100 katkı payı</span>
+                            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-semibold">Komisyon ₺0</span>
+                            <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-semibold">Sabit üyelik</span>
                         </div>
                     </div>
                 </div>
@@ -504,9 +331,9 @@
                 {{-- Medium card --}}
                 <div class="bento-card rounded-3xl p-7 border border-white/5">
                     <div class="text-3xl mb-4">⚡</div>
-                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">03 · Hızlı ödeme</div>
-                    <h3 class="text-xl font-bold text-white mb-2">Her Cuma hesabında</h3>
-                    <p class="text-sm text-zinc-400 leading-relaxed">Haftalık otomatik ödeme. Acil ihtiyaçta anlık çekim de mümkün.</p>
+                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-3">03 · Doğrudan katkı</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Para aradan geçmez</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed">Yol katkı payı her yolculukta doğrudan yolcudan sana ulaşır. Platform tahsilat yapmaz, kesinti almaz.</p>
                 </div>
 
                 {{-- Wide card --}}
@@ -558,9 +385,9 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-4 relative">
                     @foreach([
                         ['01', 'Başvur', 'Aşağıdaki formu doldur — 2 dakika sürer.', '📝'],
-                        ['02', 'Belge yükle', 'Ehliyet, SRC, ruhsat. Hepsi panelden.', '📋'],
+                        ['02', 'Belge yükle', 'Sürücü belgesi, kimlik, araç ruhsatı. Hepsi panelden.', '📋'],
                         ['03', 'Aracını tanıt', 'Kendi konforlu aracını sisteme ekle, fotoğraf yükle.', '🚗'],
-                        ['04', 'Yola çık', 'Onayını al, çevrimiçi ol, ilk yolculuğu kabul et.', '🛣'],
+                        ['04', 'Yola çık', 'Onayını al, çevrimiçi ol, ilk yol arkadaşını kabul et.', '🛣'],
                     ] as $step)
                         <div class="relative text-center">
                             <div class="relative inline-flex items-center justify-center w-16 h-16 rounded-full bg-black border-2 border-brand text-2xl mb-5 mx-auto">
@@ -592,8 +419,8 @@
                     @foreach([
                         'Adına / kullanımında bakımlı bir araç (son 7 yıl)',
                         'En az 22 yaşında olmak',
-                        'B sınıfı ehliyet (büyük araç için D / D1)',
-                        'Geçerli SRC-2 belgesi (yoksa biz yönlendiririz)',
+                        'Geçerli B sınıfı sürücü belgesi',
+                        'Araç ruhsatı ve zorunlu trafik sigortası güncel',
                         'Sabıka kaydı temiz olmak',
                         'En az 2 yıl sürüş deneyimi',
                         'Sigara içilmeyen, bakımlı araç',
@@ -608,6 +435,74 @@
             </div>
         </div>
     </section>
+    {{-- ============ SSS (Soru & Cevap) ============ --}}
+    <section id="sss" class="relative px-6 py-20 md:py-28">
+        <div class="max-w-3xl mx-auto">
+            <div class="text-center mb-12">
+                <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Soru & Cevap</div>
+                <h2 class="display-font text-4xl md:text-6xl text-white mb-5">Aklına takılanlar</h2>
+                <p class="text-lg text-zinc-400">Model, katkı payı ve sorumluluklar hakkında en net haliyle.</p>
+            </div>
+
+            <div class="space-y-3">
+                @foreach([
+                    [
+                        'FerXGo ile taksi ya da ticari taşımacılık mı yapıyorum?',
+                        'Hayır. FerXGo bir dijital eşleştirme platformudur; taşımacılık şirketi değildir. Aynı güzergaha giden yolcularla buluşur, yolun masraflarını paylaşırsınız. Kâr amaçlı, ticari yolcu taşımacılığı yapmazsınız — bağımsız bir bireysiniz.',
+                    ],
+                    [
+                        'Yolcudan aldığım para nedir? Ücret mi, kazanç mı?',
+                        'Aldığınız tutar bir “ücret” ya da “gelir” değil, yol katkı payıdır: yakıt, amortisman gibi yol masraflarının yolcuyla paylaşılmasıdır. Katkı payı mesafeye göre belirlenir ve tamamı size kalır; FerXGo bu paydan komisyon almaz.',
+                    ],
+                    [
+                        'FerXGo bana maaş veya ödeme yapıyor mu?',
+                        'Hayır. FerXGo işvereniniz değildir ve size hiçbir ödeme yapmaz. Katkı payı doğrudan yolcu ile aranızda kalır; para platformdan geçmez. Aranızda bir iş sözleşmesi ya da bordro ilişkisi yoktur.',
+                    ],
+                    [
+                        'Platforma nasıl erişiyorum? Komisyon var mı?',
+                        'Platforma sabit, dönemsel bir üyelik bedeliyle erişirsiniz. Yolculuk başına komisyon veya kesinti alınmaz. Güncel üyelik koşulları başvurunuz onaylandıktan sonra sizinle paylaşılır.',
+                    ],
+                    [
+                        'Ticari belge (SRC vb.) gerekli mi?',
+                        'Model bireysel masraf paylaşımına dayanır; geçerli B sınıfı sürücü belgesi, güncel araç ruhsatı ve zorunlu trafik sigortası esas alınır. Yasal yükümlülükler mevzuata göre zamanla değişebilir — yürürlükteki kurallara uymak sürücünün sorumluluğundadır, FerXGo bu konuda bilgilendirme sağlar.',
+                    ],
+                    [
+                        'Yasal ve mali sorumluluk kimde?',
+                        'Bağımsız üye sürücü olarak kendi yasal ve mali yükümlülüklerinizden siz sorumlusunuz. FerXGo taraflar arasında yalnızca aracılık ve eşleştirme hizmeti sunar; yolculuğun tarafı değildir.',
+                    ],
+                    [
+                        'Çalışma saatlerim belli mi? Vardiya var mı?',
+                        'Hayır. Vardiya, hedef veya zorunlu mesai yoktur. İstediğiniz zaman çevrimiçi olur, uygun bir yol arkadaşını kabul eder, dilediğinizde kapatırsınız. Tamamen size bağlıdır.',
+                    ],
+                    [
+                        'Güvenlik nasıl sağlanıyor?',
+                        'Yolcular doğrulanır, yolculuklar kayıt altında tutulur ve 7/24 destek ekibi bulunur. Sürücü ile yolcu karşılıklı puanlanır; bu da güveni ve saygıyı korur.',
+                    ],
+                ] as $qa)
+                    <details class="group rounded-2xl bg-white/[0.03] border border-white/8 hover:border-brand/25 transition overflow-hidden">
+                        <summary class="flex items-center justify-between gap-4 cursor-pointer list-none p-5">
+                            <span class="text-white font-semibold text-base md:text-lg">{{ $qa[0] }}</span>
+                            <span class="shrink-0 w-7 h-7 rounded-full bg-brand/15 text-brand flex items-center justify-center transition-transform group-open:rotate-45">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            </span>
+                        </summary>
+                        <div class="px-5 pb-5 -mt-1 text-sm md:text-base text-zinc-400 leading-relaxed">
+                            {{ $qa[1] }}
+                        </div>
+                    </details>
+                @endforeach
+            </div>
+
+            {{-- Model / hukuki netlik şeridi --}}
+            <div class="mt-10 p-5 rounded-2xl bg-brand/[0.06] border border-brand/20 flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-brand/15 text-brand flex items-center justify-center shrink-0 mt-0.5">ℹ</div>
+                <p class="text-xs md:text-sm text-zinc-400 leading-relaxed">
+                    <strong class="text-zinc-200">Özet:</strong> FerXGo, bağımsız üye sürücüler ile yolcuları buluşturan bir dijital eşleştirme (aracılık) platformudur. Ticari taşımacılık hizmeti sunmaz, sürücülere ödeme yapmaz ve onları istihdam etmez. Yolculuk, aynı güzergahtaki yolcu ile sürücü arasında masraf paylaşımı esasıyla gerçekleşir. Sürücünün yasal ve mali yükümlülükleri kendisine aittir.
+                </p>
+            </div>
+        </div>
+    </section>
+
     {{-- ============ FINAL CTA STRIP ============ --}}
     <section class="relative px-4 sm:px-6 py-12 sm:py-16">
         <div class="max-w-5xl mx-auto">
@@ -619,7 +514,7 @@
                         <p class="text-sm sm:text-base text-zinc-300">WhatsApp veya telefonla 7/24 erişebilirsin.</p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full md:w-auto md:shrink-0">
-                        <a href="https://wa.me/908503403039"
+                        <a href="https://wa.me/905412948144"
                             class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition shadow-lg shadow-emerald-500/20 whitespace-nowrap">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                             WhatsApp
@@ -673,32 +568,6 @@
         // Sayfa açılırken eğer bir seçili varsa (old input) info göster
         const checked = document.querySelector('.category-radio:checked');
         if (checked) checked.dispatchEvent(new Event('change'));
-    })();
-
-    // Simple counter animation for hero earnings
-    (function() {
-        const el = document.getElementById('counter-earnings');
-        if (!el) return;
-        const target = 7420;
-        const duration = 1800;
-        const start = performance.now();
-        function step(now) {
-            const t = Math.min(1, (now - start) / duration);
-            const eased = 1 - Math.pow(1 - t, 3);
-            const value = Math.floor(target * eased);
-            el.textContent = value.toLocaleString('tr-TR');
-            if (t < 1) requestAnimationFrame(step);
-        }
-        // start when in viewport
-        const io = new IntersectionObserver((entries) => {
-            entries.forEach(e => {
-                if (e.isIntersecting) {
-                    requestAnimationFrame(step);
-                    io.disconnect();
-                }
-            });
-        }, { threshold: 0.3 });
-        io.observe(el);
     })();
 </script>
 @endpush
