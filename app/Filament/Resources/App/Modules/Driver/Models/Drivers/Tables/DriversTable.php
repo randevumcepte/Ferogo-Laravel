@@ -4,7 +4,9 @@ namespace App\Filament\Resources\App\Modules\Driver\Models\Drivers\Tables;
 
 use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use App\Modules\Driver\Models\Driver;
+use App\Modules\Driver\Services\DriverOnboardingService;
 use App\Modules\Payment\Models\DriverPackage;
+use App\Modules\Vehicle\Models\VehicleClass;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -12,12 +14,15 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Illuminate\Support\HtmlString;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -117,6 +122,24 @@ class DriversTable
                         default => $state,
                     }),
 
+                TextColumn::make('submitted_at')
+                    ->label('İnceleme')
+                    ->badge()
+                    ->state(fn (Driver $d): string => $d->approval_status === 'approved'
+                        ? 'onayli'
+                        : ($d->submitted_at ? 'bekliyor' : 'eksik'))
+                    ->color(fn (string $state): string => match ($state) {
+                        'bekliyor' => 'info',
+                        'onayli'   => 'success',
+                        default    => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'bekliyor' => '🕒 İncelemede',
+                        'onayli'   => 'Onaylı',
+                        default    => 'Eksik/Devam',
+                    })
+                    ->tooltip('Sürücü tüm belgeleri yükleyip incelemeye gönderdi mi'),
+
                 TextColumn::make('rating')
                     ->label('Puan')
                     ->formatStateUsing(fn ($state) => $state . ' ★')
@@ -160,6 +183,89 @@ class DriversTable
             ])
             ->defaultSort('id', 'desc')
             ->recordActions([
+                Action::make('review_and_approve')
+                    ->label('İncele & Onayla')
+                    ->icon(\Filament\Support\Icons\Heroicon::OutlinedClipboardDocumentCheck)
+                    ->color('success')
+                    ->button()
+                    ->visible(fn (Driver $d) => $d->approval_status !== 'approved')
+                    ->modalHeading(fn (Driver $d) => 'Onboarding İnceleme: ' . ($d->user?->name ?? 'Sürücü'))
+                    ->modalDescription('Yüklenen belge ve fotoğrafları incele. Araç sınıfını onayla/düzelt ve "Onayla" ile sürücüyü aktifleştir.')
+                    ->modalSubmitActionLabel('✓ Onayla ve Aktifleştir')
+                    ->schema([
+                        Placeholder::make('review')
+                            ->label('')
+                            ->content(fn (Driver $d) => new HtmlString(self::buildOnboardingReviewHtml($d))),
+                        Select::make('vehicle_class_id')
+                            ->label('Onaylanan araç sınıfı (sürücünün önerisini düzeltebilirsin)')
+                            ->options(fn () => VehicleClass::where('is_active', true)->orderBy('sort_order')->pluck('name', 'id'))
+                            ->default(fn (Driver $d) => $d->currentVehicle?->vehicle_class_id)
+                            ->required(fn (Driver $d) => (bool) $d->currentVehicle),
+                    ])
+                    ->action(function (Driver $d, array $data) {
+                        if (! $d->currentVehicle) {
+                            Notification::make()->danger()->title('Araç bilgisi eksik')->body('Sürücü henüz araç bilgilerini tamamlamamış; onaylanamaz.')->send();
+                            return;
+                        }
+
+                        $now = now();
+
+                        // Araç: sınıfı onayla/düzelt + aktifleştir
+                        $d->currentVehicle->update([
+                            'vehicle_class_id'         => $data['vehicle_class_id'] ?? $d->currentVehicle->vehicle_class_id,
+                            'class_confirmed_at'       => $now,
+                            'status'                   => 'active',
+                            'registration_approved_at' => $d->currentVehicle->registration_file_path ? $now : $d->currentVehicle->registration_approved_at,
+                        ]);
+
+                        // Yüklenmiş sürücü belgelerini onayla
+                        $docCols = [
+                            'license_file_path'         => 'license_approved_at',
+                            'src_file_path'             => 'src_approved_at',
+                            'psychotechnic_file_path'   => 'psychotechnic_approved_at',
+                            'criminal_record_file_path' => 'criminal_record_approved_at',
+                            'insurance_file_path'       => 'insurance_approved_at',
+                            'inspection_file_path'      => 'inspection_approved_at',
+                            'selfie_file_path'          => 'selfie_approved_at',
+                        ];
+                        $update = [
+                            'approval_status' => 'approved',
+                            'approved_at'     => $d->approved_at ?? $now,
+                            'approved_by'     => Auth::id(),
+                            'rejection_reason'=> null,
+                        ];
+                        foreach ($docCols as $fileCol => $approvedCol) {
+                            if ($d->{$fileCol} && empty($d->{$approvedCol})) {
+                                $update[$approvedCol] = $now;
+                            }
+                        }
+                        $d->update($update);
+
+                        Notification::make()
+                            ->success()
+                            ->title('✓ Sürücü onaylandı')
+                            ->body('Araç sınıfı onaylandı, belgeler işaretlendi. Sürücü "Müsait" olduğunda radara düşer.')
+                            ->persistent()
+                            ->send();
+                    }),
+
+                Action::make('reject_application')
+                    ->label('Reddet')
+                    ->icon(\Filament\Support\Icons\Heroicon::OutlinedXCircle)
+                    ->color('danger')
+                    ->visible(fn (Driver $d) => ! in_array($d->approval_status, ['approved', 'rejected'], true))
+                    ->modalHeading('Başvuruyu reddet')
+                    ->schema([
+                        Textarea::make('reason')->label('Red gerekçesi (sürücüye gösterilebilir)')->required()->rows(3),
+                    ])
+                    ->action(function (Driver $d, array $data) {
+                        $d->update([
+                            'approval_status'  => 'rejected',
+                            'rejection_reason' => $data['reason'],
+                        ]);
+                        Notification::make()->warning()->title('Başvuru reddedildi')->send();
+                    }),
+
                 Action::make('reset_password_quick')
                     ->label('Yeni Şifre + SMS')
                     ->icon(\Filament\Support\Icons\Heroicon::OutlinedKey)
@@ -566,6 +672,71 @@ class DriversTable
             $html .= '💡 <strong>Bilgi:</strong> Bu sürücüde "Sadece kadın yolcu al" açık. Yalnızca cinsiyet: kadın olan müşteriler bu sürücüyü Hızlı Seç ekranında görebilir. Radar sayfasında herkese görünür.';
             $html .= '</div>';
         }
+
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
+     * Onboarding inceleme raporu: araç bilgisi + yüklenen belge/fotoğraf linkleri
+     * + tamamlanma durumu. Admin buradan her belgeyi tıklayıp görür.
+     */
+    private static function buildOnboardingReviewHtml(Driver $d): string
+    {
+        $d = $d->loadMissing('user', 'currentVehicle.vehicleClass', 'currentVehicle.vehicleMake', 'currentVehicle.vehicleModel');
+        $v = $d->currentVehicle;
+        $ob = app(DriverOnboardingService::class)->status($d);
+
+        $link = function (?string $path, string $label): string {
+            if (! $path) return '<span style="color:#ef4444;">✗ ' . e($label) . ' — yok</span>';
+            $url = str_starts_with($path, 'http') ? $path : asset('storage/' . $path);
+            return '✅ <a href="' . e($url) . '" target="_blank" style="color:#3b82f6; text-decoration:underline;">' . e($label) . '</a>';
+        };
+
+        $html = '<div style="font-family: system-ui,sans-serif; font-size: 13px; line-height: 1.7;">';
+
+        // Tamamlanma
+        $barColor = $ob['is_ready_for_review'] ? '#10b981' : '#f59e0b';
+        $html .= '<div style="margin-bottom:12px; padding:10px 14px; background:rgba(0,0,0,0.04); border-radius:8px;">';
+        $html .= '<strong>Tamamlanma:</strong> ' . $ob['completed'] . '/' . $ob['total'] . ' (%' . $ob['percent'] . ') · '
+              . '<span style="color:' . $barColor . '; font-weight:600;">' . ($ob['is_ready_for_review'] ? 'İncelemeye hazır' : 'Eksik var') . '</span>';
+        if (! empty($ob['missing'])) {
+            $html .= '<div style="color:#b45309; font-size:12px; margin-top:4px;">Eksik: ' . e(implode(', ', $ob['missing'])) . '</div>';
+        }
+        $html .= '</div>';
+
+        // Araç
+        $html .= '<div style="margin-bottom:8px; font-weight:700;">🚗 Araç</div>';
+        if ($v) {
+            $html .= '<div style="margin-bottom:10px; color:#374151;">'
+                . e($v->vehicle_type ?: '—') . ' · ' . e(($v->vehicleMake?->name ?? $v->brand) . ' ' . ($v->vehicleModel?->name ?? $v->model))
+                . ' · ' . e((string) $v->year_of_manufacture) . ' · ' . e((string) $v->color)
+                . ' · Plaka: <strong>' . e((string) $v->plate) . '</strong>'
+                . ' · Önerilen sınıf: <strong>' . e($v->vehicleClass?->name ?? '—') . '</strong>'
+                . '</div>';
+            // Fotoğraflar
+            $angles = ['left'=>'Sol','front'=>'Ön','right'=>'Sağ','back'=>'Arka','interior_front'=>'İç ön','interior_back'=>'İç arka'];
+            $pa = is_array($v->photo_angles) ? $v->photo_angles : [];
+            $html .= '<div style="margin-bottom:10px;">';
+            foreach ($angles as $k => $lbl) {
+                $html .= '<div>' . $link($pa[$k] ?? null, 'Foto: ' . $lbl) . '</div>';
+            }
+            $html .= '</div>';
+        } else {
+            $html .= '<div style="color:#ef4444; margin-bottom:10px;">Araç bilgisi henüz girilmemiş.</div>';
+        }
+
+        // Belgeler
+        $html .= '<div style="margin-bottom:8px; font-weight:700;">📄 Belgeler</div>';
+        $html .= '<div>' . $link($d->license_file_path, 'Ehliyet') . '</div>';
+        $html .= '<div>' . $link($d->selfie_file_path, 'Selfie') . '</div>';
+        $html .= '<div>' . $link($d->src_file_path, 'SRC') . '</div>';
+        $html .= '<div>' . $link($d->criminal_record_file_path, 'Adli Sicil') . '</div>';
+        $html .= '<div>' . $link($d->psychotechnic_file_path, 'Psikoteknik') . '</div>';
+        $html .= '<div>' . $link($v?->registration_file_path, 'Ruhsat') . '</div>';
+        $html .= '<div>' . $link($d->insurance_file_path, 'Sigorta') . '</div>';
+        $html .= '<div>' . $link($d->inspection_file_path, 'Muayene') . '</div>';
 
         $html .= '</div>';
 

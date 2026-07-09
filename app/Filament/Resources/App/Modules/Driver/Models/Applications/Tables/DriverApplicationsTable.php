@@ -130,7 +130,10 @@ class DriverApplicationsTable
                     ->label('Onayla ve Hesap Aç')
                     ->icon(\Filament\Support\Icons\Heroicon::OutlinedCheckCircle)
                     ->color('success')
-                    ->visible(fn (DriverApplication $a) => $a->status !== 'approved')
+                    // Hesap-önce modelinde hesap ön kayıtta açılır (user_id dolu). Eski
+                    // "hesap aç" aksiyonu yalnızca eski (hesabı olmayan) başvurularda görünür;
+                    // yeni başvurular Sürücüler ekranından "İncele & Onayla" ile değerlendirilir.
+                    ->visible(fn (DriverApplication $a) => $a->status !== 'approved' && ! $a->user_id)
                     ->schema([
                         TextInput::make('email')
                             ->label('Giriş e-postası')
