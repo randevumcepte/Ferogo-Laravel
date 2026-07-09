@@ -486,6 +486,9 @@
     {{-- Açılır pencere (popup) reklamı — aktif popup varsa gösterilir --}}
     @include('partials.ad-popup')
 
+    {{-- Uygulama indirme QR kartı — sağ alttan yukarı kayar (masaüstü) --}}
+    @include('partials.app-download-qr')
+
     @stack('scripts')
 </body>
 </html>
