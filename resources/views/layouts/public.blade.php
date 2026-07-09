@@ -114,34 +114,101 @@
     {{-- Footer — embed modunda gizlenir --}}
     @unless(request()->boolean('embed'))
     <footer class="bg-zinc-950 border-t border-white/5 mt-24">
-        <div class="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-zinc-400">
-            <div>
+        <div class="max-w-7xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-8 gap-y-10 text-sm text-zinc-400">
+
+            {{-- Marka + açıklama + güven + sosyal --}}
+            <div class="col-span-2 md:col-span-3 lg:col-span-2">
                 <div class="text-2xl font-extrabold mb-3">
                     <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
                 </div>
-                <p class="leading-relaxed">FerXGo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk platformudur. Yolculuk hizmeti üye sürücü ile yolcu arasında gerçekleşir; FerXGo yalnızca aracılık ve eşleştirme hizmeti sunar.</p>
+                <p class="leading-relaxed max-w-sm">FerXGo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk platformudur. Yolculuk hizmeti üye sürücü ile yolcu arasında gerçekleşir; FerXGo yalnızca aracılık ve eşleştirme hizmeti sunar.</p>
+
+                {{-- Güven rozetleri --}}
+                <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                    <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Doğrulanmış üye sürücüler</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="text-brand">🛡</span> KVKK korumalı</span>
+                </div>
+
+                {{-- Sosyal --}}
+                <div class="mt-5">
+                    <div class="text-white font-semibold mb-2 text-xs uppercase tracking-wider">Bizi Takip Et</div>
+                    <div class="flex items-center gap-3">
+                        <a href="https://instagram.com/ferxgo" target="_blank" rel="noopener" aria-label="Instagram"
+                           class="w-9 h-9 rounded-lg bg-white/5 border border-white/10 hover:border-brand/40 hover:text-brand flex items-center justify-center transition">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.86s0 3.6-.07 4.86c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.9.07s-3.6 0-4.86-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.21 15.6 2.2 15.2 2.2 12s0-3.6.07-4.86c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.4 2.21 8.8 2.2 12 2.2zm0 1.8c-3.14 0-3.51.01-4.75.07-.9.04-1.38.19-1.71.32-.43.17-.74.37-1.06.69-.32.32-.52.63-.69 1.06-.13.33-.28.81-.32 1.71C3.21 8.79 3.2 9.16 3.2 12s.01 3.21.07 4.45c.04.9.19 1.38.32 1.71.17.43.37.74.69 1.06.32.32.63.52 1.06.69.33.13.81.28 1.71.32 1.24.06 1.61.07 4.75.07s3.51-.01 4.75-.07c.9-.04 1.38-.19 1.71-.32.43-.17.74-.37 1.06-.69.32-.32.52-.63.69-1.06.13-.33.28-.81.32-1.71.06-1.24.07-1.61.07-4.45s-.01-3.21-.07-4.45c-.04-.9-.19-1.38-.32-1.71a2.86 2.86 0 0 0-.69-1.06 2.86 2.86 0 0 0-1.06-.69c-.33-.13-.81-.28-1.71-.32C15.51 4.01 15.14 4 12 4zm0 3.06A4.94 4.94 0 1 1 12 16.94 4.94 4.94 0 0 1 12 7.06zm0 8.14A3.2 3.2 0 1 0 12 8.8a3.2 3.2 0 0 0 0 6.4zm6.28-8.34a1.15 1.15 0 1 1-2.3 0 1.15 1.15 0 0 1 2.3 0z"/></svg>
+                        </a>
+                        <a href="https://wa.me/908503403039" target="_blank" rel="noopener" aria-label="WhatsApp"
+                           class="w-9 h-9 rounded-lg bg-white/5 border border-white/10 hover:border-brand/40 hover:text-brand flex items-center justify-center transition">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35zM12.04 2.5A9.5 9.5 0 0 0 3.9 16.86L2.5 21.5l4.76-1.25a9.5 9.5 0 1 0 4.78-17.75zm0 17.4a7.9 7.9 0 0 1-4.02-1.1l-.29-.17-2.82.74.75-2.75-.19-.3a7.9 7.9 0 1 1 6.57 3.58z"/></svg>
+                        </a>
+                    </div>
+                </div>
             </div>
+
+            {{-- Hızlı Bağlantılar --}}
             <div>
-                <div class="text-white font-semibold mb-3">Yolculuk Kategorileri</div>
+                <div class="text-white font-semibold mb-3 text-xs uppercase tracking-wider">Hızlı Bağlantılar</div>
                 <ul class="space-y-2">
-                    <li>Havalimanı Yolculuğu</li>
-                    <li>Kurumsal Yolculuk</li>
-                    <li>Premium Yolculuk</li>
-                    <li>Şehir İçi Yolculuk</li>
+                    <li><a href="{{ route('home') }}" class="hover:text-white transition">Anasayfa</a></li>
+                    <li><a href="{{ route('home') }}#rezervasyon" class="hover:text-white transition">Rezervasyon Yap</a></li>
+                    <li><a href="{{ route('ride.show') }}" class="hover:text-white transition">Yolculuk Yap</a></li>
+                    <li><a href="{{ route('driver.apply') }}" class="hover:text-white transition">Sürücü Ol</a></li>
+                    <li><a href="{{ route('driver.login') }}" class="hover:text-white transition">Sürücü Girişi</a></li>
+                    <li><a href="{{ route('customer.login') }}" class="hover:text-white transition">Müşteri Girişi</a></li>
                 </ul>
             </div>
+
+            {{-- Yasal --}}
             <div>
-                <div class="text-white font-semibold mb-3">Yasal &amp; İletişim</div>
+                <div class="text-white font-semibold mb-3 text-xs uppercase tracking-wider">Yasal</div>
                 <ul class="space-y-2">
                     <li><a href="{{ route('legal.terms') }}" class="hover:text-white transition">Hizmet Şartları</a></li>
                     <li><a href="{{ route('legal.kvkk') }}" class="hover:text-white transition">KVKK Aydınlatma Metni</a></li>
                     <li><a href="{{ route('legal.distance-sales') }}" class="hover:text-white transition">Mesafeli Satış Sözleşmesi</a></li>
                     <li><a href="{{ route('legal.cookies') }}" class="hover:text-white transition">Çerez Politikası</a></li>
-                    <li><a href="{{ route('legal.privacy-security') }}" class="hover:text-white transition">Gizlilik ve Güvenlik Politikası</a></li>
-                    <li class="pt-2 border-t border-white/5">📞 0850 340 3039 · 💬 WhatsApp</li>
+                    <li><a href="{{ route('legal.privacy-security') }}" class="hover:text-white transition">Gizlilik ve Güvenlik</a></li>
                 </ul>
             </div>
+
+            {{-- İzmir Rehberi --}}
+            <div>
+                <div class="text-white font-semibold mb-3 text-xs uppercase tracking-wider">İzmir Rehberi</div>
+                <ul class="space-y-2">
+                    <li><a href="{{ url('/izmir-havalimani-ulasim') }}" class="hover:text-white transition">Havalimanı Ulaşım</a></li>
+                    <li><a href="{{ url('/izmir-uygun-ulasim') }}" class="hover:text-white transition">Uygun Ulaşım</a></li>
+                    <li><a href="{{ url('/korsan-taksi-yasal-mi') }}" class="hover:text-white transition">Korsan Taksi Yasal mı?</a></li>
+                    <li><a href="{{ route('legal.ride-sharing') }}" class="hover:text-white transition">Paylaşımlı Yolculuk Nedir?</a></li>
+                    <li class="pt-2 mt-1 border-t border-white/5"><a href="tel:+908503403039" class="hover:text-white transition">📞 0850 340 3039</a></li>
+                </ul>
+            </div>
+
+            {{-- Uygulamayı İndir --}}
+            <div class="col-span-2 md:col-span-3 lg:col-span-1">
+                <div class="text-white font-semibold mb-3 text-xs uppercase tracking-wider">Uygulamayı İndir</div>
+                <div class="flex flex-row lg:flex-col gap-3">
+                    {{-- App Store (yakında) --}}
+                    <div class="relative inline-flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 opacity-70 cursor-default select-none" title="Çok yakında">
+                        <svg class="w-6 h-6 text-white shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z"/></svg>
+                        <div class="leading-tight">
+                            <div class="text-[10px] text-zinc-400">İndir</div>
+                            <div class="text-white font-semibold text-sm">App Store</div>
+                        </div>
+                        <span class="absolute -top-2 -right-2 text-[9px] font-bold bg-brand text-black px-1.5 py-0.5 rounded-full">Yakında</span>
+                    </div>
+                    {{-- Google Play (yakında) --}}
+                    <div class="relative inline-flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 opacity-70 cursor-default select-none" title="Çok yakında">
+                        <svg class="w-6 h-6 shrink-0" viewBox="0 0 24 24"><path fill="#00D1C1" d="M3.6 2.3c-.3.2-.5.5-.5 1v17.4c0 .5.2.8.5 1l9.3-9.7z"/><path fill="#FFCE00" d="M17.2 12l-3.1-3.2-9.3-6.3c-.2-.1-.4-.2-.6-.2z"/><path fill="#FF4B3E" d="M4.2 22.3c.2 0 .4-.1.6-.2l9.3-6.3-2.9-3z"/><path fill="#00A0FF" d="M20.4 11.1c.6.3 1 .8 1 .9s-.4.6-1 .9l-3.2 1.7-3.1-3.3 3.1-3.3z"/></svg>
+                        <div class="leading-tight">
+                            <div class="text-[10px] text-zinc-400">İndir</div>
+                            <div class="text-white font-semibold text-sm">Google Play</div>
+                        </div>
+                        <span class="absolute -top-2 -right-2 text-[9px] font-bold bg-brand text-black px-1.5 py-0.5 rounded-full">Yakında</span>
+                    </div>
+                </div>
+                <p class="mt-3 text-[11px] text-zinc-500">iOS 13+ ve Android 8.0+ desteklenir.</p>
+            </div>
         </div>
+
         <div class="border-t border-white/5 py-6 px-6 text-center text-[11px] text-zinc-500 leading-relaxed">
             &copy; {{ date('Y') }} FerXGo · Tüm hakları saklıdır<br>
             <span class="opacity-75">FerXGo bir dijital eşleştirme platformudur, ticari taşımacılık hizmeti sağlamaz. Yolculuk, bağımsız üye sürücü ile yolcu arasında gerçekleşir. Platform, taraflar arasında kişisel veri korumalı (KVKK 6698) bir aracılık hizmeti sunar.</span>
