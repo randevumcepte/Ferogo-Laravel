@@ -78,7 +78,7 @@ class ReservationController extends Controller
 
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_phone' => ['required', 'string', 'max:20'],
-            'customer_tc_no' => ['nullable', 'string', 'size:11'],
+            'customer_tc_no' => ['required', 'digits:11'],
 
             'extras' => ['nullable', 'array'],
             'extras.*' => ['nullable', 'array'],
@@ -89,7 +89,8 @@ class ReservationController extends Controller
         ], [
             'kvkk_consent.accepted' => 'KVKK onayını işaretlemeniz gerekiyor.',
             'scheduled_at.after' => 'Tarih geçmiş bir zaman olamaz.',
-            'customer_tc_no.size' => 'T.C. Kimlik numarası 11 haneli olmalıdır.',
+            'customer_tc_no.required' => 'T.C. Kimlik numarası zorunlu (yasal mali kayıt için).',
+            'customer_tc_no.digits'   => 'T.C. Kimlik numarası 11 haneli olmalıdır.',
             'transport_scheduled_at.required_with' => 'Ulaşım tipi seçtiyseniz planlanan varış saatini girmelisiniz.',
         ]);
 
@@ -237,6 +238,7 @@ class ReservationController extends Controller
             'dropoff_lng' => ['nullable', 'numeric'],
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_phone' => ['required', 'string', 'max:20'],
+            'customer_tc_no' => ['required', 'digits:11'],
             'preferred_driver_name' => ['required', 'string', 'max:120'],
             'preferred_driver_plate' => ['nullable', 'string', 'max:32'],
             'distance_km' => ['required', 'numeric', 'min:0', 'max:500'],

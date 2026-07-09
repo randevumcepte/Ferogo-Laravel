@@ -195,6 +195,7 @@ class DriverApplicationsTable
                                 'email'    => $data['email'],
                                 'password' => $userPasswordHash,
                                 'phone'    => preg_replace('/\s+/', '', $a->phone),
+                                'tc_no'    => $a->tc_no,
                                 'gender'   => $a->gender,
                                 'type'     => 'driver',
                                 'status'   => 'active',
@@ -240,6 +241,7 @@ class DriverApplicationsTable
                                     'model'              => optional($a->vehicleModel)->name,
                                     'year_of_manufacture'=> $a->vehicle_year,
                                     'color'              => $a->vehicle_color,
+                                    'capacity'           => $a->vehicle_capacity,
                                     'plate'              => $a->vehicle_plate,
                                     'status'             => 'active',
                                     'photos'             => $photos,
@@ -372,7 +374,8 @@ class DriverApplicationsTable
         $html .= '<div style="background:rgba(240,192,64,0.06);border-left:3px solid #F0C040;padding:12px 16px;border-radius:6px;margin-bottom:16px;">';
         $html .= '<div style="font-size:15px;font-weight:700;color:#F0C040;">' . e($a->full_name) . '</div>';
         $html .= '<div style="color:#aaa;margin-top:4px;">';
-        $html .= '📞 ' . e($a->phone) . ' · ✉️ ' . e($a->email ?? '—');
+        $html .= '🆔 T.C.: <strong style="color:#fff;">' . e($a->tc_no ?? '—') . '</strong>';
+        $html .= ' · 📞 ' . e($a->phone) . ' · ✉️ ' . e($a->email ?? '—');
         $html .= ' · ' . ($a->gender === 'female' ? '👩 Kadın' : '👨 Erkek');
         $html .= ' · Doğum yılı: ' . e((string) $a->birth_year);
         $html .= ' · Şehir: ' . e($a->city?->name ?? '—');
@@ -404,7 +407,7 @@ class DriverApplicationsTable
         $html .= '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.15em;color:#888;margin:16px 0 10px;">Araç Bilgileri</h3>';
         $html .= '<div style="background:#000;border:1px solid #333;border-radius:8px;padding:12px 16px;color:#ddd;">';
         $html .= '<div><strong>' . e(($a->vehicleMake?->name ?? '') . ' ' . ($a->vehicleModel?->name ?? '')) . '</strong></div>';
-        $html .= '<div style="color:#aaa;margin-top:4px;">Yıl: ' . e((string) $a->vehicle_year) . ' · Renk: ' . e($a->vehicle_color ?? '—') . ' · Plaka: <strong style="color:#F0C040;">' . e($a->vehicle_plate ?? '—') . '</strong></div>';
+        $html .= '<div style="color:#aaa;margin-top:4px;">Yıl: ' . e((string) $a->vehicle_year) . ' · Renk: ' . e($a->vehicle_color ?? '—') . ' · Kapasite: <strong>' . e((string) ($a->vehicle_capacity ?? '—')) . ' yolcu</strong> · Plaka: <strong style="color:#F0C040;">' . e($a->vehicle_plate ?? '—') . '</strong></div>';
         $html .= '</div>';
 
         // Araç fotoğrafları (6 açı)

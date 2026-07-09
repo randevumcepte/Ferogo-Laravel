@@ -17,6 +17,7 @@ class DriverApplication extends Model
     protected $fillable = [
         'user_id',
         'full_name',
+        'tc_no',
         'phone',
         'email',
         'password_hash',
@@ -33,6 +34,7 @@ class DriverApplication extends Model
         'vehicle_model_id',
         'vehicle_year',
         'vehicle_color',
+        'vehicle_capacity',
         'vehicle_plate',
         // Fotoğraflar & belgeler
         'selfie_file_path',

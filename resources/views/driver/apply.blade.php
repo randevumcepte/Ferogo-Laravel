@@ -164,6 +164,10 @@
                             <label class="block text-xs font-medium text-zinc-400 mb-2">Ad Soyad</label>
                             <input type="text" name="full_name" value="{{ old('full_name') }}" required maxlength="120" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mehmet Yılmaz">
                         </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">T.C. Kimlik No <span class="text-zinc-600">(11 hane · yasal zorunlu)</span></label>
+                            <input type="text" name="tc_no" value="{{ old('tc_no') }}" required pattern="[0-9]{11}" maxlength="11" inputmode="numeric" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 tabular-nums" placeholder="12345678901">
+                        </div>
                         <div>
                             <label class="block text-xs font-medium text-zinc-400 mb-2">Telefon</label>
                             <input type="tel" name="phone" value="{{ old('phone') }}" required maxlength="32" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="0532 000 00 00">
@@ -276,6 +280,15 @@
                                 <option value="">Seçiniz</option>
                                 @foreach(['Beyaz','Siyah','Gri','Gümüş','Kırmızı','Mavi','Yeşil','Sarı','Turuncu','Kahverengi','Bej','Diğer'] as $renk)
                                     <option value="{{ $renk }}" {{ old('vehicle_color') === $renk ? 'selected' : '' }}>{{ $renk }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Yolcu Kapasitesi <span class="text-zinc-600">(sürücü hariç)</span></label>
+                            <select name="vehicle_capacity" required class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                <option value="">Seçiniz</option>
+                                @foreach([1 => '1 yolcu (motor)', 2 => '2 yolcu', 3 => '3 yolcu', 4 => '4 yolcu (standart otomobil)', 5 => '5 yolcu', 6 => '6 yolcu (SUV/Kombi)', 7 => '7 yolcu (Vito/Minibüs)', 8 => '8 yolcu', 9 => '9-11 yolcu (Sprinter/Transporter)', 12 => '12-16 yolcu (Minibüs)'] as $cap => $label)
+                                    <option value="{{ $cap }}" {{ old('vehicle_capacity') == $cap ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>

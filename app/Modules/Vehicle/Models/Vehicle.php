@@ -24,6 +24,7 @@ class Vehicle extends Model
         'model',
         'year_of_manufacture',
         'color',
+        'capacity',
         'plate',
         'registration_file_path',
         'registration_approved_at',

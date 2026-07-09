@@ -53,6 +53,7 @@ class DriverApplicationController extends Controller
             // Kategori & kişisel
             'driver_category_id' => ['required', Rule::in($categoryIds)],
             'full_name'          => ['required', 'string', 'max:120'],
+            'tc_no'              => ['required', 'digits:11'],
             'phone'              => ['required', 'string', 'max:32'],
             'email'              => ['required', 'email', 'max:255', 'unique:driver_applications,email'],
             'password'           => ['required', 'string', 'min:6', 'max:100', 'confirmed'],
@@ -67,6 +68,7 @@ class DriverApplicationController extends Controller
             'vehicle_model_id'   => ['required', 'integer', 'exists:vehicle_models,id'],
             'vehicle_year'       => ['required', 'integer', 'min:2000', 'max:' . (date('Y') + 1)],
             'vehicle_color'      => ['required', 'string', 'max:30'],
+            'vehicle_capacity'   => ['required', 'integer', 'min:1', 'max:16'],
             'vehicle_plate'      => ['required', 'string', 'max:15'],
 
             // Kimlik & Ehliyet fotoğrafları — hepsi max 8MB, jpg/png/webp
@@ -108,6 +110,9 @@ class DriverApplicationController extends Controller
 
         $messages = [
             'driver_category_id.required' => 'Sürücü kategorisi (Otomobil / Sarı Taksi / Motosiklet) seçmelisin.',
+            'tc_no.required'              => 'T.C. Kimlik No zorunludur.',
+            'tc_no.digits'                => 'T.C. Kimlik No 11 haneli olmalı.',
+            'vehicle_capacity.required'   => 'Aracın kaç yolcu aldığını seçmelisin.',
             'email.unique'                => 'Bu e-posta ile daha önce başvuru yapılmış.',
             'password.confirmed'          => 'Şifreler eşleşmiyor.',
             'kvkk.accepted'               => 'KVKK onayı zorunlu.',
@@ -145,6 +150,7 @@ class DriverApplicationController extends Controller
 
         $application = DriverApplication::create([
             'full_name'          => $validated['full_name'],
+            'tc_no'              => $validated['tc_no'],
             'phone'              => $validated['phone'],
             'email'              => strtolower(trim($validated['email'])),
             'password_hash'      => Hash::make($validated['password']),
@@ -161,6 +167,7 @@ class DriverApplicationController extends Controller
             'vehicle_model_id'   => $validated['vehicle_model_id'],
             'vehicle_year'       => $validated['vehicle_year'],
             'vehicle_color'      => $validated['vehicle_color'],
+            'vehicle_capacity'   => $validated['vehicle_capacity'],
             'vehicle_plate'      => strtoupper(preg_replace('/\s+/', ' ', $validated['vehicle_plate'])),
             'vehicle_info'       => $vehicleInfo,
 

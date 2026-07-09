@@ -407,10 +407,11 @@
                                 class="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand focus:outline-none">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-zinc-300 mb-2">T.C. Kimlik No <span class="text-zinc-500 text-xs">(opsiyonel)</span></label>
-                            <input type="text" name="customer_tc_no" value="{{ old('customer_tc_no') }}" maxlength="11" pattern="[0-9]{11}"
+                            <label class="block text-sm font-medium text-zinc-300 mb-2">T.C. Kimlik No <span class="text-red-400 text-xs">*</span></label>
+                            <input type="text" name="customer_tc_no" value="{{ old('customer_tc_no') }}" required maxlength="11" pattern="[0-9]{11}" inputmode="numeric"
                                 placeholder="11 haneli"
-                                class="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand focus:outline-none">
+                                class="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand focus:outline-none tabular-nums">
+                            <p class="text-[10px] text-zinc-500 mt-1">Yasal mali kayıt zorunlu (Maliye 7 Ağustos 2024 kararı)</p>
                         </div>
                     </div>
 
