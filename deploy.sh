@@ -42,6 +42,12 @@ chmod +x "$0" 2>/dev/null || true
 # (yoksa cache temizlenmez ve sunucu eski surumde takili kalir).
 "$PHP_BIN" artisan migrate --force || echo "  ! migrate hata verdi, devam ediliyor"
 
+# Katalog seeder'lari — idempotent (updateOrCreate). Yeni marka/model/kategori
+# eklendiginde otomatik canliya iner. Var olan kayitlar korunur, sadece
+# eksikler eklenir. Hata verse deploy'u durdurma.
+"$PHP_BIN" artisan db:seed --class="Database\\Seeders\\DriverCategorySeeder" --force 2>/dev/null || echo "  ! DriverCategorySeeder hata verdi, gecildi"
+"$PHP_BIN" artisan db:seed --class="Database\\Seeders\\VehicleCatalogSeeder" --force 2>/dev/null || echo "  ! VehicleCatalogSeeder hata verdi, gecildi"
+
 # Filament / Blade / config / route / view cache'lerini toplu temizle
 "$PHP_BIN" artisan optimize:clear || true
 
