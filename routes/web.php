@@ -7,6 +7,7 @@ use App\Modules\Booking\Http\Controllers\PhoneVerificationController;
 use App\Modules\Booking\Http\Controllers\ReservationController;
 use App\Modules\Booking\Http\Controllers\RideRequestController;
 use App\Modules\Driver\Http\Controllers\DriverApplicationController;
+use App\Modules\Driver\Http\Controllers\DriverOnboardingController;
 use App\Modules\Driver\Http\Controllers\DriverPanelController;
 use App\Modules\Driver\Http\Controllers\DriverReservationController;
 use App\Modules\Legal\Http\Controllers\LegalConsentController;
@@ -201,6 +202,16 @@ Route::post('/surucu-cikis',   [DriverPanelController::class, 'logout'])->name('
 // yok ve Filament admin paneli farklı bir guard. Controller her metoda kendisi
 // `currentDriver()` ile auth kontrolü yapıp ya redirect ya da 401 JSON döner.
 Route::get('/surucu-paneli',                                 [DriverPanelController::class, 'panel'])->name('driver.panel');
+
+// ─── Hesap-önce onboarding (Doğrulama Durumu) — web sayfası + paylaşımlı API (web+mobil) ───
+Route::get('/surucu-paneli/dogrulama',                       [DriverOnboardingController::class, 'show'])->name('driver.onboarding');
+Route::get('/surucu-paneli/api/onboarding/status',           [DriverOnboardingController::class, 'status'])->name('driver.onboarding.status');
+Route::get('/surucu-paneli/api/onboarding/vehicle-models',   [DriverOnboardingController::class, 'vehicleModels'])->name('driver.onboarding.models');
+Route::post('/surucu-paneli/api/onboarding/vehicle',         [DriverOnboardingController::class, 'saveVehicle'])->name('driver.onboarding.vehicle');
+Route::post('/surucu-paneli/api/onboarding/photo',           [DriverOnboardingController::class, 'uploadPhoto'])->name('driver.onboarding.photo');
+Route::post('/surucu-paneli/api/onboarding/document',        [DriverOnboardingController::class, 'uploadDocument'])->name('driver.onboarding.document');
+Route::post('/surucu-paneli/api/onboarding/submit',          [DriverOnboardingController::class, 'submit'])->name('driver.onboarding.submit');
+
 Route::get('/surucu-paneli/profil',                          [DriverPanelController::class, 'showProfile'])->name('driver.profile');
 Route::post('/surucu-paneli/profil',                         [DriverPanelController::class, 'updateProfile'])->name('driver.profile.update');
 Route::post('/surucu-paneli/api/vehicle-photo',              [DriverPanelController::class, 'uploadVehiclePhoto'])->name('driver.api.vehicle_photo');
