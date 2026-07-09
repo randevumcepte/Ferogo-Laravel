@@ -144,8 +144,13 @@
                             <input type="tel" name="phone" value="{{ old('phone') }}" required maxlength="32" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="0532 000 00 00">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">E-posta <span class="text-zinc-600">(opsiyonel)</span></label>
-                            <input type="email" name="email" value="{{ old('email') }}" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="mehmet@ornek.com">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">E-posta</label>
+                            <input type="email" name="email" value="{{ old('email') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="mehmet@ornek.com">
+                            <p class="text-[11px] text-zinc-500 mt-1">Giriş için kullanacaksın.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şifre</label>
+                            <input type="password" name="password" required minlength="6" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="En az 6 karakter">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-zinc-400 mb-2">Şehir</label>
@@ -215,10 +220,14 @@
                         </label>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-medium text-zinc-400 mb-2">Aracın <span class="text-zinc-600">(marka, model, yıl)</span></label>
-                        <input type="text" name="vehicle_info" value="{{ old('vehicle_info') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mercedes Vito 2021">
-                        <p class="text-xs text-zinc-500 mt-2">Bakımlı, sigara içilmeyen, son 7 yıl içinde üretilmiş araç.</p>
+                    <div class="bg-white/[0.02] border border-white/10 rounded-xl p-4 flex items-start gap-3">
+                        <div class="text-xl shrink-0">🚗</div>
+                        <div class="text-xs text-zinc-400 leading-relaxed">
+                            <div class="font-semibold text-zinc-200 mb-1">Araç bilgileri ve belgeler bir sonraki adımda</div>
+                            Ön kaydını tamamladığında hesabın açılır; araç bilgilerini (marka/model seçmeli),
+                            araç fotoğraflarını, ehliyet, selfie ve diğer belgeleri <strong>doğrulama ekranından</strong>
+                            adım adım yükleyeceksin. Tüm belgeler tamamlanınca inceleme ekibimiz başvurunu değerlendirir.
+                        </div>
                     </div>
                 </div>
 
@@ -228,17 +237,16 @@
                     <textarea name="notes" rows="4" maxlength="1000" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 resize-none" placeholder="Bizimle paylaşmak istediğin bir şey varsa...">{{ old('notes') }}</textarea>
                 </div>
 
-                {{-- Vergi Sorumluluğu Bilgilendirme --}}
+                {{-- Sorumluluk Bilgilendirme --}}
                 <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 md:p-5">
                     <div class="flex items-start gap-3">
                         <div class="text-xl shrink-0">📋</div>
                         <div class="text-xs md:text-sm text-zinc-300 leading-relaxed">
-                            <div class="font-semibold text-amber-200 mb-1.5">Vergi Sorumluluğu Bilgilendirmesi</div>
+                            <div class="font-semibold text-amber-200 mb-1.5">Sorumluluk Bilgilendirmesi</div>
                             <p>
-                                FerXGo bir <strong>paylaşımlı yolculuk platformudur</strong>; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
-                                Gelir İdaresi Başkanlığı'nın 7 Ağustos 2024 tarihli kararı uyarınca paylaşımlı yolculuk faaliyetinden elde edilen kazanç
-                                <strong>üye sürücünün ticari kazancıdır</strong> ve vergi yükümlülüğü tamamen üye sürücüye aittir.
-                                FerXGo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
+                                FerXGo bir <strong>paylaşımlı yolculuk eşleştirme platformudur</strong>; ticari taşımacılık yapmaz, yolculuğun tarafı değildir ve üye sürücülerin işvereni değildir.
+                                Yolcunun ödediği katkı payı, yolculuğun <strong>yakıt ve amortisman gibi değişken giderlerine katkı</strong> niteliğindedir; doğrudan üye sürücüye aittir ve FerXGo bu ödemeden komisyon almaz.
+                                Paylaşımlı yolculuğa kendi aracınızla ve kendi takdirinizle katılırsınız; bu faaliyetten doğabilecek <strong>her türlü yasal ve mali yükümlülük tamamen üye sürücüye aittir</strong>, FerXGo bu yükümlülüklerin tarafı değildir.
                             </p>
                         </div>
                     </div>
