@@ -16,11 +16,17 @@ class Vehicle extends Model
     protected $fillable = [
         'tenant_id',
         'vehicle_class_id',
+        'class_confirmed_at',
+        'vehicle_type',
+        'vehicle_make_id',
+        'vehicle_model_id',
         'brand',
         'model',
         'year_of_manufacture',
         'color',
         'plate',
+        'registration_file_path',
+        'registration_approved_at',
         'insurance_policy',
         'insurance_expires_at',
         'inspection_expires_at',
@@ -30,10 +36,13 @@ class Vehicle extends Model
         'has_booster_seat',
         'pet_friendly',
         'photos',
+        'photo_angles',
         'status',
     ];
 
     protected $casts = [
+        'class_confirmed_at' => 'datetime',
+        'registration_approved_at' => 'datetime',
         'insurance_expires_at' => 'date',
         'inspection_expires_at' => 'date',
         'license_expires_at' => 'date',
@@ -42,6 +51,7 @@ class Vehicle extends Model
         'has_booster_seat' => 'boolean',
         'pet_friendly' => 'boolean',
         'photos' => 'array',
+        'photo_angles' => 'array',
     ];
 
     public function tenant(): BelongsTo
@@ -52,5 +62,17 @@ class Vehicle extends Model
     public function vehicleClass(): BelongsTo
     {
         return $this->belongsTo(VehicleClass::class);
+    }
+
+    // NOT: 'brand' ve 'model' string sütunları olduğu için ilişki adları
+    // çakışmayacak şekilde vehicleMake / vehicleModel seçildi.
+    public function vehicleMake(): BelongsTo
+    {
+        return $this->belongsTo(VehicleMake::class, 'vehicle_make_id');
+    }
+
+    public function vehicleModel(): BelongsTo
+    {
+        return $this->belongsTo(VehicleModel::class, 'vehicle_model_id');
     }
 }
