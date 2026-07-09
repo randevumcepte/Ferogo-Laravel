@@ -23,6 +23,7 @@ class Driver extends Model
         'city_id',
         'current_vehicle_id',
         'license_class',
+        'driver_category_id',
         'license_issued_at',
         'license_expires_at',
         'license_file_path',
@@ -33,6 +34,9 @@ class Driver extends Model
         'psychotechnic_file_path',
         'criminal_record_at',
         'criminal_record_file_path',
+        'selfie_file_path',
+        'selfie_approved_at',
+        'submitted_at',
         'insurance_file_path',
         'insurance_expires_at',
         'inspection_file_path',
@@ -74,6 +78,8 @@ class Driver extends Model
         'current_lng' => 'decimal:7',
         'last_location_updated_at' => 'datetime',
         'approved_at' => 'datetime',
+        'selfie_approved_at' => 'datetime',
+        'submitted_at' => 'datetime',
         'rating' => 'decimal:2',
         'women_passengers_only' => 'boolean',
         'package_active_until' => 'datetime',
@@ -90,6 +96,11 @@ class Driver extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(DriverCategory::class, 'driver_category_id');
     }
 
     public function city(): BelongsTo

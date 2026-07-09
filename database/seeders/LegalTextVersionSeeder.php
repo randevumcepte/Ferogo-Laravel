@@ -23,7 +23,7 @@ class LegalTextVersionSeeder extends Seeder
 {
     public function run(): void
     {
-        $version = 'v1.0-2026-06-01';
+        $version = 'v1.1-2026-07-09';
 
         $items = [
             [
@@ -59,7 +59,7 @@ class LegalTextVersionSeeder extends Seeder
             ],
             [
                 'key'   => 'driver_registration',
-                'title' => 'Sürücü Kayıt Onayı (vergi sorumluluğu beyanı)',
+                'title' => 'Sürücü Kayıt Onayı (sorumluluk beyanı)',
                 'view'  => null,
                 'content' => $this->driverRegistrationContent(),
             ],
@@ -137,18 +137,18 @@ TXT;
     protected function driverRegistrationContent(): string
     {
         return <<<'TXT'
-SÜRÜCÜ KAYIT ONAY METNİ (Vergi Sorumluluğu Beyanı)
+SÜRÜCÜ KAYIT ONAY METNİ (Sorumluluk Beyanı)
 
-FerXGo bir paylaşımlı yolculuk platformudur; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
+FerXGo bir paylaşımlı yolculuk eşleştirme platformudur; ticari taşımacılık yapmaz, yolculuğun tarafı değildir ve üye sürücülerin işvereni değildir.
 
-Gelir İdaresi Başkanlığı'nın 7 Ağustos 2024 tarihli kararı uyarınca paylaşımlı yolculuk faaliyetinden elde edilen kazanç
-üye sürücünün ticari kazancıdır ve vergi yükümlülüğü tamamen üye sürücüye aittir.
+Yolcunun ödediği katkı payı, yolculuğun değişken giderlerine (yakıt, amortisman) katkı niteliğindedir ve doğrudan üye sürücüye aittir.
+FerXGo bu ödemenin tarafı değildir ve komisyon almaz.
 
-FerXGo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
+Paylaşımlı yolculuğa kendi aracınızla ve kendi takdirinizle katılırsınız; bu faaliyetten doğabilecek her türlü yasal ve mali yükümlülük tamamen size aittir.
 
 Aşağıdaki bilgileri okuduğumu ve onaylıyorum:
 - FerXGo'nun aracı hizmet sağlayıcı olduğunu,
-- Vergi sorumluluğunun bana ait olduğunu,
+- Yasal ve mali sorumluluğun bana ait olduğunu,
 - Hizmet Şartları ve Paylaşımlı Yolculuk modelini kabul ettiğimi,
 - KVKK kapsamında verilerimin işlenmesine onay verdiğimi.
 TXT;

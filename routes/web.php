@@ -7,6 +7,7 @@ use App\Modules\Booking\Http\Controllers\PhoneVerificationController;
 use App\Modules\Booking\Http\Controllers\ReservationController;
 use App\Modules\Booking\Http\Controllers\RideRequestController;
 use App\Modules\Driver\Http\Controllers\DriverApplicationController;
+use App\Modules\Driver\Http\Controllers\DriverOnboardingController;
 use App\Modules\Driver\Http\Controllers\DriverPanelController;
 use App\Modules\Driver\Http\Controllers\DriverReservationController;
 use App\Modules\Legal\Http\Controllers\LegalConsentController;
@@ -58,7 +59,13 @@ Route::post('/reklam/olay', function (Request $request) {
     } catch (\Throwable $e) {
         // sessizce geç
     }
-    return response()->json(['ok' => true])->withCookie($cookie);
+    $resp = response()->json(['ok' => true])->withCookie($cookie);
+    // Kullanıcının ilçesini çereze yaz → sonraki sayfa açılışlarında bölgesel reklam gösterilir
+    $dist = AdEvent::districtFromLatLng($data['lat'] ?? null, $data['lng'] ?? null);
+    if ($dist) {
+        $resp->withCookie(cookie('ferxgo_dist', $dist, 60 * 24 * 30)); // 30 gün
+    }
+    return $resp;
 })->name('ad.event');
 
 // Sponsor performans raporu (yazdırılabilir HTML → PDF). Yalnızca panel (admin) kullanıcıları.
@@ -75,6 +82,9 @@ Route::get('/sitemap.xml', function () {
         ['loc' => route('home'),                 'freq' => 'daily',   'priority' => '1.0'],
         ['loc' => route('ride.show'),            'freq' => 'weekly',  'priority' => '0.9'],
         ['loc' => route('driver.apply'),         'freq' => 'weekly',  'priority' => '0.8'],
+        ['loc' => url('/izmir-havalimani-ulasim'), 'freq' => 'weekly', 'priority' => '0.8'],
+        ['loc' => url('/izmir-uygun-ulasim'),      'freq' => 'weekly', 'priority' => '0.8'],
+        ['loc' => url('/korsan-taksi-yasal-mi'),   'freq' => 'weekly', 'priority' => '0.7'],
         ['loc' => route('legal.ride-sharing'),   'freq' => 'monthly', 'priority' => '0.6'],
         ['loc' => route('legal.terms'),          'freq' => 'yearly',  'priority' => '0.3'],
         ['loc' => route('legal.kvkk'),           'freq' => 'yearly',  'priority' => '0.3'],
@@ -129,8 +139,22 @@ Route::get('/surucu-olun', [DriverApplicationController::class, 'show'])
 Route::post('/surucu-olun', [DriverApplicationController::class, 'store'])
     ->name('driver.apply.store');
 
+// AJAX: kategori seçince marka listesi + marka seçince model listesi
+Route::get('/api/driver-catalog/makes',  [DriverApplicationController::class, 'apiMakes'])
+    ->name('driver.catalog.makes');
+Route::get('/api/driver-catalog/models', [DriverApplicationController::class, 'apiModels'])
+    ->name('driver.catalog.models');
+
 // Yolculuk Yapın - yolcu landing
 Route::view('/yolculuk-yapin', 'ride.show')->name('ride.show');
+
+// ─────────────────────────────────────────────────────────
+// SEO REHBER SAYFALARI — İzmir ulaşım niyetli aramaları yasal-güvenli
+// çerçevede yakalar (paylaşımlı yolculuk alternatifi olarak konumlanır).
+// ─────────────────────────────────────────────────────────
+Route::view('/izmir-havalimani-ulasim', 'rehber.izmir-havalimani-ulasim')->name('rehber.havalimani');
+Route::view('/izmir-uygun-ulasim',      'rehber.izmir-uygun-ulasim')->name('rehber.uygun');
+Route::view('/korsan-taksi-yasal-mi',   'rehber.korsan-taksi-yasal-mi')->name('rehber.korsan-taksi');
 
 // ─────────────────────────────────────────────────────────
 // FAZ 3 — Ride Request / Accept akışı (müşteri tarafı)
@@ -201,6 +225,16 @@ Route::post('/surucu-cikis',   [DriverPanelController::class, 'logout'])->name('
 // yok ve Filament admin paneli farklı bir guard. Controller her metoda kendisi
 // `currentDriver()` ile auth kontrolü yapıp ya redirect ya da 401 JSON döner.
 Route::get('/surucu-paneli',                                 [DriverPanelController::class, 'panel'])->name('driver.panel');
+
+// ─── Hesap-önce onboarding (Doğrulama Durumu) — web sayfası + paylaşımlı API (web+mobil) ───
+Route::get('/surucu-paneli/dogrulama',                       [DriverOnboardingController::class, 'show'])->name('driver.onboarding');
+Route::get('/surucu-paneli/api/onboarding/status',           [DriverOnboardingController::class, 'status'])->name('driver.onboarding.status');
+Route::get('/surucu-paneli/api/onboarding/vehicle-models',   [DriverOnboardingController::class, 'vehicleModels'])->name('driver.onboarding.models');
+Route::post('/surucu-paneli/api/onboarding/vehicle',         [DriverOnboardingController::class, 'saveVehicle'])->name('driver.onboarding.vehicle');
+Route::post('/surucu-paneli/api/onboarding/photo',           [DriverOnboardingController::class, 'uploadPhoto'])->name('driver.onboarding.photo');
+Route::post('/surucu-paneli/api/onboarding/document',        [DriverOnboardingController::class, 'uploadDocument'])->name('driver.onboarding.document');
+Route::post('/surucu-paneli/api/onboarding/submit',          [DriverOnboardingController::class, 'submit'])->name('driver.onboarding.submit');
+
 Route::get('/surucu-paneli/profil',                          [DriverPanelController::class, 'showProfile'])->name('driver.profile');
 Route::post('/surucu-paneli/profil',                         [DriverPanelController::class, 'updateProfile'])->name('driver.profile.update');
 Route::post('/surucu-paneli/api/vehicle-photo',              [DriverPanelController::class, 'uploadVehiclePhoto'])->name('driver.api.vehicle_photo');

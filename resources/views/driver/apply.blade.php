@@ -131,6 +131,34 @@
             <form method="POST" action="{{ route('driver.apply.store') }}" class="bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-10 space-y-8">
                 @csrf
 
+                {{-- ==== KATEGORİ SEÇİMİ (Otomobil / Sarı Taksi / Motosiklet) ==== --}}
+                @if(isset($categories) && $categories->count() > 0)
+                <div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Sürücü Kategorisi</div>
+                    <p class="text-xs text-zinc-500 mb-4">Hangi tür araçla paylaşımlı yolculuk yapacaksın? Kategoriye göre farklı belgeler gerekli olacak.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        @foreach($categories as $cat)
+                            <label class="cursor-pointer relative group">
+                                <input type="radio" name="driver_category_id" value="{{ $cat->id }}" required
+                                       {{ old('driver_category_id') == $cat->id ? 'checked' : '' }}
+                                       data-slug="{{ $cat->slug }}"
+                                       class="sr-only peer category-radio">
+                                <div class="p-5 rounded-2xl border-2 border-white/10 bg-white/[0.02] peer-checked:border-brand peer-checked:bg-brand/10 transition text-center">
+                                    <div class="text-4xl mb-2">{{ $cat->emoji }}</div>
+                                    <div class="text-base font-bold text-white">{{ $cat->name }}</div>
+                                    <div class="text-[11px] text-zinc-500 mt-1">
+                                        Ehliyet: <span class="text-zinc-300 font-semibold">{{ $cat->required_license_class }}</span>
+                                        @if($cat->requires_src)  · SRC şart @endif
+                                        @if($cat->requires_helmet) · Kask şart @endif
+                                    </div>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div id="category-info" class="mt-3 hidden p-3 rounded-xl bg-brand/5 border border-brand/20 text-xs text-zinc-300"></div>
+                </div>
+                @endif
+
                 {{-- Section: kişisel --}}
                 <div>
                     <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Kişisel</div>
@@ -144,8 +172,13 @@
                             <input type="tel" name="phone" value="{{ old('phone') }}" required maxlength="32" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="0532 000 00 00">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-zinc-400 mb-2">E-posta <span class="text-zinc-600">(opsiyonel)</span></label>
-                            <input type="email" name="email" value="{{ old('email') }}" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="mehmet@ornek.com">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">E-posta</label>
+                            <input type="email" name="email" value="{{ old('email') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="mehmet@ornek.com">
+                            <p class="text-[11px] text-zinc-500 mt-1">Giriş için kullanacaksın.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şifre</label>
+                            <input type="password" name="password" required minlength="6" maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="En az 6 karakter">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-zinc-400 mb-2">Şehir</label>
@@ -215,10 +248,14 @@
                         </label>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-medium text-zinc-400 mb-2">Aracın <span class="text-zinc-600">(marka, model, yıl)</span></label>
-                        <input type="text" name="vehicle_info" value="{{ old('vehicle_info') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mercedes Vito 2021">
-                        <p class="text-xs text-zinc-500 mt-2">Bakımlı, sigara içilmeyen, son 7 yıl içinde üretilmiş araç.</p>
+                    <div class="bg-white/[0.02] border border-white/10 rounded-xl p-4 flex items-start gap-3">
+                        <div class="text-xl shrink-0">🚗</div>
+                        <div class="text-xs text-zinc-400 leading-relaxed">
+                            <div class="font-semibold text-zinc-200 mb-1">Araç bilgileri ve belgeler bir sonraki adımda</div>
+                            Ön kaydını tamamladığında hesabın açılır; araç bilgilerini (marka/model seçmeli),
+                            araç fotoğraflarını, ehliyet, selfie ve diğer belgeleri <strong>doğrulama ekranından</strong>
+                            adım adım yükleyeceksin. Tüm belgeler tamamlanınca inceleme ekibimiz başvurunu değerlendirir.
+                        </div>
                     </div>
                 </div>
 
@@ -228,17 +265,16 @@
                     <textarea name="notes" rows="4" maxlength="1000" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 resize-none" placeholder="Bizimle paylaşmak istediğin bir şey varsa...">{{ old('notes') }}</textarea>
                 </div>
 
-                {{-- Vergi Sorumluluğu Bilgilendirme --}}
+                {{-- Sorumluluk Bilgilendirme --}}
                 <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 md:p-5">
                     <div class="flex items-start gap-3">
                         <div class="text-xl shrink-0">📋</div>
                         <div class="text-xs md:text-sm text-zinc-300 leading-relaxed">
-                            <div class="font-semibold text-amber-200 mb-1.5">Vergi Sorumluluğu Bilgilendirmesi</div>
+                            <div class="font-semibold text-amber-200 mb-1.5">Sorumluluk Bilgilendirmesi</div>
                             <p>
-                                FerXGo bir <strong>paylaşımlı yolculuk platformudur</strong>; ticari taşımacılık yapmaz, üye sürücülerin işvereni değildir.
-                                Gelir İdaresi Başkanlığı'nın 7 Ağustos 2024 tarihli kararı uyarınca paylaşımlı yolculuk faaliyetinden elde edilen kazanç
-                                <strong>üye sürücünün ticari kazancıdır</strong> ve vergi yükümlülüğü tamamen üye sürücüye aittir.
-                                FerXGo, başvurunuz kabul edildiğinde anlaşmalı mali müşavirlik desteğiyle basit usul vergi kaydı kurulumuna yardımcı olabilir.
+                                FerXGo bir <strong>paylaşımlı yolculuk eşleştirme platformudur</strong>; ticari taşımacılık yapmaz, yolculuğun tarafı değildir ve üye sürücülerin işvereni değildir.
+                                Yolcunun ödediği katkı payı, yolculuğun <strong>yakıt ve amortisman gibi değişken giderlerine katkı</strong> niteliğindedir; doğrudan üye sürücüye aittir ve FerXGo bu ödemeden komisyon almaz.
+                                Paylaşımlı yolculuğa kendi aracınızla ve kendi takdirinizle katılırsınız; bu faaliyetten doğabilecek <strong>her türlü yasal ve mali yükümlülük tamamen üye sürücüye aittir</strong>, FerXGo bu yükümlülüklerin tarafı değildir.
                             </p>
                         </div>
                     </div>
@@ -604,6 +640,41 @@
 
 @push('scripts')
 <script>
+    // Kategori seçilince gerekli belgeleri kısaca göster
+    (function() {
+        const infoBox = document.getElementById('category-info');
+        if (!infoBox) return;
+
+        const categoryDocs = @json(
+            isset($categories) ? $categories->pluck('required_documents', 'slug')->toArray() : []
+        );
+        const categoryNames = @json(
+            isset($categories) ? $categories->pluck('name', 'slug')->toArray() : []
+        );
+
+        document.querySelectorAll('.category-radio').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const slug = radio.dataset.slug;
+                const docs = categoryDocs[slug];
+                if (!docs) { infoBox.classList.add('hidden'); return; }
+
+                const name = categoryNames[slug] || slug;
+                const items = Object.values(docs);
+                infoBox.innerHTML =
+                    '<div class="font-semibold text-brand mb-1">' + name + ' için gerekli belgeler:</div>' +
+                    '<ul class="list-disc list-inside text-zinc-400 space-y-0.5">' +
+                    items.map(d => '<li>' + d + '</li>').join('') +
+                    '</ul>' +
+                    '<div class="text-[10px] text-zinc-500 mt-2">Belgeleri ön kayıt sonrası doğrulama ekranından yükleyeceksin.</div>';
+                infoBox.classList.remove('hidden');
+            });
+        });
+
+        // Sayfa açılırken eğer bir seçili varsa (old input) info göster
+        const checked = document.querySelector('.category-radio:checked');
+        if (checked) checked.dispatchEvent(new Event('change'));
+    })();
+
     // Simple counter animation for hero earnings
     (function() {
         const el = document.getElementById('counter-earnings');

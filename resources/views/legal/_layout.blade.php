@@ -23,7 +23,7 @@
     <div class="mt-16 pt-8 border-t border-white/5 text-xs text-zinc-500 leading-relaxed">
         Bu metin FerXGo'nun bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk platformu olarak faaliyet gösterdiği esasına dayanır.
         FerXGo, 6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun kapsamında <strong>aracı hizmet sağlayıcı</strong> sıfatına sahiptir; ticari taşımacılık hizmeti sağlamaz.
-        Yolculuk hizmeti, bağımsız vergi mükellefi üye sürücü ile yolcu arasında gerçekleşir.
+        Yolculuk, üye sürücü ile yolcu arasında paylaşımlı olarak gerçekleşir; FerXGo yalnızca eşleştirme hizmeti sunar.
     </div>
 </main>
 @endsection

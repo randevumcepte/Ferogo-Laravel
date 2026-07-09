@@ -71,7 +71,11 @@ class DriverPanelController extends Controller
         // (login_customer_xxx) yok eder. Sadece CSRF token'ı yenile.
         $request->session()->regenerateToken();
 
-        return redirect()->route('driver.panel');
+        // Onaylı → panel; değilse doğrulama (onboarding) ekranı
+        $driver = Driver::where('user_id', $user->id)->first();
+        return redirect()->route(
+            $driver && $driver->approval_status === 'approved' ? 'driver.panel' : 'driver.onboarding'
+        );
     }
 
     public function logout(Request $request): RedirectResponse
@@ -90,6 +94,11 @@ class DriverPanelController extends Controller
     {
         $driver = $this->currentDriver();
         if (! $driver) return redirect()->route('driver.login');
+
+        // Onaylanmamış sürücü tam paneli göremez → doğrulama (onboarding) ekranına
+        if ($driver->approval_status !== 'approved') {
+            return redirect()->route('driver.onboarding');
+        }
 
         return view('driver.panel', [
             'driver' => $driver->loadMissing('user', 'currentVehicle.vehicleClass'),
@@ -475,6 +484,16 @@ class DriverPanelController extends Controller
     {
         $driver = $this->currentDriver();
         if (! $driver) return response()->json(['ok' => false], 401);
+
+        // Onaylanmamış sürücü online olamaz (doğrulama tamamlanmadan yolculuk alamaz)
+        if ($driver->approval_status !== 'approved') {
+            return response()->json([
+                'ok'      => false,
+                'code'    => 'not_approved',
+                'message' => 'Hesabın henüz onaylanmadı. Doğrulama tamamlanıp onaylanınca müsait olabilirsin.',
+                'redirect' => route('driver.onboarding'),
+            ], 422);
+        }
 
         $validated = $request->validate([
             'status' => ['required', 'in:online,offline'],
