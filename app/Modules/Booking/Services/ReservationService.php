@@ -62,6 +62,14 @@ class ReservationService
                 customerTrustTier: $trustTier,
             );
 
+            // Martı modeli: sistem yalnızca ÖNERİ üretir; nihai yolculuk paylaşım tutarını
+            // yolcu belirler. Yolcu bir tutar girdiyse total_fare onun değeridir; sistemin
+            // hesabı yalnızca başlangıç önerisi (breakdown kayıt için tutulur).
+            $suggestedTotal = (float) $fare['total_fare'];
+            $offeredFare = isset($data['offered_fare']) && $data['offered_fare'] !== null && $data['offered_fare'] !== ''
+                ? round((float) $data['offered_fare'], 2)
+                : $suggestedTotal;
+
             $customer = $this->resolveCustomer($data);
 
             // ─── Karşılama (uçak/tren/otogar) — Faz 1 ───
@@ -108,7 +116,7 @@ class ReservationService
                 'extras_total' => $fare['extras_total'],
                 'multiplier' => $fare['multiplier'],
                 'subtotal' => $fare['subtotal'],
-                'total_fare' => $fare['total_fare'],
+                'total_fare' => $offeredFare,
                 'currency' => 'TRY',
                 'source' => $data['source'] ?? 'web',
                 'status' => 'pending',

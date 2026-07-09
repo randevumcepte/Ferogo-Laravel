@@ -217,8 +217,7 @@
                                         required>
                                     <div class="border-2 border-white/10 rounded-xl p-4 peer-checked:border-brand peer-checked:bg-brand/5 transition">
                                         <div class="font-bold text-lg mb-1">{{ $class->name }}</div>
-                                        <div class="text-xs text-zinc-400 mb-2">👤 {{ $class->max_passengers }} kişi · 🧳 {{ $class->max_luggage }} bagaj</div>
-                                        <div class="text-sm text-brand font-semibold">₺{{ number_format($class->base_fare, 0, ',', '.') }} açılış</div>
+                                        <div class="text-xs text-zinc-400">👤 {{ $class->max_passengers }} kişi · 🧳 {{ $class->max_luggage }} bagaj</div>
                                     </div>
                                 </label>
                             @endforeach
@@ -425,46 +424,40 @@
                     </label>
                 </div>
 
-                {{-- Fare Preview --}}
+                {{-- Yolculuk Paylaşım Tutarı (Martı modeli — tutarı yolcu belirler) --}}
                 <div id="fare-preview" class="bg-gradient-to-br from-brand/10 to-brand/5 border-2 border-brand/30 rounded-2xl p-4 sm:p-6 hidden">
                     <div class="flex items-center justify-between mb-4">
-                        <div id="fare-tier-badge" class="hidden px-3 py-1 rounded-full bg-brand text-black text-xs font-bold uppercase tracking-wider"></div>
+                        <div class="text-xs text-zinc-400">
+                            <span id="card-distance" class="text-zinc-200 font-semibold">—</span> ·
+                            <span id="card-duration" class="text-zinc-200 font-semibold">—</span>
+                        </div>
                         <div id="fare-loading" class="hidden text-xs text-zinc-400">Hesaplanıyor...</div>
+                        <div class="inline-flex items-center gap-1 text-[11px] text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Komisyon yok</div>
                     </div>
 
-                    {{-- Üç özet kart: Mesafe / Süre / Tahmini Ücret --}}
-                    <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
-                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-2 sm:p-3 min-w-0">
-                            <div class="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-zinc-400 uppercase tracking-wider mb-1">
-                                <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                                <span class="truncate">Mesafe</span>
+                    <div class="text-center">
+                        <div class="text-sm text-zinc-300 mb-3">Yolculuk paylaşım tutarını belirle</div>
+
+                        <div class="flex items-center justify-center gap-4 sm:gap-6">
+                            <button type="button" id="fare-minus" aria-label="Azalt"
+                                class="w-12 h-12 rounded-full border-2 border-white/15 text-white text-2xl font-bold flex items-center justify-center hover:border-brand hover:text-brand transition select-none active:scale-95">−</button>
+
+                            <div class="min-w-[130px]">
+                                <div id="card-fare" class="text-4xl sm:text-5xl font-extrabold text-brand tabular-nums leading-none">—</div>
                             </div>
-                            <div id="card-distance" class="text-sm sm:text-lg md:text-xl font-bold text-white truncate">—</div>
+
+                            <button type="button" id="fare-plus" aria-label="Artır"
+                                class="w-12 h-12 rounded-full border-2 border-white/15 text-white text-2xl font-bold flex items-center justify-center hover:border-brand hover:text-brand transition select-none active:scale-95">+</button>
                         </div>
-                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-2 sm:p-3 min-w-0">
-                            <div class="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-zinc-400 uppercase tracking-wider mb-1">
-                                <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span class="truncate">Süre</span>
-                            </div>
-                            <div id="card-duration" class="text-sm sm:text-lg md:text-xl font-bold text-white truncate">—</div>
-                        </div>
-                        <div class="bg-brand/10 border-2 border-brand/40 rounded-xl p-2 sm:p-3 min-w-0">
-                            <div class="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-brand uppercase tracking-wider mb-1">
-                                <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span class="truncate">Katkı Payı</span>
-                            </div>
-                            <div id="card-fare" class="text-sm sm:text-lg md:text-xl font-bold text-brand truncate">—</div>
+
+                        <div class="mt-3 flex items-center justify-center gap-2 text-[11px] text-zinc-500">
+                            <span>Önerilen: <span id="fare-suggested" class="text-zinc-400">—</span></span>
+                            <button type="button" id="fare-reset" class="hidden text-brand hover:underline">öneriye dön</button>
                         </div>
                     </div>
 
-                    {{-- Detaylı kırılım (açılabilir) --}}
-                    <details class="group">
-                        <summary class="cursor-pointer list-none text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1 select-none">
-                            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                            Fiyat detayı
-                        </summary>
-                        <div id="fare-breakdown" class="space-y-1 text-sm mt-3 pt-3 border-t border-white/5"></div>
-                    </details>
+                    {{-- Yolcunun belirlediği tutar backend'e bu input ile gider --}}
+                    <input type="hidden" id="offered-fare" name="offered_fare" value="">
                 </div>
 
                 <button type="submit" class="w-full py-4 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-lg transition shadow-lg shadow-brand/20">
@@ -472,7 +465,7 @@
                 </button>
 
                 <p class="text-center text-xs text-zinc-500">
-                    Rezervasyon sonrası tahmini katkı payı SMS ile bildirilir. Nihai tutar yolculuk sonunda netleşir.
+                    Tutarı sen belirlersin — FerXGo hiçbir komisyon almaz. Katkı payı doğrudan sürücüye aittir. Sürücü, teklifini kabul ederse yolculuk eşleşir.
                 </p>
             </form>
         </div>
@@ -727,6 +720,14 @@ const FeroGoForm = (function() {
     let distanceService = null;
     let fareDebounceTimer = null;
 
+    // Yolculuk paylaşım tutarı (Martı modeli) durumu
+    let fareSuggested = 0;   // sistemin önerisi (çapa)
+    let fareOffered = 0;     // yolcunun belirlediği tutar
+    let fareStep = 5;        // − / + adımı
+    let fareMin = 0, fareMax = 0;
+    let fareUserAdjusted = false; // yolcu elle değiştirdi mi
+    let fareBound = false;   // − / + butonları bağlandı mı
+
     function getDistanceService() {
         if (!distanceService && typeof google !== 'undefined' && google.maps) {
             distanceService = new google.maps.DistanceMatrixService();
@@ -829,54 +830,64 @@ const FeroGoForm = (function() {
         });
     }
 
-    function renderFare(fare) {
-        const fmt = (n) => '₺' + Number(n).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const fmtInt = (n) => '₺' + Math.round(Number(n)).toLocaleString('tr-TR');
+    function fmtFareInt(n) {
+        return '₺' + Math.round(Number(n)).toLocaleString('tr-TR');
+    }
 
-        // Üst kartlar: Mesafe / Süre / Tahmini Ücret
+    // Sistemin hesabı yalnızca bir ÖNERİ üretir; yolcu − / + ile kendi paylaşım tutarını belirler.
+    function renderFare(fare) {
         const km = parseFloat(document.getElementById('distance-km').value) || 0;
         const min = parseInt(document.getElementById('duration-minutes').value) || 0;
         document.getElementById('card-distance').textContent = km.toFixed(1) + ' km';
         document.getElementById('card-duration').textContent = min + ' dk';
-        document.getElementById('card-fare').textContent = fmtInt(fare.total_fare);
 
-        // Araç sınıfı rozet
-        const tierBadge = document.getElementById('fare-tier-badge');
-        const selectedRadio = document.querySelector('.vehicle-class-radio:checked');
-        if (selectedRadio) {
-            const tierName = selectedRadio.closest('label').querySelector('.font-bold').textContent.trim();
-            tierBadge.textContent = tierName;
-            tierBadge.classList.remove('hidden');
-        }
+        const suggested = Math.round(Number(fare.total_fare) || 0);
+        fareSuggested = suggested;
+        // Adım: önerinin ~%5'i, 5 TL'ye yuvarlı, en az 5 TL
+        fareStep = Math.max(5, Math.round(suggested * 0.05 / 5) * 5);
+        // Yolcu makul bir bantta oynayabilir (±%40)
+        fareMin = Math.max(fareStep, Math.round(suggested * 0.6));
+        fareMax = Math.round(suggested * 1.4);
 
-        let html = `
-            <div class="flex justify-between text-zinc-300"><span>Açılış</span><span>${fmt(fare.base_fare)}</span></div>
-        `;
-        if (parseFloat(fare.boarding_fee) > 0) {
-            const tierLabels = { trusted: 'sadık müşteri', standard: 'müşteri', new: 'yeni müşteri', suspicious: 'riskli' };
-            const tierColors = { trusted: 'text-emerald-400', standard: 'text-zinc-300', new: 'text-zinc-400', suspicious: 'text-rose-400' };
-            const label = tierLabels[fare.customer_trust_tier] || 'standart';
-            const color = tierColors[fare.customer_trust_tier] || 'text-zinc-300';
-            html += `<div class="flex justify-between ${color}"><span>İndi-bindi <span class="text-xs opacity-70">(${label})</span></span><span>${fmt(fare.boarding_fee)}</span></div>`;
-        }
-        html += `<div class="flex justify-between text-zinc-300"><span>Mesafe</span><span>${fmt(fare.distance_fare)}</span></div>`;
-        if (parseFloat(fare.time_fare) > 0) {
-            html += `<div class="flex justify-between text-zinc-300"><span>Süre</span><span>${fmt(fare.time_fare)}</span></div>`;
-        }
-        if (parseFloat(fare.extras_total) > 0) {
-            html += `<div class="flex justify-between text-zinc-300"><span>Ekstralar</span><span>${fmt(fare.extras_total)}</span></div>`;
-        }
-        if (parseFloat(fare.multiplier) > 1) {
-            html += `<div class="flex justify-between text-yellow-400 text-xs"><span>Gece zammı (×${fare.multiplier})</span><span>uygulandı</span></div>`;
-        }
-        html += `
-            <div class="flex justify-between text-xl font-bold text-white pt-3 mt-2 border-t border-white/10">
-                <span>Tahmini Toplam</span>
-                <span class="text-brand">${fmt(fare.total_fare)}</span>
-            </div>
-        `;
-        document.getElementById('fare-breakdown').innerHTML = html;
+        // Yolcu daha önce elle değiştirmediyse öneriyle başlat
+        if (!fareUserAdjusted) fareOffered = suggested;
+        fareOffered = Math.min(fareMax, Math.max(fareMin, fareOffered));
+
+        document.getElementById('fare-suggested').textContent = fmtFareInt(suggested);
+        applyFare();
+        bindFareStepper();
         document.getElementById('fare-preview').classList.remove('hidden');
+    }
+
+    function applyFare() {
+        const fareEl = document.getElementById('card-fare');
+        const offeredEl = document.getElementById('offered-fare');
+        if (fareEl) fareEl.textContent = fmtFareInt(fareOffered);
+        if (offeredEl) offeredEl.value = fareOffered;
+        const resetBtn = document.getElementById('fare-reset');
+        if (resetBtn) resetBtn.classList.toggle('hidden', Math.round(fareOffered) === Math.round(fareSuggested));
+    }
+
+    function adjustFare(dir) {
+        const next = fareOffered + dir * fareStep;
+        fareOffered = Math.min(fareMax, Math.max(fareMin, next));
+        fareUserAdjusted = true;
+        applyFare();
+    }
+
+    function bindFareStepper() {
+        if (fareBound) return;
+        fareBound = true;
+        const minus = document.getElementById('fare-minus');
+        const plus = document.getElementById('fare-plus');
+        const reset = document.getElementById('fare-reset');
+        if (minus) minus.addEventListener('click', () => adjustFare(-1));
+        if (plus) plus.addEventListener('click', () => adjustFare(1));
+        if (reset) reset.addEventListener('click', () => {
+            fareOffered = fareSuggested;
+            fareUserAdjusted = false;
+            applyFare();
+        });
     }
 
     function showFareLoading(show) {
