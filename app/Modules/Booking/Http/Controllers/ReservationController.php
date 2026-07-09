@@ -68,6 +68,11 @@ class ReservationController extends Controller
 
             'scheduled_at' => ['required', 'date', 'after:now'],
 
+            // Karşılama (uçak/tren/otogar) — opsiyonel
+            'transport_type' => ['nullable', Rule::in(Ride::TRANSPORT_TYPES)],
+            'transport_code' => ['nullable', 'string', 'max:40'],
+            'transport_scheduled_at' => ['nullable', 'required_with:transport_type', 'date'],
+
             'passenger_count' => ['required', 'integer', 'min:1', 'max:8'],
             'luggage_count' => ['nullable', 'integer', 'min:0', 'max:10'],
 
@@ -85,6 +90,7 @@ class ReservationController extends Controller
             'kvkk_consent.accepted' => 'KVKK onayını işaretlemeniz gerekiyor.',
             'scheduled_at.after' => 'Tarih geçmiş bir zaman olamaz.',
             'customer_tc_no.size' => 'T.C. Kimlik numarası 11 haneli olmalıdır.',
+            'transport_scheduled_at.required_with' => 'Ulaşım tipi seçtiyseniz planlanan varış saatini girmelisiniz.',
         ]);
 
         $ride = $this->service->create($validated);
@@ -140,6 +146,41 @@ class ReservationController extends Controller
         return response()->json([
             'ok' => true,
             'message' => 'Rezervasyon iptal edildi.',
+        ]);
+    }
+
+    /**
+     * Karşılama (uçak/tren/otogar) — yolcu şoföre canlı durum sinyali gönderir.
+     * "Yola çıktım / Geldim, bekliyorum / Gecikeceğim" (public_id ile, PII yok).
+     */
+    public function paxStatus(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(Ride::PAX_STATUSES)],
+            'note' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $ride = Ride::where('public_id', $publicId)->firstOrFail();
+
+        // Tamamlanmış/iptal edilmiş yolculukta sinyal kabul etme.
+        if (in_array($ride->status, ['completed', 'cancelled', Ride::STATUS_RES_UNMATCHED], true)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Bu rezervasyon için artık durum güncellenemez.',
+            ], 422);
+        }
+
+        $ride->update([
+            'pax_status' => $validated['status'],
+            'pax_status_note' => $validated['note'] ?? null,
+            'pax_status_at' => now(),
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'status' => $ride->pax_status,
+            'status_label' => $ride->paxStatusLabel(),
+            'message' => 'Durumun sürücüye iletildi.',
         ]);
     }
 

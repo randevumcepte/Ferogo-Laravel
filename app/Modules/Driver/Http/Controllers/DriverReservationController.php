@@ -186,6 +186,12 @@ class DriverReservationController extends Controller
             'currency'          => $r->currency,
             'passenger_count'   => (int) $r->passenger_count,
             'luggage_count'     => (int) $r->luggage_count,
+            // Karşılama (uçak/tren/otogar) — PII değil, şoförün iş seçimine yardımcı
+            'transport_type'    => $r->transport_type,
+            'transport_icon'    => $r->transportIcon(),
+            'transport_label'   => $r->transportLabel(),
+            'transport_code'    => $r->transport_code,
+            'transport_scheduled_at' => $r->transport_scheduled_at?->toIso8601String(),
             // PII yok: customer_name/phone/tc payload'da YOK
         ];
     }
@@ -201,6 +207,12 @@ class DriverReservationController extends Controller
             'imminent_notified_at'    => $r->imminent_notified_at?->toIso8601String(),
             'call_unlocked'           => $r->callUnlocked(),
             'chat_unlocked'           => $r->chatUnlocked(),
+            // Karşılama: yolcunun canlı durumu + ücretsiz bekleme bitişi
+            'free_wait_minutes'       => $r->free_wait_minutes ? (int) $r->free_wait_minutes : null,
+            'free_wait_until'         => $r->freeWaitUntil()?->toIso8601String(),
+            'pax_status'              => $r->pax_status,
+            'pax_status_label'        => $r->paxStatusLabel(),
+            'pax_status_at'           => $r->pax_status_at?->toIso8601String(),
             // Sürücü kendi kabul ettiği için müşteri ADINI görür ama telefon yok
             'customer_name'           => $r->customer_name,
         ]);

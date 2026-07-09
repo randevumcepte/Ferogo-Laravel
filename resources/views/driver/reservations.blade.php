@@ -129,6 +129,34 @@
         return data;
     }
 
+    // Karşılama (uçak/tren/otogar) rozeti
+    function transportChip(r) {
+        if (!r.transport_type) return '';
+        const parts = [r.transport_icon || '', r.transport_label || ''];
+        if (r.transport_code) parts.push('· ' + escapeHtml(r.transport_code));
+        if (r.transport_scheduled_at) parts.push('· varış ' + fmt.date(r.transport_scheduled_at));
+        return `<div class="mb-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand/10 border border-brand/30 text-[11px] font-semibold text-brand">${parts.join(' ')}</div>`;
+    }
+
+    // Yolcunun canlı durumu (sadece "Aldıklarım")
+    function paxChip(r) {
+        if (!r.pax_status) return '';
+        const map = {
+            on_way:  ['🚶 Yolcu yola çıktı', 'bg-blue-500/15 text-blue-300 border-blue-500/30'],
+            arrived: ['✅ Yolcu geldi, bekliyor', 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'],
+            delayed: ['⏳ Yolcu gecikecek', 'bg-amber-500/15 text-amber-300 border-amber-500/30'],
+        };
+        const [label, cls] = map[r.pax_status] || [r.pax_status_label || r.pax_status, 'bg-white/5 text-zinc-300 border-white/10'];
+        const when = r.pax_status_at ? ' · ' + fmt.date(r.pax_status_at) : '';
+        return `<div class="mb-2 inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] font-bold ${cls}">${label}${when}</div>`;
+    }
+
+    // Ücretsiz bekleme bilgisi
+    function freeWaitLine(r) {
+        if (!r.free_wait_until) return '';
+        return `<div class="text-[11px] text-zinc-500 mb-2">Ücretsiz bekleme: <span class="text-zinc-300">${r.free_wait_minutes} dk</span> (≈ ${fmt.date(r.free_wait_until)}'e kadar)</div>`;
+    }
+
     function marketCard(r) {
         return `
         <div class="rounded-2xl border border-white/10 bg-zinc-950 p-4 hover:border-brand/40 transition">
@@ -136,6 +164,7 @@
                 <div class="text-xs text-zinc-500 uppercase tracking-wider">${fmt.date(r.scheduled_at)} · <span class="text-zinc-300">${fmt.timeUntil(r.scheduled_at)} sonra</span></div>
                 <div class="text-lg font-extrabold text-brand">${fmt.money(r.total_fare)}</div>
             </div>
+            ${transportChip(r)}
             <div class="space-y-2 mb-3">
                 <div class="flex items-start gap-2">
                     <div class="w-2.5 h-2.5 rounded-full bg-brand mt-1.5 shrink-0"></div>
@@ -162,6 +191,9 @@
                 <div class="text-lg font-extrabold text-brand">${fmt.money(r.total_fare)}</div>
             </div>
             <div class="text-xs text-zinc-500 mb-2">${fmt.date(r.scheduled_at)} · <span class="text-zinc-300">${fmt.timeUntil(r.scheduled_at)} sonra</span></div>
+            ${transportChip(r)}
+            ${paxChip(r)}
+            ${freeWaitLine(r)}
             <div class="text-xs text-zinc-400 mb-3">Müşteri: <span class="text-white font-semibold">${escapeHtml(r.customer_name || '—')}</span></div>
             <div class="space-y-2 mb-3">
                 <div class="flex items-start gap-2"><div class="w-2.5 h-2.5 rounded-full bg-brand mt-1.5 shrink-0"></div><div class="text-sm text-white">${escapeHtml(r.pickup_address)}</div></div>

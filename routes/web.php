@@ -125,6 +125,10 @@ Route::get('/rezervasyonlarim', [ReservationController::class, 'myReservations']
     ->name('reservation.mine');
 Route::post('/api/reservations/{publicId}/cancel', [ReservationController::class, 'cancel'])
     ->name('reservation.cancel');
+// Karşılama — yolcu canlı durum sinyali (yola çıktım / geldim / gecikeceğim)
+Route::post('/api/reservations/{publicId}/pax-status', [ReservationController::class, 'paxStatus'])
+    ->middleware('throttle:30,1')
+    ->name('reservation.pax-status');
 
 // AJAX: canlı fiyat hesabı
 Route::post('/api/calculate-fare', [ReservationController::class, 'calculateFare'])

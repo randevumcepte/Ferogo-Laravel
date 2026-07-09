@@ -33,6 +33,9 @@ class ReservationService
      *   passenger_count?:int,
      *   luggage_count?:int,
      *   scheduled_at:string,
+     *   transport_type?:?string,
+     *   transport_code?:?string,
+     *   transport_scheduled_at?:?string,
      *   distance_km?:float,
      *   duration_minutes?:int,
      *   extras?:array,
@@ -61,6 +64,18 @@ class ReservationService
 
             $customer = $this->resolveCustomer($data);
 
+            // ─── Karşılama (uçak/tren/otogar) — Faz 1 ───
+            $transportType = in_array($data['transport_type'] ?? null, Ride::TRANSPORT_TYPES, true)
+                ? $data['transport_type']
+                : null;
+            $transportScheduledAt = ($transportType && ! empty($data['transport_scheduled_at']))
+                ? Carbon::parse($data['transport_scheduled_at'])
+                : null;
+            // Tampon süre tipe göre otomatik (yolcu değil sistem belirler).
+            $freeWaitMinutes = $transportType
+                ? (Ride::FREE_WAIT_DEFAULTS[$transportType] ?? null)
+                : null;
+
             $ride = Ride::create([
                 'city_id' => $data['city_id'],
                 'vehicle_class_id' => $data['vehicle_class_id'],
@@ -76,6 +91,10 @@ class ReservationService
                 'dropoff_lat' => $data['dropoff_lat'] ?? 0,
                 'dropoff_lng' => $data['dropoff_lng'] ?? 0,
                 'dropoff_notes' => $data['dropoff_notes'] ?? null,
+                'transport_type' => $transportType,
+                'transport_code' => $transportType ? ($data['transport_code'] ?? null) : null,
+                'transport_scheduled_at' => $transportScheduledAt,
+                'free_wait_minutes' => $freeWaitMinutes,
                 'passenger_count' => $data['passenger_count'] ?? 1,
                 'luggage_count' => $data['luggage_count'] ?? 0,
                 'scheduled_at' => $scheduledAt,

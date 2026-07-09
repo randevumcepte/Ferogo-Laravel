@@ -36,6 +36,14 @@ class Ride extends Model
         'dropoff_lat',
         'dropoff_lng',
         'dropoff_notes',
+        // ─── Karşılama (uçak/tren/otogar) — Faz 1 ───
+        'transport_type',
+        'transport_code',
+        'transport_scheduled_at',
+        'free_wait_minutes',
+        'pax_status',
+        'pax_status_note',
+        'pax_status_at',
         'estimated_distance_km',
         'estimated_duration_minutes',
         'actual_distance_km',
@@ -101,6 +109,8 @@ class Ride extends Model
         'discount' => 'decimal:2',
         'total_fare' => 'decimal:2',
         'scheduled_at' => 'datetime',
+        'transport_scheduled_at' => 'datetime',
+        'pax_status_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'assigned_at' => 'datetime',
         'driver_arrived_at' => 'datetime',
@@ -134,6 +144,72 @@ class Ride extends Model
         self::STATUS_RES_CONFIRMED,
         self::STATUS_RES_IMMINENT,
     ];
+
+    // ─── Karşılama (uçak/tren/otogar) sabitleri — Faz 1 ───
+    public const TRANSPORT_FLIGHT = 'flight';
+    public const TRANSPORT_TRAIN  = 'train';
+    public const TRANSPORT_BUS    = 'bus';
+
+    public const TRANSPORT_TYPES = [
+        self::TRANSPORT_FLIGHT,
+        self::TRANSPORT_TRAIN,
+        self::TRANSPORT_BUS,
+    ];
+
+    /** Ulaşım tipine göre varsayılan ücretsiz bekleme (tampon) süresi — dakika. */
+    public const FREE_WAIT_DEFAULTS = [
+        self::TRANSPORT_FLIGHT => 45, // bagaj + pasaport/çıkış payı
+        self::TRANSPORT_TRAIN  => 25,
+        self::TRANSPORT_BUS    => 20,
+    ];
+
+    /** Yolcu → şoför canlı sinyal durumları. */
+    public const PAX_ON_WAY  = 'on_way';
+    public const PAX_ARRIVED = 'arrived';
+    public const PAX_DELAYED = 'delayed';
+    public const PAX_STATUSES = [self::PAX_ON_WAY, self::PAX_ARRIVED, self::PAX_DELAYED];
+
+    /** Bir karşılama (uçak/tren/otogar) rezervasyonu mu? */
+    public function isMeeting(): bool
+    {
+        return in_array($this->transport_type, self::TRANSPORT_TYPES, true);
+    }
+
+    /** Ücretsiz beklemenin bittiği an: planlanan varış + tampon süre. */
+    public function freeWaitUntil(): ?\Illuminate\Support\Carbon
+    {
+        if (! $this->transport_scheduled_at || ! $this->free_wait_minutes) {
+            return null;
+        }
+        return $this->transport_scheduled_at->copy()->addMinutes((int) $this->free_wait_minutes);
+    }
+
+    public function transportLabel(): ?string
+    {
+        return [
+            self::TRANSPORT_FLIGHT => 'Uçak',
+            self::TRANSPORT_TRAIN  => 'Tren',
+            self::TRANSPORT_BUS    => 'Otobüs',
+        ][$this->transport_type] ?? null;
+    }
+
+    public function transportIcon(): ?string
+    {
+        return [
+            self::TRANSPORT_FLIGHT => '✈️',
+            self::TRANSPORT_TRAIN  => '🚆',
+            self::TRANSPORT_BUS    => '🚌',
+        ][$this->transport_type] ?? null;
+    }
+
+    public function paxStatusLabel(): ?string
+    {
+        return [
+            self::PAX_ON_WAY  => 'Yola çıktı',
+            self::PAX_ARRIVED => 'Geldi, bekliyor',
+            self::PAX_DELAYED => 'Gecikecek',
+        ][$this->pax_status] ?? null;
+    }
 
     /** Bir rezervasyon yaşam döngüsünde mi? */
     public function isReservation(): bool

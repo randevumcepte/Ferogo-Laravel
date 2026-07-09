@@ -133,6 +133,93 @@
 
             </div>
 
+            {{-- Karşılama: canlı yolcu → şoför durum sinyali --}}
+            @if($ride->isMeeting())
+                @php $freeWaitUntil = $ride->freeWaitUntil(); @endphp
+                <div class="mt-8 p-5 bg-zinc-900/50 border border-brand/20 rounded-2xl"
+                     data-pax-url="{{ route('reservation.pax-status', $ride->public_id) }}"
+                     data-csrf="{{ csrf_token() }}"
+                     id="pax-panel">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xl">{{ $ride->transportIcon() }}</span>
+                        <div class="font-semibold text-brand">{{ $ride->transportLabel() }} karşılama</div>
+                    </div>
+                    <div class="text-sm text-zinc-400 mb-4">
+                        @if($ride->transport_code)<span class="text-zinc-200 font-medium">{{ $ride->transport_code }}</span> · @endif
+                        Planlanan varış: <span class="text-zinc-200 font-medium">{{ $ride->transport_scheduled_at?->format('d.m.Y H:i') ?? '—' }}</span>
+                        @if($freeWaitUntil)
+                            <br><span class="text-xs">Şoför {{ $ride->free_wait_minutes }} dk ücretsiz bekler (≈ {{ $freeWaitUntil->format('H:i') }}'e kadar).</span>
+                        @endif
+                    </div>
+
+                    <div class="text-xs text-zinc-500 uppercase tracking-wider mb-2">Şoförüne durumunu bildir</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" data-pax="on_way"
+                            class="pax-btn flex flex-col items-center gap-1 py-3 rounded-xl bg-zinc-800 border border-white/10 text-xs font-medium text-zinc-200 hover:border-brand/50 transition">
+                            <span class="text-lg leading-none">🚶</span> Yola çıktım
+                        </button>
+                        <button type="button" data-pax="arrived"
+                            class="pax-btn flex flex-col items-center gap-1 py-3 rounded-xl bg-zinc-800 border border-white/10 text-xs font-medium text-zinc-200 hover:border-emerald-500/50 transition">
+                            <span class="text-lg leading-none">✅</span> Geldim, bekliyorum
+                        </button>
+                        <button type="button" data-pax="delayed"
+                            class="pax-btn flex flex-col items-center gap-1 py-3 rounded-xl bg-zinc-800 border border-white/10 text-xs font-medium text-zinc-200 hover:border-amber-500/50 transition">
+                            <span class="text-lg leading-none">⏳</span> Gecikeceğim
+                        </button>
+                    </div>
+                    <div id="pax-feedback" class="mt-3 text-sm {{ $ride->pax_status ? '' : 'hidden' }} text-emerald-400">
+                        @if($ride->pax_status)
+                            Son durum: <span class="font-semibold">{{ $ride->paxStatusLabel() }}</span> · {{ $ride->pax_status_at?->format('H:i') }}
+                        @endif
+                    </div>
+                </div>
+
+                <script>
+                (function () {
+                    const panel = document.getElementById('pax-panel');
+                    if (!panel) return;
+                    const url = panel.dataset.paxUrl;
+                    const csrf = panel.dataset.csrf;
+                    const feedback = document.getElementById('pax-feedback');
+                    const LABELS = { on_way: 'Yola çıktı', arrived: 'Geldi, bekliyor', delayed: 'Gecikecek' };
+
+                    panel.querySelectorAll('.pax-btn').forEach((btn) => {
+                        btn.addEventListener('click', async () => {
+                            const status = btn.dataset.pax;
+                            panel.querySelectorAll('.pax-btn').forEach((b) => b.disabled = true);
+                            const prev = btn.innerHTML;
+                            btn.innerHTML = '<span class="text-lg leading-none">…</span>';
+                            try {
+                                const r = await fetch(url, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-CSRF-TOKEN': csrf,
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                    },
+                                    credentials: 'same-origin',
+                                    body: JSON.stringify({ status }),
+                                });
+                                const data = await r.json();
+                                if (!r.ok || data.ok === false) throw new Error(data.message || 'Hata');
+                                const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                                feedback.className = 'mt-3 text-sm text-emerald-400';
+                                feedback.innerHTML = 'Son durum: <span class="font-semibold">' + (data.status_label || LABELS[status] || status) + '</span> · ' + now;
+                            } catch (e) {
+                                feedback.classList.remove('hidden');
+                                feedback.className = 'mt-3 text-sm text-red-400';
+                                feedback.textContent = e.message || 'Gönderilemedi.';
+                            } finally {
+                                btn.innerHTML = prev;
+                                panel.querySelectorAll('.pax-btn').forEach((b) => b.disabled = false);
+                            }
+                        });
+                    });
+                })();
+                </script>
+            @endif
+
             {{-- Next steps --}}
             <div class="mt-8 p-5 bg-blue-500/5 border border-blue-500/20 rounded-2xl">
                 <div class="flex items-start gap-3">

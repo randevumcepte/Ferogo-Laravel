@@ -288,6 +288,52 @@
                                 class="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 sm:px-4 py-3 text-white text-sm sm:text-base focus:border-brand focus:outline-none">
                         </div>
                     </div>
+
+                    {{-- Karşılama: uçak / tren / otogar bağlantısı (opsiyonel) --}}
+                    <div class="mt-4 border-t border-white/5 pt-4">
+                        <label class="block text-sm font-medium text-zinc-300 mb-2">
+                            ✈️ Karşılama <span class="text-xs text-zinc-500 font-normal">(uçak / tren / otogar — opsiyonel)</span>
+                        </label>
+                        <div class="grid grid-cols-4 gap-2" id="transport-type-group">
+                            @php
+                                $transportOpts = [
+                                    '' => ['Yok', '—'],
+                                    'flight' => ['Uçak', '✈️'],
+                                    'train' => ['Tren', '🚆'],
+                                    'bus' => ['Otogar', '🚌'],
+                                ];
+                                $oldTransport = old('transport_type', '');
+                            @endphp
+                            @foreach($transportOpts as $val => [$label, $icon])
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="transport_type" value="{{ $val }}"
+                                        class="peer sr-only transport-type-radio" {{ $oldTransport === $val ? 'checked' : '' }}>
+                                    <div class="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl bg-zinc-800 border border-white/10 text-xs font-medium text-zinc-300 peer-checked:border-brand peer-checked:bg-brand/10 peer-checked:text-brand transition">
+                                        <span class="text-base leading-none">{{ $icon }}</span>
+                                        <span>{{ $label }}</span>
+                                    </div>
+                                </label>
+                            @endforeach
+                        </div>
+
+                        {{-- Detay: tip seçilince açılır --}}
+                        <div id="transport-details" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 {{ $oldTransport ? '' : 'hidden' }}">
+                            <div class="min-w-0">
+                                <label class="block text-xs text-zinc-400 mb-1" id="transport-code-label">Sefer / Uçuş No</label>
+                                <input type="text" name="transport_code" value="{{ old('transport_code') }}" maxlength="40"
+                                    placeholder="örn. TK2312"
+                                    class="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:border-brand focus:outline-none">
+                            </div>
+                            <div class="min-w-0">
+                                <label class="block text-xs text-zinc-400 mb-1">Planlanan Varış Saati</label>
+                                <input type="datetime-local" name="transport_scheduled_at" value="{{ old('transport_scheduled_at') }}"
+                                    class="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:border-brand focus:outline-none">
+                            </div>
+                            <p class="sm:col-span-2 text-xs text-zinc-500 leading-relaxed" id="transport-hint">
+                                Uçuş/sefer rötar yaparsa, onay sayfasından <span class="text-zinc-300">“Gecikeceğim”</span> ile şoförü anında bilgilendirebilirsin. Sürücü, varıştan sonra bir süre <span class="text-zinc-300">ücretsiz bekler</span>.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Step 3: Ekstralar --}}
@@ -885,7 +931,44 @@ const FeroGoForm = (function() {
         initExtras();
         initFormChangeListeners();
         initHeroBackground();
+        initTransport();
     });
+
+    // Karşılama: tip seçimine göre detayları aç/kapat + etiket/ipucu güncelle
+    function initTransport() {
+        const details = document.getElementById('transport-details');
+        const codeLabel = document.getElementById('transport-code-label');
+        const codeInput = document.querySelector('input[name="transport_code"]');
+        const arrInput = document.querySelector('input[name="transport_scheduled_at"]');
+        const hint = document.getElementById('transport-hint');
+        if (!details) return;
+
+        const CFG = {
+            flight: { label: 'Uçuş No', ph: 'örn. TK2312', wait: 45 },
+            train:  { label: 'Tren / Sefer No', ph: 'örn. YHT 82012', wait: 25 },
+            bus:    { label: 'Firma / Sefer', ph: 'örn. Pamukkale 07:30', wait: 20 },
+        };
+
+        function apply(val) {
+            const cfg = CFG[val];
+            if (!cfg) {
+                details.classList.add('hidden');
+                return;
+            }
+            details.classList.remove('hidden');
+            if (codeLabel) codeLabel.textContent = cfg.label;
+            if (codeInput) codeInput.placeholder = cfg.ph;
+            if (hint) {
+                hint.innerHTML = 'Rötar olursa onay sayfasından <span class="text-zinc-300">“Gecikeceğim”</span> ile şoförü anında bilgilendirebilirsin. Sürücü, planlanan varıştan sonra <span class="text-brand font-semibold">' + cfg.wait + ' dk ücretsiz bekler</span>.';
+            }
+        }
+
+        document.querySelectorAll('.transport-type-radio').forEach((r) => {
+            r.addEventListener('change', () => apply(r.value));
+        });
+        const checked = document.querySelector('.transport-type-radio:checked');
+        if (checked) apply(checked.value);
+    }
 
     function initHeroBackground() {
         const layer = document.getElementById('hero-bg-img');
