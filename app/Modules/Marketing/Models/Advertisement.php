@@ -93,6 +93,7 @@ class Advertisement extends Model
         'is_exclusive',
         'target_hours',
         'target_days',
+        'target_districts',
         'starts_at',
         'ends_at',
         'impressions',
@@ -106,6 +107,7 @@ class Advertisement extends Model
         'rotation_weight' => 'integer',
         'target_hours' => 'array',
         'target_days' => 'array',
+        'target_districts' => 'array',
         'starts_at'  => 'datetime',
         'ends_at'    => 'datetime',
         'impressions' => 'integer',
@@ -140,8 +142,11 @@ class Advertisement extends Model
      *     (Tekellik / Takeover / Ana Sponsor paketleri bu şekilde çalışır.)
      *  2. Aksi halde tüm aktif reklamlar arasında rotation_weight ile AĞIRLIKLI RASTGELE
      *     bir reklam gösterilir → her sayfa açılışında sıra döner (share of voice).
+     *
+     * BÖLGE: $district verilirse (kullanıcının ilçesi), o ilçeye ÖZEL reklam varsa
+     * yalnızca onlar gösterilir; yoksa genel (ilçesiz) reklamlar gösterilir.
      */
-    public static function activeFor(string $placement): ?self
+    public static function activeFor(string $placement, ?string $district = null): ?self
     {
         $ads = static::query()
             ->where('placement', $placement)
@@ -156,28 +161,38 @@ class Advertisement extends Model
             return null;
         }
 
+        // Bölge havuzu: bu ilçeye özel reklam varsa onları kullan, yoksa genel (ilçesiz) reklamları
+        $regional = $ads->filter(fn (self $ad) => is_array($ad->target_districts) && count($ad->target_districts) > 0
+            && $district !== null && in_array($district, $ad->target_districts, true))->values();
+        $general = $ads->filter(fn (self $ad) => ! is_array($ad->target_districts) || count($ad->target_districts) === 0)->values();
+        $pool = $regional->isNotEmpty() ? $regional : $general;
+
+        if ($pool->isEmpty()) {
+            return null;
+        }
+
         // 1) Tekellik varsa rotasyona sokmadan onu göster
-        $exclusive = $ads->firstWhere('is_exclusive', true);
+        $exclusive = $pool->firstWhere('is_exclusive', true);
         if ($exclusive) {
             return $exclusive;
         }
 
         // 2) Ağırlıklı rastgele seçim (rotasyon / share of voice)
-        $totalWeight = (int) $ads->sum(fn (self $ad) => max(1, (int) $ad->rotation_weight));
+        $totalWeight = (int) $pool->sum(fn (self $ad) => max(1, (int) $ad->rotation_weight));
         if ($totalWeight <= 0) {
-            return $ads->first();
+            return $pool->first();
         }
 
         $pick = random_int(1, $totalWeight);
         $acc = 0;
-        foreach ($ads as $ad) {
+        foreach ($pool as $ad) {
             $acc += max(1, (int) $ad->rotation_weight);
             if ($pick <= $acc) {
                 return $ad;
             }
         }
 
-        return $ads->first();
+        return $pool->first();
     }
 
     /** Bir slottaki aktif reklam sayısı (admin/rapor için) */

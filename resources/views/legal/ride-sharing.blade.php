@@ -44,7 +44,6 @@
     <li><strong>İstanbul Bölge Adliye Mahkemesi 14. Hukuk Dairesi:</strong> Paylaşımlı yolculuk hizmetinin "korsan taşımacılık" kapsamına girmediğine karar verilmiştir.</li>
     <li><strong>Danıştay (1 Kasım 2025):</strong> Paylaşımlı yolculuk platformlarının elektronik ulaşım yönetim lisansı alma haklarını kesinleştirmiştir.</li>
     <li><strong>Antalya 2. İdare Mahkemesi:</strong> Paylaşımlı yolculuk kullanıcılarına verilen idari para cezalarının iptaline karar vermiştir.</li>
-    <li><strong>Gelir İdaresi Başkanlığı (7 Ağustos 2024):</strong> Paylaşımlı yolculuk gelirinin ticari kazanç olduğunu ve <strong>üye sürücüye ait</strong> olduğunu duyurmuştur.</li>
 </ul>
 
 <h2>FerXGo'nun Rolü</h2>
@@ -67,18 +66,18 @@
     <li><strong>Yalnızca eşleştirme hizmeti karşılığında üyelik bedeli alır</strong></li>
 </ul>
 
-<h2>Vergi Sorumluluğu</h2>
+<h2>Katkı Payı ve Sorumluluk</h2>
 <p>
-    Üye sürücü, paylaşımlı yolculuk faaliyetinden elde ettiği geliri ticari kazanç olarak beyan etmekle yükümlüdür.
-    Bu kapsamda:
+    Paylaşımlı yolculukta yolcunun ödediği katkı payı, yolculuğun değişken giderlerine (yakıt, amortisman) katkı
+    niteliğindedir ve doğrudan üye sürücüye aittir. Bu kapsamda:
 </p>
 <ul>
-    <li>Basit usul veya gerçek usul vergi mükellefliği (şahıs şirketi) seçilebilir</li>
-    <li>Yolcudan tahsil edilen katkı payı için e-arşiv fatura veya yazar kasa fişi düzenlenir</li>
-    <li>KDV ve gelir vergisi beyanı üye sürücü tarafından yapılır</li>
+    <li>Katkı payı FerXGo tarafından tahsil edilmez; FerXGo bu ödemenin tarafı değildir ve komisyon almaz</li>
+    <li>Üye sürücü, paylaşımlı yolculuğa kendi aracıyla ve kendi takdiriyle katılır</li>
+    <li>Bu faaliyetten doğabilecek her türlü yasal ve mali yükümlülük tamamen üye sürücüye aittir</li>
 </ul>
 <p>
-    FerXGo, üye sürücülerin vergisel yükümlülüklerini doğru biçimde yerine getirebilmeleri için anlaşmalı mali müşavirlik
+    FerXGo, üye sürücülerin kendi yükümlülükleri konusunda bilgi alabilmeleri için anlaşmalı danışmanlık
     desteği sunabilir.
 </p>
 

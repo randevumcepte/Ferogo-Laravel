@@ -30,7 +30,7 @@
 
 <h2>2. Tanımlar</h2>
 <ul>
-    <li><strong>Üye Sürücü:</strong> Kendi aracıyla, kendi güzergahında, kendi takdiriyle paylaşımlı yolculuk yapmayı kabul eden bağımsız vergi mükellefi gerçek kişi.</li>
+    <li><strong>Üye Sürücü:</strong> Kendi aracıyla, kendi güzergahında, kendi takdiriyle paylaşımlı yolculuk yapmayı kabul eden bağımsız gerçek kişi.</li>
     <li><strong>Yolcu:</strong> Üye sürücünün güzergahında ortak yolculuk yapmak isteyen kişi.</li>
     <li><strong>Katkı Payı:</strong> Yolcunun üye sürücüye, yolculuğun değişken giderlerine katkı olarak ödediği tutar.</li>
     <li><strong>Üyelik Bedeli:</strong> Üye sürücünün platform hizmetlerinden yararlanabilmek için FerXGo'ya ödediği dijital platform hizmet bedeli.</li>
@@ -39,11 +39,10 @@
 
 <h2>3. Üye Sürücünün Yükümlülükleri</h2>
 <ul>
-    <li>Üye sürücü, paylaşımlı yolculuk faaliyetinden elde ettiği gelir nedeniyle <strong>kendi adına vergi mükellefidir</strong>. Vergisel sorumluluk üye sürücüye aittir.</li>
-    <li>Üye sürücü, Gelir İdaresi Başkanlığı'nın 7 Ağustos 2024 tarihli kararı uyarınca gelirini ticari kazanç olarak beyan etmekle yükümlüdür.</li>
+    <li>Üye sürücü, paylaşımlı yolculuğa kendi aracıyla ve kendi takdiriyle katılır; bu faaliyetten doğabilecek <strong>her türlü yasal ve mali yükümlülük tamamen üye sürücüye aittir</strong>. FerXGo bu yükümlülüklerin tarafı değildir.</li>
     <li>Üye sürücü, ehliyetinin geçerli olduğunu, adli sicilinin temiz olduğunu beyan eder.</li>
     <li>Üye sürücü, kendi çalışma saatlerini, güzergahını ve yolcu kabul kararını <strong>tamamen kendi takdiriyle</strong> belirler. FerXGo, çalışma saati, miktar veya performans hedefi dayatmaz.</li>
-    <li>Üye sürücü, yolcudan tahsil ettiği katkı payı için yasal mevzuata uygun belge (e-arşiv fatura veya yazar kasa fişi) düzenlemekle yükümlüdür.</li>
+    <li>Üye sürücü, yolcudan aldığı katkı payına ilişkin kendi yasal yükümlülüklerini yerine getirmekten bizzat sorumludur.</li>
 </ul>
 
 <h2>4. Yolcunun Yükümlülükleri</h2>

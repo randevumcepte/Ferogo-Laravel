@@ -3,122 +3,86 @@
 namespace App\Modules\Driver\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Modules\Booking\Services\CustomerTrustService;
-use App\Modules\Driver\Models\Driver;
 use App\Modules\Driver\Models\DriverApplication;
+use App\Modules\Driver\Models\DriverCategory;
 use App\Modules\Legal\Services\LegalConsentService;
 use App\Modules\Shared\Models\City;
-use Illuminate\Http\RedirectResponse;
+use App\Modules\Vehicle\Models\VehicleMake;
+use App\Modules\Vehicle\Models\VehicleModel;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
-/**
- * Sürücü ÖN KAYIT (hesap-önce / Martı modeli).
- *
- * Ön kayıt formu hafif tutulur (kişisel + sürüş profili + hesap bilgisi). Gönderilince
- * DOĞRUDAN "beklemede" bir sürücü hesabı açılır ve sürücü otomatik giriş yapıp
- * "Doğrulama Durumu" (onboarding) ekranına düşer. Araç bilgisi, fotoğraflar ve tüm
- * belgeler orada adım adım toplanır; tümü tamamlanınca admin incelemesi başlar.
- */
 class DriverApplicationController extends Controller
 {
-    public function __construct(
-        private LegalConsentService $consents,
-        private CustomerTrustService $trust,
-    ) {}
+    public function __construct(private LegalConsentService $consents) {}
 
     public function show()
     {
-        // Zaten giriş yapmış sürücü → onboarding / panel
-        if (Auth::guard('driver')->check()) {
-            $driver = Driver::where('user_id', Auth::guard('driver')->id())->first();
-            if ($driver) {
-                return redirect()->route(
-                    $driver->approval_status === 'approved' ? 'driver.panel' : 'driver.onboarding'
-                );
-            }
-        }
-
         return view('driver.apply', [
-            'cities' => City::where('is_active', true)->orderBy('sort_order')->get(),
+            'cities'     => City::where('is_active', true)->orderBy('sort_order')->get(),
+            'categories' => DriverCategory::where('is_active', true)->orderBy('sort_order')->get(),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request)
     {
-        $cityIds = City::where('is_active', true)->pluck('id')->toArray();
+        $cityIds     = City::where('is_active', true)->pluck('id')->toArray();
+        $categoryIds = DriverCategory::where('is_active', true)->pluck('id')->toArray();
 
         $validated = $request->validate([
-            'full_name'       => ['required', 'string', 'max:120'],
-            'phone'           => ['required', 'string', 'max:32'],
-            'email'           => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
-            'password'        => ['required', 'string', 'min:6', 'max:255'],
-            'city_id'         => ['nullable', Rule::in($cityIds)],
-            'birth_year'      => ['nullable', 'integer', 'min:1940', 'max:' . (date('Y') - 18)],
-            'gender'          => ['required', Rule::in(['male', 'female'])],
-            'license_class'   => ['required', Rule::in(['B', 'D', 'D1', 'E'])],
-            'experience_band' => ['required', Rule::in(['under_1', '1_to_3', '3_to_5', '5_plus'])],
-            'has_src'         => ['nullable', 'boolean'],
-            'kvkk'            => ['accepted'],
-            'terms'           => ['accepted'],
+            'full_name'          => ['required', 'string', 'max:120'],
+            'phone'              => ['required', 'string', 'max:32'],
+            'email'              => ['nullable', 'email', 'max:255'],
+            'city_id'            => ['nullable', Rule::in($cityIds)],
+            'birth_year'         => ['nullable', 'integer', 'min:1940', 'max:' . (date('Y') - 18)],
+            'gender'             => ['required', Rule::in(['male', 'female'])],
+            'driver_category_id' => ['required', Rule::in($categoryIds)],
+            'license_class'      => ['required', Rule::in(['B', 'D', 'D1', 'E', 'A', 'A2'])],
+            'experience_band'    => ['required', Rule::in(['under_1', '1_to_3', '3_to_5', '5_plus'])],
+            'has_src'            => ['nullable', 'boolean'],
+            'vehicle_make_id'    => ['nullable', 'integer', 'exists:vehicle_makes,id'],
+            'vehicle_model_id'   => ['nullable', 'integer', 'exists:vehicle_models,id'],
+            'vehicle_year'       => ['nullable', 'integer', 'min:1990', 'max:' . (date('Y') + 1)],
+            'vehicle_color'      => ['nullable', 'string', 'max:30'],
+            'vehicle_info'       => ['nullable', 'string', 'max:255'],
+            'notes'              => ['nullable', 'string', 'max:1000'],
+            'kvkk'               => ['accepted'],
+            'terms'              => ['accepted'],
         ], [
-            'email.unique'    => 'Bu e-posta ile zaten bir hesap var. Giriş yapmayı dene.',
-            'gender.required' => 'Cinsiyet seçimi zorunlu.',
-            'kvkk.accepted'   => 'KVKK onayını işaretlemen gerekiyor.',
-            'terms.accepted'  => 'Hizmet Şartları ve Paylaşımlı Yolculuk model onayı zorunlu.',
+            'gender.required'              => 'Cinsiyet seçimi zorunlu.',
+            'gender.in'                    => 'Geçersiz cinsiyet değeri.',
+            'driver_category_id.required'  => 'Sürücü kategorisi seçmelisin (Otomobil / Sarı Taksi / Motosiklet).',
+            'driver_category_id.in'        => 'Geçersiz kategori.',
+            'kvkk.accepted'                => 'KVKK onayını işaretlemen gerekiyor.',
+            'terms.accepted'               => 'Hizmet Şartları ve Paylaşımlı Yolculuk model onayı zorunlu.',
         ]);
 
-        $phone = $this->trust->normalizePhone($validated['phone']);
+        // vehicle_info yoksa marka+model+yıl'dan otomatik oluştur (Filament tablosunda okunaklı olsun)
+        if (empty($validated['vehicle_info'])) {
+            $parts = [];
+            if (! empty($validated['vehicle_make_id'])) {
+                $parts[] = VehicleMake::find($validated['vehicle_make_id'])?->name;
+            }
+            if (! empty($validated['vehicle_model_id'])) {
+                $parts[] = VehicleModel::find($validated['vehicle_model_id'])?->name;
+            }
+            if (! empty($validated['vehicle_year'])) {
+                $parts[] = $validated['vehicle_year'];
+            }
+            $validated['vehicle_info'] = trim(implode(' ', array_filter($parts))) ?: null;
+        }
 
-        $user = DB::transaction(function () use ($validated, $phone, $request) {
-            $user = User::create([
-                'name'     => $validated['full_name'],
-                'email'    => $validated['email'],
-                'password' => Hash::make($validated['password']),
-                'phone'    => $phone,
-                'gender'   => $validated['gender'],
-                'type'     => 'driver',
-                'status'   => 'active', // giriş yapabilir; müşteriye görünürlük approval_status'a bağlı (gating)
-            ]);
+        $application = DriverApplication::create([
+            ...collect($validated)->except(['terms'])->all(),
+            'has_src'     => (bool) ($validated['has_src'] ?? false),
+            'has_vehicle' => true,
+            'status'      => 'pending',
+            'source'      => 'web',
+            'ip_address'  => $request->ip(),
+        ]);
 
-            Driver::create([
-                'user_id'             => $user->id,
-                'city_id'             => $validated['city_id'] ?? null,
-                'license_class'       => $validated['license_class'],
-                'experience_band'     => $validated['experience_band'],
-                'commission_rate'     => 15.00,
-                'availability_status' => 'offline',
-                'approval_status'     => 'pending',   // + submitted_at=null → onboarding devam ediyor
-                'rating'              => 5.00,
-                'total_rides'         => 0,
-            ]);
-
-            // Ön kayıt audit kaydı (hukuki + operasyon izi)
-            DriverApplication::create([
-                'user_id'         => $user->id,
-                'full_name'       => $validated['full_name'],
-                'phone'           => $phone,
-                'email'           => $validated['email'],
-                'city_id'         => $validated['city_id'] ?? null,
-                'birth_year'      => $validated['birth_year'] ?? null,
-                'gender'          => $validated['gender'],
-                'license_class'   => $validated['license_class'],
-                'experience_band' => $validated['experience_band'],
-                'has_src'         => (bool) ($validated['has_src'] ?? false),
-                'has_vehicle'     => true,
-                'status'          => 'pending',
-                'source'          => 'web',
-                'ip_address'      => $request->ip(),
-            ]);
-
-            return $user;
-        });
-
-        // ─── Hukuki onayları audit log'a yaz (mahkeme delili) ───
+        // Hukuki onayları audit log
         $this->consents->recordMany(
             request: $request,
             items: [
@@ -128,13 +92,57 @@ class DriverApplicationController extends Controller
                 ['type' => 'ride_sharing'],
             ],
             acceptedVia: 'driver_registration',
-            extraPayload: ['user_id' => $user->id],
+            extraPayload: ['application_id' => $application->id],
         );
 
-        // Otomatik giriş (sürücü guard) → onboarding
-        Auth::guard('driver')->login($user, remember: true);
-        $request->session()->regenerateToken();
+        return redirect()
+            ->route('driver.apply')
+            ->with('application_success', true);
+    }
 
-        return redirect()->route('driver.onboarding')->with('onboarding_welcome', true);
+    /**
+     * AJAX: kategori seçilince o kategoriye uygun markaları getir.
+     * GET /api/driver-catalog/makes?category=motosiklet
+     */
+    public function apiMakes(Request $request): JsonResponse
+    {
+        $category = $request->query('category');
+        if (! $category || ! in_array($category, ['otomobil', 'sari_taksi', 'motosiklet'], true)) {
+            return response()->json(['makes' => []]);
+        }
+
+        $makes = VehicleMake::query()
+            ->where('is_active', true)
+            ->whereJsonContains('applicable_categories', $category)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])
+            ->all();
+
+        return response()->json(['makes' => $makes]);
+    }
+
+    /**
+     * AJAX: marka + kategori seçilince modelleri getir.
+     * GET /api/driver-catalog/models?make=15&category=motosiklet
+     */
+    public function apiModels(Request $request): JsonResponse
+    {
+        $makeId   = (int) $request->query('make', 0);
+        $category = $request->query('category');
+        if (! $makeId || ! $category) {
+            return response()->json(['models' => []]);
+        }
+
+        $models = VehicleModel::query()
+            ->where('vehicle_make_id', $makeId)
+            ->where('category_slug', $category)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])
+            ->all();
+
+        return response()->json(['models' => $models]);
     }
 }

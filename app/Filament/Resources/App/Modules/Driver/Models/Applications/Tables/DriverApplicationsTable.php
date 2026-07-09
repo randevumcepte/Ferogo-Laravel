@@ -43,6 +43,19 @@ class DriverApplicationsTable
                     ->copyable()
                     ->placeholder('—'),
 
+                TextColumn::make('category.name')
+                    ->label('Kategori')
+                    ->formatStateUsing(fn ($state, $record) => $record->category
+                        ? ($record->category->emoji . ' ' . $record->category->name)
+                        : '—')
+                    ->badge()
+                    ->color(fn ($state, $record) => match ($record->category?->slug) {
+                        'otomobil'    => 'info',
+                        'sari_taksi'  => 'warning',
+                        'motosiklet'  => 'success',
+                        default       => 'gray',
+                    }),
+
                 TextColumn::make('gender')
                     ->label('Cinsiyet')
                     ->badge()
@@ -169,6 +182,7 @@ class DriverApplicationsTable
                                 'user_id'               => $user->id,
                                 'city_id'               => $a->city_id,
                                 'license_class'         => $a->license_class,
+                                'driver_category_id'    => $a->driver_category_id,
                                 'experience_band'       => $a->experience_band,
                                 'commission_rate'       => 15.00,
                                 'availability_status'   => 'offline',

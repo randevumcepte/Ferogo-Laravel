@@ -131,6 +131,34 @@
             <form method="POST" action="{{ route('driver.apply.store') }}" class="bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-10 space-y-8">
                 @csrf
 
+                {{-- ==== KATEGORİ SEÇİMİ (Otomobil / Sarı Taksi / Motosiklet) ==== --}}
+                @if(isset($categories) && $categories->count() > 0)
+                <div>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Sürücü Kategorisi</div>
+                    <p class="text-xs text-zinc-500 mb-4">Hangi tür araçla paylaşımlı yolculuk yapacaksın? Kategoriye göre farklı belgeler gerekli olacak.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        @foreach($categories as $cat)
+                            <label class="cursor-pointer relative group">
+                                <input type="radio" name="driver_category_id" value="{{ $cat->id }}" required
+                                       {{ old('driver_category_id') == $cat->id ? 'checked' : '' }}
+                                       data-slug="{{ $cat->slug }}"
+                                       class="sr-only peer category-radio">
+                                <div class="p-5 rounded-2xl border-2 border-white/10 bg-white/[0.02] peer-checked:border-brand peer-checked:bg-brand/10 transition text-center">
+                                    <div class="text-4xl mb-2">{{ $cat->emoji }}</div>
+                                    <div class="text-base font-bold text-white">{{ $cat->name }}</div>
+                                    <div class="text-[11px] text-zinc-500 mt-1">
+                                        Ehliyet: <span class="text-zinc-300 font-semibold">{{ $cat->required_license_class }}</span>
+                                        @if($cat->requires_src)  · SRC şart @endif
+                                        @if($cat->requires_helmet) · Kask şart @endif
+                                    </div>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div id="category-info" class="mt-3 hidden p-3 rounded-xl bg-brand/5 border border-brand/20 text-xs text-zinc-300"></div>
+                </div>
+                @endif
+
                 {{-- Section: kişisel --}}
                 <div>
                     <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Kişisel</div>
@@ -612,6 +640,41 @@
 
 @push('scripts')
 <script>
+    // Kategori seçilince gerekli belgeleri kısaca göster
+    (function() {
+        const infoBox = document.getElementById('category-info');
+        if (!infoBox) return;
+
+        const categoryDocs = @json(
+            isset($categories) ? $categories->pluck('required_documents', 'slug')->toArray() : []
+        );
+        const categoryNames = @json(
+            isset($categories) ? $categories->pluck('name', 'slug')->toArray() : []
+        );
+
+        document.querySelectorAll('.category-radio').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const slug = radio.dataset.slug;
+                const docs = categoryDocs[slug];
+                if (!docs) { infoBox.classList.add('hidden'); return; }
+
+                const name = categoryNames[slug] || slug;
+                const items = Object.values(docs);
+                infoBox.innerHTML =
+                    '<div class="font-semibold text-brand mb-1">' + name + ' için gerekli belgeler:</div>' +
+                    '<ul class="list-disc list-inside text-zinc-400 space-y-0.5">' +
+                    items.map(d => '<li>' + d + '</li>').join('') +
+                    '</ul>' +
+                    '<div class="text-[10px] text-zinc-500 mt-2">Belgeleri ön kayıt sonrası doğrulama ekranından yükleyeceksin.</div>';
+                infoBox.classList.remove('hidden');
+            });
+        });
+
+        // Sayfa açılırken eğer bir seçili varsa (old input) info göster
+        const checked = document.querySelector('.category-radio:checked');
+        if (checked) checked.dispatchEvent(new Event('change'));
+    })();
+
     // Simple counter animation for hero earnings
     (function() {
         const el = document.getElementById('counter-earnings');

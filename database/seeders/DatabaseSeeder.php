@@ -11,7 +11,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CitySeeder::class,
             VehicleClassSeeder::class,
-            VehicleCatalogSeeder::class,
+            DriverCategorySeeder::class,      // Sürücü kategorileri (otomobil/sari_taksi/motosiklet)
+            VehicleCatalogSeeder::class,      // Marka + model kataloğu (kategori ilişkili)
             ExtraSeeder::class,
             PricingRuleSeeder::class,
             LegalTextVersionSeeder::class,

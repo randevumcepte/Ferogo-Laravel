@@ -41,6 +41,20 @@ class DriversTable
                     ->sortable()
                     ->weight('bold'),
 
+                TextColumn::make('category.name')
+                    ->label('Kategori')
+                    ->formatStateUsing(fn ($state, $record) => $record->category
+                        ? ($record->category->emoji . ' ' . $record->category->name)
+                        : '—')
+                    ->badge()
+                    ->color(fn ($state, $record) => match ($record->category?->slug) {
+                        'otomobil'    => 'info',
+                        'sari_taksi'  => 'warning',
+                        'motosiklet'  => 'success',
+                        default       => 'gray',
+                    })
+                    ->toggleable(),
+
                 TextColumn::make('user.phone')
                     ->label('Telefon')
                     ->copyable(),

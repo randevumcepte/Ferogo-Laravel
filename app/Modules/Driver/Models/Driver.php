@@ -23,6 +23,7 @@ class Driver extends Model
         'city_id',
         'current_vehicle_id',
         'license_class',
+        'driver_category_id',
         'license_issued_at',
         'license_expires_at',
         'license_file_path',
@@ -95,6 +96,11 @@ class Driver extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(DriverCategory::class, 'driver_category_id');
     }
 
     public function city(): BelongsTo
