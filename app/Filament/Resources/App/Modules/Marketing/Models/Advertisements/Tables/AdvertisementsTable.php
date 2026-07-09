@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\App\Modules\Marketing\Models\Advertisements\Tables;
 
 use App\Modules\Marketing\Models\Advertisement;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -84,6 +85,12 @@ class AdvertisementsTable
             ])
             ->defaultSort('sort_order')
             ->recordActions([
+                Action::make('rapor')
+                    ->label('Rapor')
+                    ->icon('heroicon-o-document-chart-bar')
+                    ->color('warning')
+                    ->url(fn (Advertisement $record): string => route('ad.report', $record))
+                    ->openUrlInNewTab(),
                 EditAction::make(),
             ])
             ->toolbarActions([

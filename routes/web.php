@@ -10,6 +10,7 @@ use App\Modules\Driver\Http\Controllers\DriverApplicationController;
 use App\Modules\Driver\Http\Controllers\DriverPanelController;
 use App\Modules\Driver\Http\Controllers\DriverReservationController;
 use App\Modules\Legal\Http\Controllers\LegalConsentController;
+use App\Modules\Marketing\Http\Controllers\AdReportController;
 use App\Modules\Marketing\Models\Advertisement;
 use App\Modules\Marketing\Models\AdEvent;
 use App\Modules\Payment\Http\Controllers\DriverPackageController;
@@ -59,6 +60,11 @@ Route::post('/reklam/olay', function (Request $request) {
     }
     return response()->json(['ok' => true])->withCookie($cookie);
 })->name('ad.event');
+
+// Sponsor performans raporu (yazdırılabilir HTML → PDF). Yalnızca panel (admin) kullanıcıları.
+Route::get('/reklam-rapor/{advertisement}', [AdReportController::class, 'show'])
+    ->middleware('auth')
+    ->name('ad.report');
 
 // ─────────────────────────────────────────────────────────
 // SEO — sitemap.xml (yalnızca herkese açık, indekslenebilir sayfalar)
