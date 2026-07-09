@@ -16,7 +16,9 @@ class AdClicksByPlacementChart extends ChartWidget
 
     protected ?string $description = 'Her slotun gösterim ve tıklama sayısı';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
+
+    protected ?string $maxHeight = '200px';
 
     protected function getType(): string
     {

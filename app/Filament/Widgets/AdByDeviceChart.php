@@ -17,6 +17,8 @@ class AdByDeviceChart extends ChartWidget
 
     protected int|string|array $columnSpan = 1;
 
+    protected ?string $maxHeight = '200px';
+
     protected function getType(): string
     {
         return 'doughnut';

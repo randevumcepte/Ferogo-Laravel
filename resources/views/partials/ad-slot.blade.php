@@ -15,7 +15,7 @@
     $slotClass = $class ?? '';
     $compact = $compact ?? false;
     try {
-        $ad = \App\Modules\Marketing\Models\Advertisement::activeFor($placement);
+        $ad = \App\Modules\Marketing\Models\Advertisement::activeFor($placement, request()->cookie('ferxgo_dist'));
     } catch (\Throwable $e) {
         $ad = null; // tablo henüz migrate edilmemişse sayfa kırılmasın
     }

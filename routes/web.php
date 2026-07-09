@@ -37,7 +37,12 @@ Route::get('/reklam/{advertisement}', function (Advertisement $advertisement, Re
         // analitik yazımı başarısız olsa da yönlendirme çalışsın
     }
 
-    return redirect()->away($advertisement->link_url ?: url('/'))->withCookie($cookie);
+    $redirect = redirect()->away($advertisement->link_url ?: url('/'))->withCookie($cookie);
+    $dist = AdEvent::districtFromLatLng($lat, $lng);
+    if ($dist) {
+        $redirect->withCookie(cookie('ferxgo_dist', $dist, 60 * 24 * 30));
+    }
+    return $redirect;
 })->name('ad.click');
 
 // Gösterim beacon'ı: reklam ekranda görününce JS buraya POST atar (görünürlük + kaba konum).

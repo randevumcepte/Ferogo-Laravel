@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\App\Modules\Marketing\Models\Advertisements\Schemas;
 
+use App\Modules\Marketing\Models\AdEvent;
 use App\Modules\Marketing\Models\Advertisement;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -125,6 +126,15 @@ class AdvertisementForm
                     5 => 'Cuma', 6 => 'Cumartesi', 0 => 'Pazar',
                 ])
                 ->helperText('Reklam yalnızca seçili günlerde gösterilir. Boş = her gün.'),
+
+            Select::make('target_districts')
+                ->label('Hedef İlçeler (bölge hedefleme)')
+                ->multiple()
+                ->searchable()
+                ->options(collect(AdEvent::IZMIR_DISTRICTS)->keys()->mapWithKeys(fn ($d) => [$d => $d])->all())
+                ->helperText('Seçilirse reklam YALNIZCA bu ilçelerdeki kullanıcılara gösterilir '
+                    . '(kullanıcı konum izni verdiyse). Boş = tüm bölgeler. '
+                    . 'Bir ilçede bölgesel reklam varsa, o ilçede genel reklamların yerine o gösterilir.'),
 
             Toggle::make('is_active')
                 ->label('Aktif')

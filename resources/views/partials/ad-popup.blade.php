@@ -5,7 +5,7 @@
 --}}
 @php
     try {
-        $popupAd = \App\Modules\Marketing\Models\Advertisement::activeFor('popup');
+        $popupAd = \App\Modules\Marketing\Models\Advertisement::activeFor('popup', request()->cookie('ferxgo_dist'));
     } catch (\Throwable $e) {
         $popupAd = null;
     }
