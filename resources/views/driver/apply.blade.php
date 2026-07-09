@@ -236,17 +236,17 @@
                 <section>
                     <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">3. Kimlik & Selfie</div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        @include('partials.file-upload', ['name' => 'selfie',   'label' => 'Selfie',        'hint' => 'Yüzün net görünsün'])
-                        @include('partials.file-upload', ['name' => 'id_front', 'label' => 'Kimlik — Ön',   'hint' => 'T.C. kimlik ön yüz'])
-                        @include('partials.file-upload', ['name' => 'id_back',  'label' => 'Kimlik — Arka', 'hint' => 'T.C. kimlik arka yüz'])
+                        @include('partials.file-upload', ['name' => 'selfie',   'label' => 'Selfie',        'hint' => 'Yüzün net görünsün', 'mode' => 'photo', 'capture' => 'user'])
+                        @include('partials.file-upload', ['name' => 'id_front', 'label' => 'Kimlik — Ön',   'hint' => 'T.C. kimlik ön yüz', 'mode' => 'photo', 'capture' => 'environment'])
+                        @include('partials.file-upload', ['name' => 'id_back',  'label' => 'Kimlik — Arka', 'hint' => 'T.C. kimlik arka yüz', 'mode' => 'photo', 'capture' => 'environment'])
                     </div>
                 </section>
 
                 <section>
                     <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">4. Ehliyet</div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        @include('partials.file-upload', ['name' => 'license_front', 'label' => 'Ehliyet — Ön',  'hint' => 'Fotoğraflı yüz'])
-                        @include('partials.file-upload', ['name' => 'license_back',  'label' => 'Ehliyet — Arka','hint' => 'Sınıflar/geçerlilik'])
+                        @include('partials.file-upload', ['name' => 'license_front', 'label' => 'Ehliyet — Ön',  'hint' => 'Fotoğraflı yüz', 'mode' => 'photo', 'capture' => 'environment'])
+                        @include('partials.file-upload', ['name' => 'license_back',  'label' => 'Ehliyet — Arka','hint' => 'Sınıflar/geçerlilik', 'mode' => 'photo', 'capture' => 'environment'])
                     </div>
                 </section>
 
@@ -303,7 +303,7 @@
                     <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">6. Araç Fotoğrafları <span class="text-zinc-600 normal-case tracking-normal">— 6 açı zorunlu</span></div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         @foreach($vehiclePhotoSlots as $slot => $label)
-                            @include('partials.file-upload', ['name' => 'vehicle_photo_' . $slot, 'label' => $label, 'hint' => 'Aracın net görünsün'])
+                            @include('partials.file-upload', ['name' => 'vehicle_photo_' . $slot, 'label' => $label, 'hint' => 'Aracın net görünsün', 'mode' => 'photo', 'capture' => 'environment'])
                         @endforeach
                     </div>
                 </section>
@@ -331,7 +331,7 @@
                 <section id="motor-docs" class="hidden">
                     <div class="text-xs uppercase tracking-[0.2em] text-brand mb-5 pb-3 border-b border-brand/20">🏍 Motosiklet — Ek Belge</div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        @include('partials.file-upload', ['name' => 'helmet_file', 'label' => 'Kask Fotoğrafı', 'hint' => 'Kullandığın kaskı çek'])
+                        @include('partials.file-upload', ['name' => 'helmet_file', 'label' => 'Kask Fotoğrafı', 'hint' => 'Kullandığın kaskı çek', 'mode' => 'photo', 'capture' => 'environment'])
                     </div>
                 </section>
 
@@ -853,13 +853,25 @@
     if (preChecked) preChecked.dispatchEvent(new Event('change'));
 
     // ============================================================
-    // 2) Dosya upload preview (görsel önizleme + dosya adı)
+    // 2) Dosya upload — Galeri seçilirse dosyayı ana input'a mirror et
+    //    (form submit'te tek input adı gitsin)
     // ============================================================
     document.querySelectorAll('.fu-input').forEach(input => {
         input.addEventListener('change', () => {
             const name = input.dataset.target;
-            const file = input.files?.[0];
+            let file = input.files?.[0];
             if (!file) return;
+
+            // Galeri input'u seçildiyse dosyayı ana (kamera) input'a kopyala
+            const mirrorId = input.dataset.mirror;
+            if (mirrorId) {
+                const target = document.getElementById(mirrorId);
+                if (target) {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    target.files = dt.files;
+                }
+            }
 
             const empty  = document.querySelector('.fu-empty-' + name);
             const prev   = document.querySelector('.fu-preview-' + name);

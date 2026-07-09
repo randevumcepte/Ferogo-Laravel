@@ -66,6 +66,10 @@ class ReservationController extends Controller
             'distance_km' => ['nullable', 'numeric', 'min:0'],
             'duration_minutes' => ['nullable', 'integer', 'min:0'],
 
+            // Yolcunun belirlediği yolculuk paylaşım tutarı (Martı modeli — tutarı yolcu belirler).
+            // Sistem yalnızca bir başlangıç önerisi sunar; nihai tutar yolcunundur.
+            'offered_fare' => ['nullable', 'numeric', 'min:0', 'max:100000'],
+
             'scheduled_at' => ['required', 'date', 'after:now'],
 
             // Karşılama (uçak/tren/otogar) — opsiyonel
