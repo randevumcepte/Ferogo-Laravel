@@ -111,6 +111,21 @@ class AdvertisementForm
                     . 'KAPALI: reklam diğerleriyle rotasyonda döner (paylaşımlı).')
                 ->default(false),
 
+            Select::make('target_hours')
+                ->label('Saat Hedefleme')
+                ->multiple()
+                ->options(collect(range(0, 23))->mapWithKeys(fn ($h) => [$h => str_pad((string) $h, 2, '0', STR_PAD_LEFT) . ':00'])->all())
+                ->helperText('Reklam yalnızca seçili saatlerde gösterilir. Boş = her saat.'),
+
+            Select::make('target_days')
+                ->label('Gün Hedefleme')
+                ->multiple()
+                ->options([
+                    1 => 'Pazartesi', 2 => 'Salı', 3 => 'Çarşamba', 4 => 'Perşembe',
+                    5 => 'Cuma', 6 => 'Cumartesi', 0 => 'Pazar',
+                ])
+                ->helperText('Reklam yalnızca seçili günlerde gösterilir. Boş = her gün.'),
+
             Toggle::make('is_active')
                 ->label('Aktif')
                 ->default(true),

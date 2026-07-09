@@ -91,6 +91,8 @@ class Advertisement extends Model
         'sort_order',
         'rotation_weight',
         'is_exclusive',
+        'target_hours',
+        'target_days',
         'starts_at',
         'ends_at',
         'impressions',
@@ -102,6 +104,8 @@ class Advertisement extends Model
         'image_only' => 'boolean',
         'is_exclusive' => 'boolean',
         'rotation_weight' => 'integer',
+        'target_hours' => 'array',
+        'target_days' => 'array',
         'starts_at'  => 'datetime',
         'ends_at'    => 'datetime',
         'impressions' => 'integer',
@@ -144,7 +148,9 @@ class Advertisement extends Model
             ->live()
             ->orderBy('sort_order')
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->filter(fn (self $ad) => $ad->isScheduledNow())
+            ->values();
 
         if ($ads->isEmpty()) {
             return null;
@@ -178,6 +184,26 @@ class Advertisement extends Model
     public static function rotationCountFor(string $placement): int
     {
         return static::query()->where('placement', $placement)->live()->count();
+    }
+
+    /**
+     * Şu anki saat/gün bu reklamın hedeflemesine uyuyor mu?
+     * Boş hedefleme = her zaman uygun. Saat=sunucu (İzmir) saati.
+     */
+    public function isScheduledNow(): bool
+    {
+        $now = now();
+        $hours = $this->target_hours;
+        if (is_array($hours) && count($hours) > 0
+            && ! in_array((int) $now->format('G'), array_map('intval', $hours), true)) {
+            return false;
+        }
+        $days = $this->target_days;
+        if (is_array($days) && count($days) > 0
+            && ! in_array((int) $now->format('w'), array_map('intval', $days), true)) {
+            return false;
+        }
+        return true;
     }
 
     /**
