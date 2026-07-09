@@ -11,17 +11,30 @@ use App\Modules\Vehicle\Models\VehicleMake;
 use App\Modules\Vehicle\Models\VehicleModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class DriverApplicationController extends Controller
 {
     public function __construct(private LegalConsentService $consents) {}
 
+    /** 6 açılı araç fotoğrafı slot'ları (form input adları). */
+    private const VEHICLE_PHOTO_SLOTS = [
+        'front'          => 'Ön',
+        'back'           => 'Arka',
+        'left'           => 'Sol yan',
+        'right'          => 'Sağ yan',
+        'interior_front' => 'İç — ön koltuklar',
+        'interior_back'  => 'İç — arka koltuklar',
+    ];
+
     public function show()
     {
         return view('driver.apply', [
-            'cities'     => City::where('is_active', true)->orderBy('sort_order')->get(),
-            'categories' => DriverCategory::where('is_active', true)->orderBy('sort_order')->get(),
+            'cities'          => City::where('is_active', true)->orderBy('sort_order')->get(),
+            'categories'      => DriverCategory::where('is_active', true)->orderBy('sort_order')->get(),
+            'vehiclePhotoSlots' => self::VEHICLE_PHOTO_SLOTS,
         ]);
     }
 
@@ -30,59 +43,153 @@ class DriverApplicationController extends Controller
         $cityIds     = City::where('is_active', true)->pluck('id')->toArray();
         $categoryIds = DriverCategory::where('is_active', true)->pluck('id')->toArray();
 
-        $validated = $request->validate([
+        // Kategoriye göre koşullu belge zorunluluğu:
+        $categoryId   = (int) $request->input('driver_category_id');
+        $categorySlug = DriverCategory::find($categoryId)?->slug;
+        $isTaxi       = $categorySlug === 'sari_taksi';
+        $isMotor      = $categorySlug === 'motosiklet';
+
+        $rules = [
+            // Kategori & kişisel
+            'driver_category_id' => ['required', Rule::in($categoryIds)],
             'full_name'          => ['required', 'string', 'max:120'],
             'phone'              => ['required', 'string', 'max:32'],
-            'email'              => ['nullable', 'email', 'max:255'],
-            'city_id'            => ['nullable', Rule::in($cityIds)],
-            'birth_year'         => ['nullable', 'integer', 'min:1940', 'max:' . (date('Y') - 18)],
+            'email'              => ['required', 'email', 'max:255', 'unique:driver_applications,email'],
+            'password'           => ['required', 'string', 'min:6', 'max:100', 'confirmed'],
             'gender'             => ['required', Rule::in(['male', 'female'])],
-            'driver_category_id' => ['required', Rule::in($categoryIds)],
+            'birth_year'         => ['required', 'integer', 'min:1940', 'max:' . (date('Y') - 18)],
+            'city_id'            => ['required', Rule::in($cityIds)],
             'license_class'      => ['required', Rule::in(['B', 'D', 'D1', 'E', 'A', 'A2'])],
             'experience_band'    => ['required', Rule::in(['under_1', '1_to_3', '3_to_5', '5_plus'])],
-            'has_src'            => ['nullable', 'boolean'],
-            'vehicle_make_id'    => ['nullable', 'integer', 'exists:vehicle_makes,id'],
-            'vehicle_model_id'   => ['nullable', 'integer', 'exists:vehicle_models,id'],
-            'vehicle_year'       => ['nullable', 'integer', 'min:1990', 'max:' . (date('Y') + 1)],
-            'vehicle_color'      => ['nullable', 'string', 'max:30'],
-            'vehicle_info'       => ['nullable', 'string', 'max:255'],
+
+            // Araç bilgileri
+            'vehicle_make_id'    => ['required', 'integer', 'exists:vehicle_makes,id'],
+            'vehicle_model_id'   => ['required', 'integer', 'exists:vehicle_models,id'],
+            'vehicle_year'       => ['required', 'integer', 'min:2000', 'max:' . (date('Y') + 1)],
+            'vehicle_color'      => ['required', 'string', 'max:30'],
+            'vehicle_plate'      => ['required', 'string', 'max:15'],
+
+            // Kimlik & Ehliyet fotoğrafları — hepsi max 8MB, jpg/png/webp
+            'selfie'             => ['required', 'image', 'max:8192'],
+            'id_front'           => ['required', 'image', 'max:8192'],
+            'id_back'            => ['required', 'image', 'max:8192'],
+            'license_front'      => ['required', 'image', 'max:8192'],
+            'license_back'       => ['required', 'image', 'max:8192'],
+
+            // Araç fotoğrafları (6 açı)
+            'vehicle_photo_front'          => ['required', 'image', 'max:8192'],
+            'vehicle_photo_back'           => ['required', 'image', 'max:8192'],
+            'vehicle_photo_left'           => ['required', 'image', 'max:8192'],
+            'vehicle_photo_right'          => ['required', 'image', 'max:8192'],
+            'vehicle_photo_interior_front' => ['required', 'image', 'max:8192'],
+            'vehicle_photo_interior_back'  => ['required', 'image', 'max:8192'],
+
+            // Belgeler (PDF de kabul)
+            'registration_file'  => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'insurance_file'     => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'inspection_file'    => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'criminal_record_file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+
+            // Kategori-özel belgeler
+            'src_file'           => [$isTaxi ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'taksi_plaka_file'   => [$isTaxi ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'taksimetre_file'    => [$isTaxi ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'oda_kaydi_file'     => [$isTaxi ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'psychotechnic_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'helmet_file'        => [$isMotor ? 'required' : 'nullable', 'image', 'max:8192'],
+
+            // Notlar
             'notes'              => ['nullable', 'string', 'max:1000'],
+
+            // Onaylar
             'kvkk'               => ['accepted'],
             'terms'              => ['accepted'],
-        ], [
-            'gender.required'              => 'Cinsiyet seçimi zorunlu.',
-            'gender.in'                    => 'Geçersiz cinsiyet değeri.',
-            'driver_category_id.required'  => 'Sürücü kategorisi seçmelisin (Otomobil / Sarı Taksi / Motosiklet).',
-            'driver_category_id.in'        => 'Geçersiz kategori.',
-            'kvkk.accepted'                => 'KVKK onayını işaretlemen gerekiyor.',
-            'terms.accepted'               => 'Hizmet Şartları ve Paylaşımlı Yolculuk model onayı zorunlu.',
-        ]);
+        ];
 
-        // vehicle_info yoksa marka+model+yıl'dan otomatik oluştur (Filament tablosunda okunaklı olsun)
-        if (empty($validated['vehicle_info'])) {
-            $parts = [];
-            if (! empty($validated['vehicle_make_id'])) {
-                $parts[] = VehicleMake::find($validated['vehicle_make_id'])?->name;
-            }
-            if (! empty($validated['vehicle_model_id'])) {
-                $parts[] = VehicleModel::find($validated['vehicle_model_id'])?->name;
-            }
-            if (! empty($validated['vehicle_year'])) {
-                $parts[] = $validated['vehicle_year'];
-            }
-            $validated['vehicle_info'] = trim(implode(' ', array_filter($parts))) ?: null;
+        $messages = [
+            'driver_category_id.required' => 'Sürücü kategorisi (Otomobil / Sarı Taksi / Motosiklet) seçmelisin.',
+            'email.unique'                => 'Bu e-posta ile daha önce başvuru yapılmış.',
+            'password.confirmed'          => 'Şifreler eşleşmiyor.',
+            'kvkk.accepted'               => 'KVKK onayı zorunlu.',
+            'terms.accepted'              => 'Hizmet Şartları ve Paylaşımlı Yolculuk model onayı zorunlu.',
+            '*.required'                  => 'Bu alan zorunlu.',
+            '*.image'                     => 'Bir fotoğraf (JPG / PNG / WEBP) yüklemelisin.',
+            '*.max'                       => 'Dosya boyutu limiti aşıldı (max 8 MB fotoğraf, 10 MB belge).',
+        ];
+
+        $validated = $request->validate($rules, $messages);
+
+        // Storage disk
+        $disk = Storage::disk('public');
+        $baseFolder = 'driver-applications/' . date('Y/m');
+
+        // Basit dosya yükleme yardımcısı
+        $upload = function (string $inputName) use ($request, $disk, $baseFolder): ?string {
+            if (! $request->hasFile($inputName)) return null;
+            return $request->file($inputName)->store($baseFolder, 'public');
+        };
+
+        // 6 açılı araç fotoğrafları → JSON dizi
+        $vehiclePhotos = [];
+        foreach (array_keys(self::VEHICLE_PHOTO_SLOTS) as $slot) {
+            $path = $upload('vehicle_photo_' . $slot);
+            if ($path) $vehiclePhotos[$slot] = $path;
         }
 
+        // Marka + model + yıl → okunaklı 'vehicle_info' (Filament'te kolay görüntü)
+        $vehicleInfo = trim(implode(' ', array_filter([
+            VehicleMake::find($validated['vehicle_make_id'])?->name,
+            VehicleModel::find($validated['vehicle_model_id'])?->name,
+            $validated['vehicle_year'],
+        ])));
+
         $application = DriverApplication::create([
-            ...collect($validated)->except(['terms'])->all(),
-            'has_src'     => (bool) ($validated['has_src'] ?? false),
-            'has_vehicle' => true,
-            'status'      => 'pending',
-            'source'      => 'web',
-            'ip_address'  => $request->ip(),
+            'full_name'          => $validated['full_name'],
+            'phone'              => $validated['phone'],
+            'email'              => strtolower(trim($validated['email'])),
+            'password_hash'      => Hash::make($validated['password']),
+            'city_id'            => $validated['city_id'],
+            'birth_year'         => $validated['birth_year'],
+            'gender'             => $validated['gender'],
+            'license_class'      => $validated['license_class'],
+            'driver_category_id' => $validated['driver_category_id'],
+            'experience_band'    => $validated['experience_band'],
+            'has_src'            => (bool) $request->boolean('has_src'),
+            'has_vehicle'        => true,
+
+            'vehicle_make_id'    => $validated['vehicle_make_id'],
+            'vehicle_model_id'   => $validated['vehicle_model_id'],
+            'vehicle_year'       => $validated['vehicle_year'],
+            'vehicle_color'      => $validated['vehicle_color'],
+            'vehicle_plate'      => strtoupper(preg_replace('/\s+/', ' ', $validated['vehicle_plate'])),
+            'vehicle_info'       => $vehicleInfo,
+
+            // Fotoğraflar + belgeler
+            'selfie_file_path'          => $upload('selfie'),
+            'id_front_file_path'        => $upload('id_front'),
+            'id_back_file_path'         => $upload('id_back'),
+            'license_front_file_path'   => $upload('license_front'),
+            'license_back_file_path'    => $upload('license_back'),
+            'vehicle_photos'            => $vehiclePhotos,
+            'registration_file_path'    => $upload('registration_file'),
+            'insurance_file_path'       => $upload('insurance_file'),
+            'inspection_file_path'      => $upload('inspection_file'),
+            'criminal_record_file_path' => $upload('criminal_record_file'),
+            'src_file_path'             => $upload('src_file'),
+            'taksi_plaka_file_path'     => $upload('taksi_plaka_file'),
+            'taksimetre_file_path'      => $upload('taksimetre_file'),
+            'oda_kaydi_file_path'       => $upload('oda_kaydi_file'),
+            'psychotechnic_file_path'   => $upload('psychotechnic_file'),
+            'helmet_file_path'          => $upload('helmet_file'),
+
+            'notes'        => $validated['notes'] ?? null,
+            'status'       => 'pending',
+            'source'       => 'web',
+            'ip_address'   => $request->ip(),
+            'submitted_at' => now(),
         ]);
 
-        // Hukuki onayları audit log
+        // Hukuki onayları audit log'a yaz
         $this->consents->recordMany(
             request: $request,
             items: [

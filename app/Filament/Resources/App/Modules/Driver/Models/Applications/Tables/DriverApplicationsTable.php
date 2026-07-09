@@ -6,8 +6,10 @@ use App\Models\User;
 use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use App\Modules\Driver\Models\Driver;
 use App\Modules\Driver\Models\DriverApplication;
+use App\Modules\Vehicle\Models\Vehicle;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -17,6 +19,8 @@ use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
 class DriverApplicationsTable
@@ -139,6 +143,20 @@ class DriverApplicationsTable
             ])
             ->defaultSort('id', 'desc')
             ->recordActions([
+                Action::make('review')
+                    ->label('🔍 Detaylı İncele')
+                    ->icon(\Filament\Support\Icons\Heroicon::OutlinedEye)
+                    ->color('info')
+                    ->modalHeading(fn (DriverApplication $a) => 'Başvuru İnceleme — ' . $a->full_name)
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Kapat')
+                    ->modalWidth('7xl')
+                    ->schema([
+                        Placeholder::make('detail')
+                            ->label('')
+                            ->content(fn (DriverApplication $a) => new HtmlString(self::buildDetailHtml($a))),
+                    ]),
+
                 Action::make('approve')
                     ->label('Onayla ve Hesap Aç')
                     ->icon(\Filament\Support\Icons\Heroicon::OutlinedCheckCircle)
@@ -167,18 +185,22 @@ class DriverApplicationsTable
                             ->visible(fn (DriverApplication $a) => $a->gender === 'female'),
                     ])
                     ->action(function (DriverApplication $a, array $data) {
-                        DB::transaction(function () use ($a, $data) {
+                        // Başvurudaki hazır şifre (sürücünün seçtiği) varsa onu kullan;
+                        // yoksa modaldeki admin şifresi kullanılsın.
+                        $userPasswordHash = $a->password_hash ?: Hash::make($data['password']);
+
+                        DB::transaction(function () use ($a, $data, $userPasswordHash) {
                             $user = User::create([
                                 'name'     => $a->full_name,
                                 'email'    => $data['email'],
-                                'password' => Hash::make($data['password']),
+                                'password' => $userPasswordHash,
                                 'phone'    => preg_replace('/\s+/', '', $a->phone),
                                 'gender'   => $a->gender,
                                 'type'     => 'driver',
                                 'status'   => 'active',
                             ]);
 
-                            Driver::create([
+                            $driver = Driver::create([
                                 'user_id'               => $user->id,
                                 'city_id'               => $a->city_id,
                                 'license_class'         => $a->license_class,
@@ -191,9 +213,48 @@ class DriverApplicationsTable
                                 'rating'                => 5.00,
                                 'total_rides'           => 0,
                                 'women_passengers_only' => (bool) ($data['women_passengers_only'] ?? false),
+                                // Belge path'lerini başvurudan sürücüye aktar (adminde onayl yapılmadan yüklendiği kabul edilir)
+                                'license_file_path'         => $a->license_front_file_path,
+                                'license_approved_at'       => now(),
+                                'src_file_path'             => $a->src_file_path,
+                                'src_approved_at'           => $a->src_file_path ? now() : null,
+                                'psychotechnic_file_path'   => $a->psychotechnic_file_path,
+                                'psychotechnic_approved_at' => $a->psychotechnic_file_path ? now() : null,
+                                'criminal_record_file_path' => $a->criminal_record_file_path,
+                                'criminal_record_approved_at' => now(),
+                                'insurance_file_path'       => $a->insurance_file_path,
+                                'insurance_approved_at'     => now(),
+                                'inspection_file_path'      => $a->inspection_file_path,
+                                'inspection_approved_at'    => now(),
+                                'selfie_file_path'          => $a->selfie_file_path,
+                                'selfie_approved_at'        => now(),
                             ]);
 
-                            $a->update(['status' => 'approved']);
+                            // Vehicle oluştur
+                            if ($a->vehicle_make_id) {
+                                $photos = collect($a->vehicle_photos ?? [])->values()->all();
+                                $vehicle = Vehicle::create([
+                                    'vehicle_make_id'    => $a->vehicle_make_id,
+                                    'vehicle_model_id'   => $a->vehicle_model_id,
+                                    'brand'              => optional($a->vehicleMake)->name,
+                                    'model'              => optional($a->vehicleModel)->name,
+                                    'year_of_manufacture'=> $a->vehicle_year,
+                                    'color'              => $a->vehicle_color,
+                                    'plate'              => $a->vehicle_plate,
+                                    'status'             => 'active',
+                                    'photos'             => $photos,
+                                    'registration_file_path'   => $a->registration_file_path,
+                                    'registration_approved_at' => now(),
+                                ]);
+                                $driver->update(['current_vehicle_id' => $vehicle->id]);
+                            }
+
+                            $a->update([
+                                'status'       => 'approved',
+                                'user_id'      => $user->id,
+                                'reviewed_at'  => now(),
+                                'reviewed_by'  => auth()->id(),
+                            ]);
                         });
 
                         // ─── Sürücüye onay + giriş bilgisi SMS'i ───
@@ -267,5 +328,126 @@ class DriverApplicationsTable
                             ->send();
                     }),
             ]);
+    }
+
+    /**
+     * Başvurunun TÜM belge/fotoğraf/bilgilerini tek modal ekranda gösterir.
+     * Admin buradan görsel inceleme yapar, sonra onayla/reddet basar.
+     */
+    private static function buildDetailHtml(DriverApplication $a): string
+    {
+        $a->loadMissing('city', 'category', 'vehicleMake', 'vehicleModel');
+
+        $fileUrl = function (?string $path): ?string {
+            if (! $path) return null;
+            if (str_starts_with($path, 'http')) return $path;
+            return Storage::disk('public')->url($path);
+        };
+
+        $imageBox = function (string $label, ?string $path) use ($fileUrl): string {
+            $url = $fileUrl($path);
+            if (! $url) {
+                return '<div style="background:#1a1a1a;border:1px dashed #444;border-radius:8px;padding:16px;text-align:center;color:#888;font-size:12px;">' . e($label) . '<br><em>Yüklenmemiş</em></div>';
+            }
+            $isImage = preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $path);
+            $content = $isImage
+                ? '<img src="' . $url . '" style="width:100%;height:160px;object-fit:cover;border-radius:6px;">'
+                : '<div style="height:160px;background:#111;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:32px;">📄 PDF</div>';
+            return '<div style="background:#000;border:1px solid #333;border-radius:8px;padding:8px;">'
+                . '<div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:600;">' . e($label) . '</div>'
+                . $content
+                . '<a href="' . $url . '" target="_blank" style="display:block;margin-top:6px;font-size:11px;color:#F0C040;text-align:center;">Büyüt / İndir ↗</a>'
+                . '</div>';
+        };
+
+        $vehiclePhotos = $a->vehicle_photos ?? [];
+        $vehicleLabels = [
+            'front'=>'Ön','back'=>'Arka','left'=>'Sol','right'=>'Sağ',
+            'interior_front'=>'İç — Ön','interior_back'=>'İç — Arka',
+        ];
+
+        $html = '<div style="font-family:system-ui,sans-serif;font-size:13px;color:#e0e0e0;">';
+
+        // Özet
+        $html .= '<div style="background:rgba(240,192,64,0.06);border-left:3px solid #F0C040;padding:12px 16px;border-radius:6px;margin-bottom:16px;">';
+        $html .= '<div style="font-size:15px;font-weight:700;color:#F0C040;">' . e($a->full_name) . '</div>';
+        $html .= '<div style="color:#aaa;margin-top:4px;">';
+        $html .= '📞 ' . e($a->phone) . ' · ✉️ ' . e($a->email ?? '—');
+        $html .= ' · ' . ($a->gender === 'female' ? '👩 Kadın' : '👨 Erkek');
+        $html .= ' · Doğum yılı: ' . e((string) $a->birth_year);
+        $html .= ' · Şehir: ' . e($a->city?->name ?? '—');
+        $html .= '</div>';
+        if ($a->category) {
+            $html .= '<div style="margin-top:8px;font-size:14px;">Kategori: <strong>' . e($a->category->emoji . ' ' . $a->category->name) . '</strong>';
+            $html .= ' · Ehliyet: ' . e($a->license_class);
+            $html .= ' · Deneyim: ' . e($a->experience_band);
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+
+        // Kimlik & Selfie
+        $html .= '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.15em;color:#888;margin:16px 0 10px;">Kimlik & Selfie</h3>';
+        $html .= '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+        $html .= $imageBox('Selfie', $a->selfie_file_path);
+        $html .= $imageBox('Kimlik — Ön', $a->id_front_file_path);
+        $html .= $imageBox('Kimlik — Arka', $a->id_back_file_path);
+        $html .= '</div>';
+
+        // Ehliyet
+        $html .= '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.15em;color:#888;margin:16px 0 10px;">Ehliyet</h3>';
+        $html .= '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">';
+        $html .= $imageBox('Ehliyet — Ön', $a->license_front_file_path);
+        $html .= $imageBox('Ehliyet — Arka', $a->license_back_file_path);
+        $html .= '</div>';
+
+        // Araç bilgileri
+        $html .= '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.15em;color:#888;margin:16px 0 10px;">Araç Bilgileri</h3>';
+        $html .= '<div style="background:#000;border:1px solid #333;border-radius:8px;padding:12px 16px;color:#ddd;">';
+        $html .= '<div><strong>' . e(($a->vehicleMake?->name ?? '') . ' ' . ($a->vehicleModel?->name ?? '')) . '</strong></div>';
+        $html .= '<div style="color:#aaa;margin-top:4px;">Yıl: ' . e((string) $a->vehicle_year) . ' · Renk: ' . e($a->vehicle_color ?? '—') . ' · Plaka: <strong style="color:#F0C040;">' . e($a->vehicle_plate ?? '—') . '</strong></div>';
+        $html .= '</div>';
+
+        // Araç fotoğrafları (6 açı)
+        $html .= '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.15em;color:#888;margin:16px 0 10px;">Araç Fotoğrafları (6 açı)</h3>';
+        $html .= '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+        foreach ($vehicleLabels as $slot => $lbl) {
+            $html .= $imageBox($lbl, $vehiclePhotos[$slot] ?? null);
+        }
+        $html .= '</div>';
+
+        // Belgeler
+        $html .= '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.15em;color:#888;margin:16px 0 10px;">Belgeler</h3>';
+        $html .= '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">';
+        $html .= $imageBox('Araç Ruhsatı',     $a->registration_file_path);
+        $html .= $imageBox('Trafik Sigortası', $a->insurance_file_path);
+        $html .= $imageBox('Fenni Muayene',    $a->inspection_file_path);
+        $html .= $imageBox('Adli Sicil',       $a->criminal_record_file_path);
+        $html .= '</div>';
+
+        // Kategori-özel belgeler
+        if ($a->category?->slug === 'sari_taksi') {
+            $html .= '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.15em;color:#F0C040;margin:16px 0 10px;">🚕 Sarı Taksi — Ek Belgeler</h3>';
+            $html .= '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">';
+            $html .= $imageBox('SRC-2',           $a->src_file_path);
+            $html .= $imageBox('Taksi Plaka',     $a->taksi_plaka_file_path);
+            $html .= $imageBox('Taksimetre',      $a->taksimetre_file_path);
+            $html .= $imageBox('Oda Kaydı',       $a->oda_kaydi_file_path);
+            $html .= '</div>';
+        }
+        if ($a->category?->slug === 'motosiklet') {
+            $html .= '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.15em;color:#F0C040;margin:16px 0 10px;">🏍 Motosiklet — Ek Belge</h3>';
+            $html .= '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">';
+            $html .= $imageBox('Kask Fotoğrafı', $a->helmet_file_path);
+            $html .= '</div>';
+        }
+
+        // Notlar
+        if ($a->notes) {
+            $html .= '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.15em;color:#888;margin:16px 0 10px;">Aday Notu</h3>';
+            $html .= '<div style="background:#111;border:1px solid #333;border-radius:8px;padding:12px 16px;color:#ddd;">' . nl2br(e($a->notes)) . '</div>';
+        }
+
+        $html .= '</div>';
+        return $html;
     }
 }

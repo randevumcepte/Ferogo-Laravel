@@ -128,6 +128,240 @@
                 </div>
             @endif
 
+            <form method="POST" action="{{ route('driver.apply.store') }}" enctype="multipart/form-data"
+                  class="bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-10 space-y-10">
+                @csrf
+
+                @if(isset($categories) && $categories->count() > 0)
+                <section>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">1. Sürücü Kategorisi</div>
+                    <p class="text-xs text-zinc-500 mb-4">Hangi tür araçla paylaşımlı yolculuk yapacaksın?</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        @foreach($categories as $cat)
+                            <label class="cursor-pointer">
+                                <input type="radio" name="driver_category_id" value="{{ $cat->id }}" required
+                                       {{ old('driver_category_id') == $cat->id ? 'checked' : '' }}
+                                       data-slug="{{ $cat->slug }}" class="sr-only peer category-radio">
+                                <div class="p-5 rounded-2xl border-2 border-white/10 bg-white/[0.02] peer-checked:border-brand peer-checked:bg-brand/10 transition text-center">
+                                    <div class="text-4xl mb-2">{{ $cat->emoji }}</div>
+                                    <div class="text-base font-bold text-white">{{ $cat->name }}</div>
+                                    <div class="text-[11px] text-zinc-500 mt-1">
+                                        Ehliyet: <span class="text-zinc-300 font-semibold">{{ $cat->required_license_class }}</span>
+                                        @if($cat->requires_src)  · SRC şart @endif
+                                        @if($cat->requires_helmet) · Kask şart @endif
+                                    </div>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                </section>
+                @endif
+
+                <section>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">2. Kişisel Bilgiler</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ad Soyad</label>
+                            <input type="text" name="full_name" value="{{ old('full_name') }}" required maxlength="120" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="Mehmet Yılmaz">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Telefon</label>
+                            <input type="tel" name="phone" value="{{ old('phone') }}" required maxlength="32" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="0532 000 00 00">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Doğum yılı</label>
+                            <input type="number" name="birth_year" value="{{ old('birth_year') }}" required min="1940" max="{{ date('Y') - 18 }}" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="1990">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">E-posta <span class="text-zinc-600">(giriş için)</span></label>
+                            <input type="email" name="email" value="{{ old('email') }}" required maxlength="255" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="mehmet@ornek.com">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şehir</label>
+                            <select name="city_id" required class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                <option value="">Seçiniz</option>
+                                @foreach($cities as $city)
+                                    <option value="{{ $city->id }}" {{ old('city_id') == $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şifre <span class="text-zinc-600">(min 6 karakter)</span></label>
+                            <input type="password" name="password" required minlength="6" maxlength="100" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="••••••••">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Şifre (tekrar)</label>
+                            <input type="password" name="password_confirmation" required minlength="6" maxlength="100" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600" placeholder="••••••••">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Cinsiyet</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="gender" value="male" required class="sr-only peer" {{ old('gender') === 'male' ? 'checked' : '' }}>
+                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 peer-checked:border-brand peer-checked:bg-brand/10 text-zinc-300 transition">
+                                        <span class="text-lg">👨</span><span class="text-sm font-medium">Erkek</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="gender" value="female" required class="sr-only peer" {{ old('gender') === 'female' ? 'checked' : '' }}>
+                                    <div class="flex items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/10 peer-checked:border-brand peer-checked:bg-brand/10 text-zinc-300 transition">
+                                        <span class="text-lg">👩</span><span class="text-sm font-medium">Kadın</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Ehliyet sınıfı</label>
+                            <select name="license_class" required class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                @foreach(['B' => 'B', 'A2' => 'A2', 'A' => 'A', 'D1' => 'D1', 'D' => 'D', 'E' => 'E'] as $val => $label)
+                                    <option value="{{ $val }}" {{ old('license_class', 'B') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Deneyim</label>
+                            <select name="experience_band" required class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                @foreach(['under_1' => '1 yıldan az', '1_to_3' => '1-3 yıl', '3_to_5' => '3-5 yıl', '5_plus' => '5 yıl ve üzeri'] as $val => $label)
+                                    <option value="{{ $val }}" {{ old('experience_band', '1_to_3') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">3. Kimlik & Selfie</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        @include('partials.file-upload', ['name' => 'selfie',   'label' => 'Selfie',        'hint' => 'Yüzün net görünsün'])
+                        @include('partials.file-upload', ['name' => 'id_front', 'label' => 'Kimlik — Ön',   'hint' => 'T.C. kimlik ön yüz'])
+                        @include('partials.file-upload', ['name' => 'id_back',  'label' => 'Kimlik — Arka', 'hint' => 'T.C. kimlik arka yüz'])
+                    </div>
+                </section>
+
+                <section>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">4. Ehliyet</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        @include('partials.file-upload', ['name' => 'license_front', 'label' => 'Ehliyet — Ön',  'hint' => 'Fotoğraflı yüz'])
+                        @include('partials.file-upload', ['name' => 'license_back',  'label' => 'Ehliyet — Arka','hint' => 'Sınıflar/geçerlilik'])
+                    </div>
+                </section>
+
+                <section>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">5. Araç Bilgileri</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Marka</label>
+                            <select id="vehicle-make" name="vehicle_make_id" required class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                <option value="">Önce kategori seç</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Model</label>
+                            <select id="vehicle-model" name="vehicle_model_id" required class="form-input w-full rounded-xl px-4 py-3 text-white" disabled>
+                                <option value="">Önce marka seç</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Yıl</label>
+                            <select name="vehicle_year" required class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                <option value="">Seçiniz</option>
+                                @for($y = date('Y') + 1; $y >= 2000; $y--)
+                                    <option value="{{ $y }}" {{ old('vehicle_year') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Renk</label>
+                            <select name="vehicle_color" required class="form-input w-full rounded-xl px-4 py-3 text-white">
+                                <option value="">Seçiniz</option>
+                                @foreach(['Beyaz','Siyah','Gri','Gümüş','Kırmızı','Mavi','Yeşil','Sarı','Turuncu','Kahverengi','Bej','Diğer'] as $renk)
+                                    <option value="{{ $renk }}" {{ old('vehicle_color') === $renk ? 'selected' : '' }}>{{ $renk }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">Plaka</label>
+                            <input type="text" name="vehicle_plate" value="{{ old('vehicle_plate') }}" required maxlength="15" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 uppercase" placeholder="35 ABC 1234">
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">6. Araç Fotoğrafları <span class="text-zinc-600 normal-case tracking-normal">— 6 açı zorunlu</span></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        @foreach($vehiclePhotoSlots as $slot => $label)
+                            @include('partials.file-upload', ['name' => 'vehicle_photo_' . $slot, 'label' => $label, 'hint' => 'Aracın net görünsün'])
+                        @endforeach
+                    </div>
+                </section>
+
+                <section>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">7. Belgeler <span class="text-zinc-600 normal-case tracking-normal">— PDF veya fotoğraf</span></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        @include('partials.file-upload', ['name' => 'registration_file',    'label' => 'Araç Ruhsatı',      'hint' => 'PDF veya fotoğraf'])
+                        @include('partials.file-upload', ['name' => 'insurance_file',       'label' => 'Trafik Sigortası',  'hint' => 'Geçerlilik tarihi görünsün'])
+                        @include('partials.file-upload', ['name' => 'inspection_file',      'label' => 'Fenni Muayene',     'hint' => 'TÜVTÜRK belgesi'])
+                        @include('partials.file-upload', ['name' => 'criminal_record_file', 'label' => 'Adli Sicil Kaydı',  'hint' => 'e-Devletten al'])
+                    </div>
+                </section>
+
+                <section id="taxi-docs" class="hidden">
+                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-5 pb-3 border-b border-brand/20">🚕 Sarı Taksi — Ek Belgeler</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        @include('partials.file-upload', ['name' => 'src_file',         'label' => 'SRC-2 Sertifikası',        'hint' => 'Zorunlu'])
+                        @include('partials.file-upload', ['name' => 'taksi_plaka_file', 'label' => 'Ticari Taksi Plaka İzin',  'hint' => 'T plaka belgesi'])
+                        @include('partials.file-upload', ['name' => 'taksimetre_file',  'label' => 'Taksimetre Kalibrasyon',   'hint' => 'Geçerli kalibrasyon'])
+                        @include('partials.file-upload', ['name' => 'oda_kaydi_file',   'label' => 'Taksiciler Odası Kaydı',   'hint' => 'İzmir Esnaf Odası'])
+                    </div>
+                </section>
+
+                <section id="motor-docs" class="hidden">
+                    <div class="text-xs uppercase tracking-[0.2em] text-brand mb-5 pb-3 border-b border-brand/20">🏍 Motosiklet — Ek Belge</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        @include('partials.file-upload', ['name' => 'helmet_file', 'label' => 'Kask Fotoğrafı', 'hint' => 'Kullandığın kaskı çek'])
+                    </div>
+                </section>
+
+                <section>
+                    <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">Eklemek istediğin</div>
+                    <textarea name="notes" rows="3" maxlength="1000" class="form-input w-full rounded-xl px-4 py-3 text-white placeholder-zinc-600 resize-none" placeholder="Bize iletmek istediğin bir şey">{{ old('notes') }}</textarea>
+                </section>
+
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3">
+                    <div class="text-xl shrink-0">📋</div>
+                    <div class="text-xs md:text-sm text-zinc-300 leading-relaxed">
+                        <div class="font-semibold text-amber-200 mb-1.5">Vergi Sorumluluğu</div>
+                        FerXGo <strong>paylaşımlı yolculuk platformudur</strong>. Kazançlar üye sürücünün ticari kazancıdır; vergi yükümlülüğü sürücüye aittir.
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="kvkk" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
+                        <span class="text-sm text-zinc-400 leading-relaxed">
+                            Kişisel verilerimin işlenmesini kabul ediyorum.
+                            <a href="{{ route('legal.kvkk') }}" target="_blank" class="text-brand hover:underline">KVKK Aydınlatma Metni</a>
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="terms" value="1" required class="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-brand focus:ring-brand focus:ring-offset-0">
+                        <span class="text-sm text-zinc-400 leading-relaxed">
+                            <a href="{{ route('legal.terms') }}" target="_blank" class="text-brand hover:underline">Hizmet Şartları</a> ve
+                            <a href="{{ route('legal.ride-sharing') }}" target="_blank" class="text-brand hover:underline">Paylaşımlı Yolculuk modelini</a>
+                            okudum, kabul ediyorum.
+                        </span>
+                    </label>
+                </div>
+
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-lg transition-all shadow-2xl shadow-brand/30 hover:shadow-brand/50">
+                    Başvurumu Gönder
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </button>
+
+                <p class="text-xs text-zinc-500 text-center">
+                    Sorun var mı? → <a href="tel:+908503403039" class="text-brand hover:underline font-semibold">0850 340 3039</a>
+                </p>
+            </form>
 
             {{-- Reklam alanı: Sürücü Olun — Alt (formun altı, ayrı yönetilir) --}}
             @include('partials.ad-slot', ['placement' => 'driver_apply_bottom', 'class' => 'mt-8'])
@@ -535,39 +769,102 @@
 
 @push('scripts')
 <script>
-    // Kategori seçilince gerekli belgeleri kısaca göster
-    (function() {
-        const infoBox = document.getElementById('category-info');
-        if (!infoBox) return;
+(function() {
+    // ============================================================
+    // 1) Kategoriye göre marka dropdown'ını doldur (AJAX)
+    //    + Sarı Taksi / Motosiklet özel belge bölümlerini göster
+    // ============================================================
+    const makeSel   = document.getElementById('vehicle-make');
+    const modelSel  = document.getElementById('vehicle-model');
+    const taxiDocs  = document.getElementById('taxi-docs');
+    const motorDocs = document.getElementById('motor-docs');
 
-        const categoryDocs = @json(
-            isset($categories) ? $categories->pluck('required_documents', 'slug')->toArray() : []
-        );
-        const categoryNames = @json(
-            isset($categories) ? $categories->pluck('name', 'slug')->toArray() : []
-        );
+    async function loadMakes(categorySlug) {
+        if (!makeSel) return;
+        makeSel.innerHTML = '<option value="">Yükleniyor…</option>';
+        modelSel.innerHTML = '<option value="">Önce marka seç</option>';
+        modelSel.disabled = true;
 
-        document.querySelectorAll('.category-radio').forEach(radio => {
-            radio.addEventListener('change', () => {
-                const slug = radio.dataset.slug;
-                const docs = categoryDocs[slug];
-                if (!docs) { infoBox.classList.add('hidden'); return; }
+        // Kategori-özel belge bölümleri
+        if (taxiDocs)  taxiDocs.classList.toggle('hidden', categorySlug !== 'sari_taksi');
+        if (motorDocs) motorDocs.classList.toggle('hidden', categorySlug !== 'motosiklet');
 
-                const name = categoryNames[slug] || slug;
-                const items = Object.values(docs);
-                infoBox.innerHTML =
-                    '<div class="font-semibold text-brand mb-1">' + name + ' için gerekli belgeler:</div>' +
-                    '<ul class="list-disc list-inside text-zinc-400 space-y-0.5">' +
-                    items.map(d => '<li>' + d + '</li>').join('') +
-                    '</ul>' +
-                    '<div class="text-[10px] text-zinc-500 mt-2">Belgeleri ön kayıt sonrası doğrulama ekranından yükleyeceksin.</div>';
-                infoBox.classList.remove('hidden');
-            });
+        try {
+            const res  = await fetch(`{{ route('driver.catalog.makes') }}?category=${encodeURIComponent(categorySlug)}`);
+            const data = await res.json();
+            const makes = data.makes || [];
+            makeSel.innerHTML = '<option value="">Seçiniz</option>' +
+                makes.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        } catch (e) {
+            makeSel.innerHTML = '<option value="">Yüklenemedi, yenile</option>';
+        }
+    }
+
+    async function loadModels(makeId, categorySlug) {
+        if (!modelSel) return;
+        modelSel.innerHTML = '<option value="">Yükleniyor…</option>';
+        modelSel.disabled = true;
+
+        try {
+            const res  = await fetch(`{{ route('driver.catalog.models') }}?make=${encodeURIComponent(makeId)}&category=${encodeURIComponent(categorySlug)}`);
+            const data = await res.json();
+            const models = data.models || [];
+            if (models.length === 0) {
+                modelSel.innerHTML = '<option value="">Model bulunamadı</option>';
+            } else {
+                modelSel.innerHTML = '<option value="">Seçiniz</option>' +
+                    models.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+                modelSel.disabled = false;
+            }
+        } catch (e) {
+            modelSel.innerHTML = '<option value="">Yüklenemedi, yenile</option>';
+        }
+    }
+
+    document.querySelectorAll('.category-radio').forEach(radio => {
+        radio.addEventListener('change', () => {
+            loadMakes(radio.dataset.slug);
         });
+    });
 
-        // Sayfa açılırken eğer bir seçili varsa (old input) info göster
-        const checked = document.querySelector('.category-radio:checked');
-        if (checked) checked.dispatchEvent(new Event('change'));
-    })();
+    if (makeSel) {
+        makeSel.addEventListener('change', () => {
+            const checked = document.querySelector('.category-radio:checked');
+            const catSlug = checked?.dataset?.slug;
+            if (makeSel.value && catSlug) loadModels(makeSel.value, catSlug);
+        });
+    }
+
+    // Sayfa açılırken bir kategori önceden seçiliyse (form hata sonrası) çalıştır
+    const preChecked = document.querySelector('.category-radio:checked');
+    if (preChecked) preChecked.dispatchEvent(new Event('change'));
+
+    // ============================================================
+    // 2) Dosya upload preview (görsel önizleme + dosya adı)
+    // ============================================================
+    document.querySelectorAll('.fu-input').forEach(input => {
+        input.addEventListener('change', () => {
+            const name = input.dataset.target;
+            const file = input.files?.[0];
+            if (!file) return;
+
+            const empty  = document.querySelector('.fu-empty-' + name);
+            const prev   = document.querySelector('.fu-preview-' + name);
+            const img    = document.getElementById('fu-img-' + name);
+            const nameEl = document.getElementById('fu-name-' + name);
+            if (!empty || !prev || !img || !nameEl) return;
+
+            if (file.type.startsWith('image/')) {
+                img.src = URL.createObjectURL(file);
+                img.classList.remove('hidden');
+            } else {
+                img.classList.add('hidden');
+            }
+            nameEl.textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+            empty.classList.add('hidden');
+            prev.classList.remove('hidden');
+        });
+    });
+})();
 </script>
 @endpush
