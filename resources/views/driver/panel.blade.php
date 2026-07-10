@@ -1171,32 +1171,74 @@
             actions.appendChild(btnEl('Kapat', 'bg-gray-100 hover:bg-gray-200 text-gray-700', closeModal));
         }
 
+        // ── İnternetsiz dayanıklılık: alarm cihazda kuyruğa alınır, bağlantı gelince otomatik gönderilir ──
+        const PANIC_URL = '{{ url('/api/panic') }}';
+        const CALL_CENTER = '+908503403039';
+        const QKEY = 'ferxgo_panic_queue';
+
+        const qGet = () => { try { return JSON.parse(localStorage.getItem(QKEY) || '[]'); } catch (_) { return []; } };
+        const qSet = (q) => { try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch (_) {} };
+        function qPush(payload) { const q = qGet(); q.push(payload); qSet(q); }
+
+        async function postPanic(payload) {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const res = await fetch(PANIC_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error('http ' + res.status);
+            return await res.json();
+        }
+
+        async function flushQueue() {
+            const q = qGet();
+            if (!q.length) return;
+            const remaining = [];
+            for (const p of q) {
+                try { await postPanic(p); } catch (_) { remaining.push(p); }
+            }
+            qSet(remaining);
+        }
+        window.addEventListener('online', flushQueue);
+        setInterval(flushQueue, 20000);
+        flushQueue();
+
+        // İnternet yok — kuyruğa alındı, GSM ile ulaşma seçenekleri
+        function showOffline(payload) {
+            head.style.background = '#b45309';
+            titleEl.textContent = '⚠️ İnternet Yok';
+            bodyEl.textContent = 'Alarmın cihazına kaydedildi ve bağlantı gelir gelmez otomatik gönderilecek. İnternet olmadan da hemen ulaşmak için:';
+            actions.innerHTML = '';
+            var smsBody = 'ACIL YARDIM! FERXGO surucu. Konum: '
+                + (payload.lat ? payload.lat + ',' + payload.lng : 'bilinmiyor') + '. Lutfen hemen arayin.';
+            actions.appendChild(linkEl('📞 Çağrı Merkezini Ara', 'tel:' + CALL_CENTER, 'bg-green-600 hover:bg-green-700 text-white'));
+            actions.appendChild(linkEl('✉️ SMS ile Bildir', 'sms:' + CALL_CENTER + '?body=' + encodeURIComponent(smsBody), 'bg-blue-600 hover:bg-blue-700 text-white'));
+            actions.appendChild(btnEl('Kapat', 'bg-gray-100 hover:bg-gray-200 text-gray-700', closeModal));
+        }
+
         async function sendPanic() {
             actions.innerHTML = '';
             bodyEl.textContent = 'Alarm gönderiliyor…';
+            let lat = null, lng = null, acc = null;
+            if (navigator.geolocation) {
+                try {
+                    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 4000 }));
+                    lat = pos.coords.latitude; lng = pos.coords.longitude; acc = pos.coords.accuracy;
+                } catch (_) {}
+            }
+            const payload = {
+                triggered_by_type: 'driver',
+                ride_request_public_id: (window.currentActiveId || null),
+                lat, lng, location_accuracy_m: acc,
+            };
             try {
-                let lat = null, lng = null, acc = null;
-                if (navigator.geolocation) {
-                    try {
-                        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 4000 }));
-                        lat = pos.coords.latitude; lng = pos.coords.longitude; acc = pos.coords.accuracy;
-                    } catch (_) {}
-                }
-                const csrf = document.querySelector('meta[name="csrf-token"]').content;
-                const ridePublicId = (window.currentActiveId || null);
-                const res = await fetch('{{ url('/api/panic') }}', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-                    body: JSON.stringify({
-                        triggered_by_type: 'driver',
-                        ride_request_public_id: ridePublicId,
-                        lat, lng, location_accuracy_m: acc,
-                    }),
-                });
-                const data = await res.json();
+                const data = await postPanic(payload);
                 showResult(!!data.success, data.message, data.call);
             } catch (err) {
-                showResult(false, 'İstek gönderilemedi, lütfen doğrudan arayın: 0850 340 3039');
+                // İnternet/sunucu yok → kuyruğa al, GSM fallback göster
+                qPush(payload);
+                showOffline(payload);
             }
         }
 
