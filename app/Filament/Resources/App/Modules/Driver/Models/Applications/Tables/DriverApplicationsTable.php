@@ -184,6 +184,10 @@ class DriverApplicationsTable
                             ->helperText('Sürücü kadınsa varsayılan olarak açılır. Sonradan kendi profilinden değiştirebilir.')
                             ->default(fn (DriverApplication $a) => $a->gender === 'female')
                             ->visible(fn (DriverApplication $a) => $a->gender === 'female'),
+                        Checkbox::make('activate_now')
+                            ->label('⚡ Hemen aktif et (radara düşür)')
+                            ->helperText('Onay sonrası sürücüyü otomatik ONLINE yapar + İzmir Konak default konumunu atar. Test için pratik; sürücü kendi girdiğinde konumu güncellenir.')
+                            ->default(true),
                     ])
                     ->action(function (DriverApplication $a, array $data) {
                         // Başvurudaki hazır şifre (sürücünün seçtiği) varsa onu kullan;
@@ -203,6 +207,7 @@ class DriverApplicationsTable
                                 'status'   => 'active',
                             ]);
 
+                            $activateNow = (bool) ($data['activate_now'] ?? false);
                             $driver = Driver::create([
                                 'user_id'               => $user->id,
                                 'city_id'               => $a->city_id,
@@ -210,7 +215,11 @@ class DriverApplicationsTable
                                 'driver_category_id'    => $a->driver_category_id,
                                 'experience_band'       => $a->experience_band,
                                 'commission_rate'       => 15.00,
-                                'availability_status'   => 'offline',
+                                'availability_status'   => $activateNow ? 'online' : 'offline',
+                                'current_lat'           => $activateNow ? 38.4192 : null,
+                                'current_lng'           => $activateNow ? 27.1287 : null,
+                                'last_location_updated_at' => $activateNow ? now() : null,
+                                'package_active_until'  => $activateNow ? now()->addDays(30) : null,
                                 'approval_status'       => 'approved',
                                 'approved_at'           => now(),
                                 'rating'                => 5.00,
