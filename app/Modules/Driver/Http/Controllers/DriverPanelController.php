@@ -919,9 +919,10 @@ class DriverPanelController extends Controller
     }
 
     /**
-     * Yolcu kimliği: adı ve avatar'ı.
+     * Yolcu kimliği: adı (Ad + Soyad baş harfi) ve avatar'ı.
      * Kayıtlı bir User varsa oradan (güncel + doğru), yoksa RideRequest snapshot'ından.
-     * KVKK: telefon numarasını sürücüye ifşa ETMİYORUZ — arama tarayıcı içi WebRTC ile yapılır.
+     * KVKK: soyadı kısaltılır ("Ferdi Korkmaz" → "Ferdi K.") — telefon numarası hiç gönderilmez;
+     * arama tarayıcı içi WebRTC ile yapılır.
      *
      * @return array{name: string, avatar_url: ?string}
      */
@@ -933,12 +934,21 @@ class DriverPanelController extends Controller
                 ->where('type', 'customer')
                 ->first();
         }
-        $name = trim((string) ($user?->name ?: $req->customer_name)) ?: 'Müşteri';
+        $fullName = trim((string) ($user?->name ?: $req->customer_name));
+        if ($fullName === '') {
+            $displayName = 'Müşteri';
+        } else {
+            $parts = preg_split('/\s+/', $fullName);
+            $displayName = count($parts) > 1
+                ? $parts[0] . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.'
+                : $fullName;
+        }
+
         $avatar = $user?->avatar
             ? \Illuminate\Support\Facades\Storage::url($user->avatar)
             : null;
 
-        return ['name' => $name, 'avatar_url' => $avatar];
+        return ['name' => $displayName, 'avatar_url' => $avatar];
     }
 
     private function offerPayload(RideRequest $req): array
