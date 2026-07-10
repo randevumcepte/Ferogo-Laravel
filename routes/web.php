@@ -287,6 +287,10 @@ Route::post('/api/panic', [PanicAlertController::class, 'trigger'])->name('secur
 Route::get('/admin/panic-poll', [PanicAlertController::class, 'poll'])
     ->middleware('auth')
     ->name('security.panic.poll');
+// Operatör click-to-call (santral originate) — sadece giriş yapmış admin
+Route::post('/admin/panic-call', [PanicAlertController::class, 'call'])
+    ->middleware('auth')
+    ->name('security.panic.call');
 
 // ─────────────────────────────────────────────────────────
 // SÜRÜCÜ PAKET ABONELİĞİ — Martı TAG modeli (3 saatlik/günlük/haftalık/aylık)

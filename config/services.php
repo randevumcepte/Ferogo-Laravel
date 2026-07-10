@@ -124,6 +124,24 @@ return [
             'trim',
             explode(',', (string) env('PANIC_OPERATOR_PHONES', ''))
         ))),
+
+        /*
+         * Click-to-call — operatör panelden tek tıkla arasın (FreePBX/Asterisk AMI).
+         * Kapalıyken buton tel: fallback'e düşer. Detay: ClickToCallService.
+         */
+        'click_to_call' => [
+            'enabled' => (bool) env('PANIC_CLICK_TO_CALL_ENABLED', false),
+            'ami' => [
+                'host'             => env('AMI_HOST'),
+                'port'             => (int) env('AMI_PORT', 5038),
+                'username'         => env('AMI_USERNAME'),
+                'secret'           => env('AMI_SECRET'),
+                'operator_channel' => env('PANIC_OPERATOR_CHANNEL'),
+                'context'          => env('PANIC_CALL_CONTEXT', 'from-internal'),
+                'caller_id'        => env('PANIC_CALL_CALLERID', 'FERXGO ACIL DURUM <5555>'),
+                'outbound_prefix'  => env('PANIC_OUTBOUND_PREFIX', ''),
+            ],
+        ],
     ],
 
     'paytr' => [

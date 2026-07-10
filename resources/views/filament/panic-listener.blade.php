@@ -6,6 +6,7 @@
 --}}
 <div id="ferxgo-panic-root"
      data-poll-url="{{ url('/admin/panic-poll') }}"
+     data-call-url="{{ url('/admin/panic-call') }}"
      style="display:none"></div>
 
 <style>
@@ -36,6 +37,8 @@
         cursor: pointer; text-decoration: none; display: inline-block;
     }
     #ferxgo-panic-overlay .b-call { background: #16a34a; color: #fff; font-size: 17px; padding: 14px 26px; }
+    #ferxgo-panic-overlay .b-call:disabled { opacity: .7; cursor: default; }
+    #ferxgo-panic-overlay .b-share { background: #7c3aed; color: #fff; }
     #ferxgo-panic-overlay .b-map { background: #2563eb; color: #fff; }
     #ferxgo-panic-overlay .b-open { background: #b91c1c; color: #fff; }
     #ferxgo-panic-overlay .b-mute { background: #f3f4f6; color: #111; }
@@ -93,6 +96,9 @@
         var phoneTxt = alert.phone ? escapeHtml(alert.phone) : '—';
         var nameTxt  = alert.name ? escapeHtml(alert.name) : '(isim kayıtlı değil)';
 
+        var hasLoc = !!(alert.lat && alert.lng);
+        var locTxt = hasLoc ? (Number(alert.lat).toFixed(5) + ', ' + Number(alert.lng).toFixed(5)) : 'Konum yok';
+
         // Kimden geldiği — belirgin bilgi kartı
         var whoCard =
             '<div class="who-card">' +
@@ -100,14 +106,18 @@
                 '<div class="who">' + escapeHtml(alert.who || 'Kullanıcı') + '</div>' +
                 '<div class="meta">Ad: <b>' + nameTxt + '</b></div>' +
                 '<div class="meta">Telefon: <b>' + phoneTxt + '</b></div>' +
+                '<div class="meta">📍 Konum: <b>' + escapeHtml(locTxt) + '</b></div>' +
                 (alert.ago ? '<div class="meta">' + escapeHtml(alert.ago) + '</div>' : '') +
             '</div>';
 
         var callBtn = alert.phone
-            ? '<a class="btn b-call" href="tel:' + escapeAttr(alert.phone) + '">📞 Hemen Ara</a>'
+            ? '<button type="button" class="b-call" data-phone="' + escapeAttr(alert.phone) + '">📞 Hemen Ara</button>'
             : '';
         var mapBtn = alert.map_url
             ? '<a class="btn b-map" href="' + escapeAttr(alert.map_url) + '" target="_blank" rel="noopener">📍 Haritada Aç</a>'
+            : '';
+        var shareBtn = hasLoc
+            ? '<button type="button" class="b-share">📤 Konumu Paylaş</button>'
             : '';
         var countLine = total > 1 ? ('<div class="count">+ ' + (total - 1) + ' açık alarm daha var</div>') : '';
 
@@ -118,6 +128,7 @@
                 whoCard +
                 '<div class="btns">' +
                     callBtn +
+                    shareBtn +
                     mapBtn +
                     '<a class="btn b-open" href="' + escapeAttr(alert.url) + '">Panelde Aç</a>' +
                     '<button type="button" class="b-mute">🔇 Sessize Al</button>' +
@@ -128,6 +139,31 @@
 
         document.body.appendChild(overlay);
 
+        // Konumu paylaş — Web Share API (mobil/masaüstü), yoksa panoya kopyala
+        var shareEl = overlay.querySelector('.b-share');
+        if (shareEl) {
+            shareEl.addEventListener('click', function () {
+                var txt = 'FERXGO ACİL DURUM — ' + (alert.who || '') + ' konumu: ' + locTxt;
+                var url = alert.map_url || ('https://www.google.com/maps?q=' + alert.lat + ',' + alert.lng);
+                if (navigator.share) {
+                    navigator.share({ title: 'FERXGO Acil Durum Konumu', text: txt, url: url }).catch(function () {});
+                } else if (navigator.clipboard) {
+                    navigator.clipboard.writeText(txt + ' ' + url).then(function () {
+                        shareEl.textContent = '✓ Kopyalandı';
+                        setTimeout(function () { shareEl.textContent = '📤 Konumu Paylaş'; }, 2000);
+                    }).catch(function () {});
+                }
+            });
+        }
+
+        // Click-to-call (santralden) — henüz kurulmadıysa tel: fallback
+        var callEl = overlay.querySelector('.b-call');
+        if (callEl) {
+            callEl.addEventListener('click', function () {
+                triggerCall(alert.id, callEl.getAttribute('data-phone'), callEl);
+            });
+        }
+
         overlay.querySelector('.b-mute').addEventListener('click', function () {
             muted = true; stopSiren(); this.textContent = '🔇 Susturuldu';
         });
@@ -136,6 +172,35 @@
             removeOverlay();
             stopSiren();
         });
+    }
+
+    // Click-to-call: sunucuya istek at (santral originate). Kurulu değilse tel: ile aç.
+    function triggerCall(alertId, phone, el) {
+        var orig = el.textContent;
+        el.textContent = '📞 Aranıyor…';
+        el.disabled = true;
+        fetch(root.getAttribute('data-call-url'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ alert_id: alertId })
+        }).then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) {
+              if (data && data.success) {
+                  el.textContent = '✓ Çağrı başlatıldı';
+              } else {
+                  // Santral kurulu değil → tel: ile telefonun/softphone'un çeviricisini aç
+                  el.textContent = orig; el.disabled = false;
+                  if (phone) window.location.href = 'tel:' + phone;
+              }
+          }).catch(function () {
+              el.textContent = orig; el.disabled = false;
+              if (phone) window.location.href = 'tel:' + phone;
+          });
     }
 
     function removeOverlay() {

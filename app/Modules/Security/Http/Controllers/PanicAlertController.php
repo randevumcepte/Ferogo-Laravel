@@ -7,6 +7,7 @@ use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Driver\Models\Driver;
 use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use App\Modules\Security\Models\PanicAlert;
+use App\Modules\Security\Services\ClickToCallService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -92,9 +93,10 @@ class PanicAlertController extends Controller
             'device_fingerprint'    => $request->input('fingerprint'),
         ]);
 
-        // Operatöre SMS — yanıtı bekletmeden, sürücüyü yavaşlatmadan gönder.
+        // Operatöre SMS + otomatik click-to-call — yanıtı bekletmeden (afterResponse).
         dispatch(function () use ($alert) {
             $this->notifyOperators($alert);
+            $this->autoCall($alert);
         })->afterResponse();
 
         return response()->json([
@@ -155,6 +157,27 @@ class PanicAlertController extends Controller
     }
 
     /**
+     * Santral etkinse, panik anında operatörü otomatik arayıp kişiye köprüler.
+     * Kapalıysa sessizce atlar (operatör panelden manuel de arayabilir).
+     */
+    protected function autoCall(PanicAlert $alert): void
+    {
+        if (! config('services.panic.click_to_call.enabled', false)) {
+            return;
+        }
+        if (! $alert->triggered_by_phone) {
+            return;
+        }
+        try {
+            app(ClickToCallService::class)->callToOperator($alert->triggered_by_phone);
+        } catch (\Throwable $e) {
+            Log::error('[Panic] Otomatik click-to-call istisna: ' . $e->getMessage(), [
+                'alert_id' => $alert->public_id,
+            ]);
+        }
+    }
+
+    /**
      * GET /admin/panic-poll
      * Admin panelinin JS dinleyicisi buradan açık alarmları çeker → sesli/görsel pop-up.
      * Sadece son 30 dakikanın açık (çözülmemiş) alarmları döner.
@@ -200,5 +223,33 @@ class PanicAlertController extends Controller
             'count'  => $alerts->count(),
             'alerts' => $alerts,
         ]);
+    }
+
+    /**
+     * POST /admin/panic-call
+     * Operatör panelden click-to-call başlatır (santral üzerinden).
+     * Body: { alert_id: int }
+     * Santral kurulu değilse success:false döner → arayüz tel: fallback yapar.
+     */
+    public function call(Request $request, ClickToCallService $ctc): JsonResponse
+    {
+        $validated = $request->validate([
+            'alert_id' => ['required', 'integer'],
+        ]);
+
+        $alert = PanicAlert::find($validated['alert_id']);
+        if (! $alert || ! $alert->triggered_by_phone) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Alarm veya telefon bulunamadı.',
+            ], 422);
+        }
+
+        $res = $ctc->callToOperator($alert->triggered_by_phone);
+
+        return response()->json([
+            'success' => $res['ok'],
+            'message' => $res['message'] ?? ($res['ok'] ? 'Çağrı başlatıldı.' : 'Çağrı başlatılamadı.'),
+        ], $res['ok'] ? 200 : 422);
     }
 }
