@@ -1435,10 +1435,12 @@
     function syncRealMarkers() {
         if (!map) return;
         const seen = new Set();
+        const positions = []; // fitBounds için sürücü konumları
         realDrivers.forEach(r => {
             if (r.current_lat == null || r.current_lng == null) return;
             seen.add(String(r.id));
             const pos = [r.current_lat, r.current_lng];
+            positions.push(pos);
             // Premium/vip sınıfı hafif farklı marker; diğerleri altın (müsait)
             const state = (r.vehicle_class_slug === 'vip' || r.vehicle_class_slug === 'platinum') ? 'premium' : '';
             if (realMarkers[r.id]) {
@@ -1455,6 +1457,47 @@
                 delete realMarkers[id];
             }
         });
+
+        // Yolcunun konumunu + tüm sürücüleri kapsayacak şekilde zoom yap.
+        // Yolcu 1 km yakınında sürücü yoksa harita çok geniş olur — bu doğru,
+        // kullanıcı ne kadar uzakta olduğunu görsün.
+        // Sadece ilk sync'te veya kullanıcı manuel zoom yapmadıysa yapıyoruz
+        // (aksi halde kaydırma/zoom deneyimini bozar).
+        if (positions.length > 0 && !window.__ferxgoUserPannedMap) {
+            const userPos = getUserCenter();
+            const allPositions = [userPos, ...positions].filter(Boolean);
+            if (allPositions.length >= 2) {
+                try {
+                    const bounds = L.latLngBounds(allPositions);
+                    map.fitBounds(bounds, {
+                        padding: [50, 50],
+                        maxZoom: 14, // fazla yakınlaşma
+                        animate: true,
+                        duration: 0.6,
+                    });
+                } catch (_) {}
+            }
+        }
+    }
+
+    // Kullanıcı haritayı elle kaydırırsa/zoom yaparsa otomatik fitBounds kapatılır
+    function bindMapPanDetection() {
+        if (!map || window.__ferxgoMapPanBound) return;
+        window.__ferxgoMapPanBound = true;
+        map.on('dragstart zoomstart', () => { window.__ferxgoUserPannedMap = true; });
+    }
+
+    function getUserCenter() {
+        // Kullanıcı marker'ı varsa onun konumu, yoksa harita merkezi
+        if (window.userMarker && typeof window.userMarker.getLatLng === 'function') {
+            const ll = window.userMarker.getLatLng();
+            return [ll.lat, ll.lng];
+        }
+        if (map) {
+            const c = map.getCenter();
+            return [c.lat, c.lng];
+        }
+        return null;
     }
 
     /** Mock kart tıklandığında gerçek sürücüyü seç (varsa). */
@@ -1624,8 +1667,11 @@
                         Seç
                         <svg class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </button>`;
+            const zoomData = d.isReal && d.raw && d.raw.current_lat && d.raw.current_lng
+                ? `data-driver-lat="${d.raw.current_lat}" data-driver-lng="${d.raw.current_lng}"`
+                : '';
             return `
-                <div class="driver-rail-card border ${d.isReal ? 'border-brand/30' : 'border-white/5'} rounded-2xl p-3.5 flex items-center gap-3">
+                <div class="driver-rail-card border ${d.isReal ? 'border-brand/30' : 'border-white/5'} rounded-2xl p-3.5 flex items-center gap-3 cursor-pointer hover:border-brand/60 transition zoom-to-driver" ${zoomData}>
                     <div class="relative w-11 h-11 shrink-0">
                         <img src="${d.photoUrl}" alt="" class="w-11 h-11 rounded-xl object-cover border border-white/10 bg-zinc-900" loading="lazy" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=27272a&color=fff&size=128&bold=true';">
                         <span class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-md bg-zinc-900 border border-white/10 flex items-center justify-center text-[10px]">${d.vIcon}</span>
@@ -1652,10 +1698,31 @@
 
         // Bind: real → openQuickModal(real); mock → openQuickModal(mock) (modal kendi remap eder)
         railEl.querySelectorAll('.quick-select-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const cardId = btn.dataset.cardId;
                 const card = cards.find(c => c.id === cardId);
                 if (card) openQuickModal(card.raw);
+            });
+        });
+
+        // Bind: kart üzerine tıklayınca (Seç butonu değil) haritayı o sürücüye zoom yap
+        railEl.querySelectorAll('.zoom-to-driver').forEach(card => {
+            card.addEventListener('click', () => {
+                const lat = parseFloat(card.dataset.driverLat);
+                const lng = parseFloat(card.dataset.driverLng);
+                if (! isNaN(lat) && ! isNaN(lng) && map) {
+                    // Kullanıcı manuel zoom sayılmasın → true olarak set etme
+                    window.__ferxgoUserPannedMap = true;
+                    // Yolcu + sürücü konumunu kapsayan bounds
+                    const userPos = getUserCenter();
+                    if (userPos) {
+                        const bounds = L.latLngBounds([userPos, [lat, lng]]);
+                        map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14, animate: true, duration: 0.6 });
+                    } else {
+                        map.setView([lat, lng], 14, { animate: true });
+                    }
+                }
             });
         });
 
@@ -1760,6 +1827,10 @@
         }).addTo(map);
 
         userMarker = L.marker(center, { icon: userIcon(), interactive: false, zIndexOffset: 1000 }).addTo(map);
+        window.userMarker = userMarker; // syncRealMarkers → fitBounds için
+
+        // Kullanıcı manuel kaydırma/zoom yaptığında otomatik fitBounds'u durdur
+        bindMapPanDetection();
 
         // İlk render (gerçek sürücü gelene kadar boş durum) + gerçek sürücüleri GPS'e göre çek
         renderRail(center);
