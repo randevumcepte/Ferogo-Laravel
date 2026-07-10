@@ -30,11 +30,18 @@ class SafetyAlerts extends BaseWidget
             return $table->query(fn () => \App\Modules\Driver\Models\Driver::query()->whereRaw('1=0'));
         }
 
+        $openStatuses = [
+            PanicAlert::STATUS_TRIGGERED,
+            PanicAlert::STATUS_ACKNOWLEDGED,
+            PanicAlert::STATUS_CONTACTING,
+            PanicAlert::STATUS_POLICE_DISPATCHED,
+        ];
+
         return $table
             ->query(fn () => PanicAlert::query()
                 ->with('ride.driver.user', 'ride.customer')
-                ->where(function ($q) {
-                    $q->where('status', 'active')
+                ->where(function ($q) use ($openStatuses) {
+                    $q->whereIn('status', $openStatuses)
                       ->orWhere('created_at', '>=', now()->subDay());
                 })
                 ->latest())
@@ -45,21 +52,34 @@ class SafetyAlerts extends BaseWidget
                     ->label('Durum')
                     ->badge()
                     ->color(fn (string $s): string => match ($s) {
-                        'active'    => 'danger',
-                        'resolved'  => 'success',
-                        'false_alarm' => 'gray',
-                        default     => 'warning',
+                        'triggered'         => 'danger',
+                        'police_dispatched' => 'danger',
+                        'acknowledged'      => 'warning',
+                        'contacting'        => 'warning',
+                        'resolved'          => 'success',
+                        'false_alarm'       => 'gray',
+                        default             => 'warning',
                     })
                     ->formatStateUsing(fn (string $s): string => match ($s) {
-                        'active'      => 'ACİL',
-                        'resolved'    => 'Çözüldü',
-                        'false_alarm' => 'Yanlış alarm',
-                        default       => $s,
+                        'triggered'         => '🚨 ACİL',
+                        'acknowledged'      => 'Görüldü',
+                        'contacting'        => 'Aranıyor',
+                        'police_dispatched' => 'Polis Çağrıldı',
+                        'resolved'          => 'Çözüldü',
+                        'false_alarm'       => 'Yanlış alarm',
+                        default             => $s,
                     }),
 
-                Tables\Columns\TextColumn::make('triggered_by')
+                Tables\Columns\TextColumn::make('triggered_by_type')
                     ->label('Kim')
-                    ->badge(),
+                    ->badge()
+                    ->color(fn (string $s): string => $s === 'driver' ? 'warning' : 'info')
+                    ->formatStateUsing(fn (string $s): string => $s === 'driver' ? 'Sürücü' : 'Yolcu'),
+
+                Tables\Columns\TextColumn::make('triggered_by_phone')
+                    ->label('Telefon')
+                    ->copyable()
+                    ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('ride.customer.name')
                     ->label('Yolcu')
@@ -69,11 +89,11 @@ class SafetyAlerts extends BaseWidget
                     ->label('Sürücü')
                     ->placeholder('—'),
 
-                Tables\Columns\TextColumn::make('latitude')
+                Tables\Columns\TextColumn::make('lat')
                     ->label('Konum')
                     ->formatStateUsing(function ($state, $record) {
-                        if (! $state || ! $record->longitude) return '—';
-                        return sprintf('%.4f, %.4f', (float) $state, (float) $record->longitude);
+                        if (! $state || ! $record->lng) return '—';
+                        return sprintf('📍 %.4f, %.4f', (float) $state, (float) $record->lng);
                     }),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -84,9 +104,9 @@ class SafetyAlerts extends BaseWidget
                 Action::make('map')
                     ->label('Haritada aç')
                     ->icon('heroicon-o-map')
-                    ->url(fn (PanicAlert $a) => 'https://www.google.com/maps?q=' . $a->latitude . ',' . $a->longitude)
+                    ->url(fn (PanicAlert $a) => 'https://www.google.com/maps?q=' . $a->lat . ',' . $a->lng)
                     ->openUrlInNewTab()
-                    ->visible(fn (PanicAlert $a) => $a->latitude && $a->longitude),
+                    ->visible(fn (PanicAlert $a) => $a->lat && $a->lng),
                 Action::make('open')
                     ->label('Aç')
                     ->icon('heroicon-o-arrow-top-right-on-square')
