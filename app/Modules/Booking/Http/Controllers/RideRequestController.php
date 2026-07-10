@@ -50,6 +50,17 @@ class RideRequestController extends Controller
         $lng    = (float) $validated['lng'];
         $limit  = (int) ($validated['limit'] ?? 3);
 
+        // Bayat konum temizliği: 5 dk'dan uzun ping atmayan online sürücüyü offline yap.
+        // Sürücü panelini kapatınca/telefon uyku moduna girince watchPosition durur,
+        // eski current_lat/lng radarda yanlış yerde marker gösterir. Çözüm: heartbeat yoksa offline.
+        Driver::query()
+            ->where('availability_status', 'online')
+            ->where(function ($q) {
+                $q->whereNull('last_location_updated_at')
+                  ->orWhere('last_location_updated_at', '<', now()->subMinutes(5));
+            })
+            ->update(['availability_status' => 'offline']);
+
         // Tüm müsait sürücüleri çek (bbox YOK — demo aşamasında her şehirden
         // test edilebilsin diye; üretimde driver sayısı çoğalınca bbox ekleriz)
         // PAKET KONTROL: aktif paketi olmayan sürücü radar'a düşmez.
@@ -63,6 +74,9 @@ class RideRequestController extends Controller
                 ->where('package_active_until', '>', now()))
             ->whereNotNull('current_lat')
             ->whereNotNull('current_lng')
+            // Konum tazeliği: son 3 dk içinde ping atmış sürücüler görünür.
+            // Eski konumla yanlış yerde marker göstermek yerine hiç göstermemek daha güvenli.
+            ->where('last_location_updated_at', '>=', now()->subMinutes(3))
             // Aracı + aktif sınıfı olmayan sürücü müşteriye teklif edilemez (dispatcher da bunu arar).
             // Aksi halde radarda "MÜSAİT" görünüp seçilince "vehicle_class_slug required" hatasıyla çıkmaza düşer.
             ->whereHas('currentVehicle.vehicleClass', fn ($q) => $q->where('is_active', true))

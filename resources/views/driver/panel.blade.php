@@ -390,9 +390,15 @@
         // === CANLI KONUM TAKİBİ ===
         // Sürücü online/yolculukta iken tarayıcı GPS'i backend'e push edilir.
         // Böylece nerede olursa olsun canlı konum yakalanır: radarda doğru marker + gerçek mesafe/ETA.
-        // Sürücüden manuel "konum güncelle" istenmez — watchPosition arka planda halleder.
+        // Sürücüden manuel "konum güncelle" istenmez — watchPosition + heartbeat arka planda halleder.
+        //
+        // NEDEN HEARTBEAT? watchPosition SADECE hareket edince tetiklenir. Sürücü sabit dururken
+        // last_location_updated_at yenilenmez → 3 dk sonra backend "bayat" kabul edip radardan gizler.
+        // 30 sn'lik heartbeat: sabit dursa bile konum ping'i atarak sürücüyü "canlı" gösterir.
         let geoWatchId = null;
+        let geoHeartbeat = null;
         let lastLocSentAt = 0;
+        let lastCoords = null; // heartbeat için son bilinen konum
 
         function pushLocation(lat, lng) {
             fetch(LOCATION_URL, {
@@ -404,11 +410,33 @@
         }
 
         function onGeoPosition(pos) {
+            lastCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
             const now = Date.now();
             // watchPosition çok sık tetikleyebilir — en fazla 20 sn'de bir gönder (backend zaten 5 sn throttle'lı)
             if (now - lastLocSentAt < 20000) return;
             lastLocSentAt = now;
-            pushLocation(pos.coords.latitude, pos.coords.longitude);
+            pushLocation(lastCoords.lat, lastCoords.lng);
+        }
+
+        // Heartbeat: 30 sn'de bir mevcut konumla ping at (hareket olmasa bile canlılık göster).
+        function beatHeartbeat() {
+            if (!lastCoords) return; // henüz tek fix bile alamadıysak boşuna deneme
+            const now = Date.now();
+            if (now - lastLocSentAt < 25000) return; // yeni ping az önce gitti, gerek yok
+            // Taze bir fix al — hareketsiz olsa da timestamp yenilenmesi için
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    lastCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    lastLocSentAt = Date.now();
+                    pushLocation(lastCoords.lat, lastCoords.lng);
+                },
+                () => {
+                    // Fix alamadık ama son bilinen konumla ping atarak canlılık gösterelim
+                    lastLocSentAt = Date.now();
+                    pushLocation(lastCoords.lat, lastCoords.lng);
+                },
+                { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
+            );
         }
 
         function startLocationTracking() {
@@ -418,8 +446,9 @@
             // Konum vermeyen sürücü yolcuya görünmez, iş atanmaz — o yüzden zorunlu.
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
+                    lastCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                     lastLocSentAt = Date.now();
-                    pushLocation(pos.coords.latitude, pos.coords.longitude);
+                    pushLocation(lastCoords.lat, lastCoords.lng);
                     // Başarılıysa sürekli izleme başlat
                     if (geoWatchId === null) {
                         geoWatchId = navigator.geolocation.watchPosition(
@@ -428,12 +457,14 @@
                             { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 }
                         );
                     }
+                    if (!geoHeartbeat) geoHeartbeat = setInterval(beatHeartbeat, 30000);
                 },
                 (err) => {
                     // İzin reddedildi ya da alınamadı → zorunlu popup
                     if (window.GeolocationGate) {
                         window.GeolocationGate.require({
                             onGranted: (coords) => {
+                                lastCoords = { lat: coords.lat, lng: coords.lng };
                                 lastLocSentAt = Date.now();
                                 pushLocation(coords.lat, coords.lng);
                                 if (geoWatchId === null) {
@@ -443,6 +474,7 @@
                                         { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 }
                                     );
                                 }
+                                if (!geoHeartbeat) geoHeartbeat = setInterval(beatHeartbeat, 30000);
                             },
                         });
                     }
@@ -457,7 +489,23 @@
                 navigator.geolocation.clearWatch(geoWatchId);
                 geoWatchId = null;
             }
+            if (geoHeartbeat) { clearInterval(geoHeartbeat); geoHeartbeat = null; }
         }
+
+        // Sekme geri açılınca ANINDA taze ping at — arka planda kalmışsa konum bayattır.
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && geoWatchId !== null) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        lastCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        lastLocSentAt = Date.now();
+                        pushLocation(lastCoords.lat, lastCoords.lng);
+                    },
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            }
+        });
 
         function syncLocationTracking(status) {
             if (status === 'online' || status === 'busy') startLocationTracking();

@@ -478,7 +478,9 @@ class DispatcherService
             ->whereNotNull('package_active_until')
             ->where('package_active_until', '>', now())
             ->whereNotNull('current_lat')
-            ->whereNotNull('current_lng');
+            ->whereNotNull('current_lng')
+            // Bayat konumlu sürücüye iş atama (panel kapalı, telefon uyku vs.)
+            ->where('last_location_updated_at', '>=', now()->subMinutes(3));
 
         if (! empty($excludeIds)) {
             $query->whereNotIn('id', $excludeIds);
