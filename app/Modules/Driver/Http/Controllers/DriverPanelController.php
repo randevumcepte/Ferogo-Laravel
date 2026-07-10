@@ -918,26 +918,53 @@ class DriverPanelController extends Controller
         return Driver::where('user_id', $user->id)->first();
     }
 
+    /**
+     * Yolcu kimliği: adı ve avatar'ı.
+     * Kayıtlı bir User varsa oradan (güncel + doğru), yoksa RideRequest snapshot'ından.
+     * KVKK: telefon numarasını sürücüye ifşa ETMİYORUZ — arama tarayıcı içi WebRTC ile yapılır.
+     *
+     * @return array{name: string, avatar_url: ?string}
+     */
+    private function resolveCustomerIdentity(RideRequest $req): array
+    {
+        $user = null;
+        if ($req->customer_phone) {
+            $user = User::where('phone', $req->customer_phone)
+                ->where('type', 'customer')
+                ->first();
+        }
+        $name = trim((string) ($user?->name ?: $req->customer_name)) ?: 'Müşteri';
+        $avatar = $user?->avatar
+            ? \Illuminate\Support\Facades\Storage::url($user->avatar)
+            : null;
+
+        return ['name' => $name, 'avatar_url' => $avatar];
+    }
+
     private function offerPayload(RideRequest $req): array
     {
+        $identity = $this->resolveCustomerIdentity($req);
+
         return [
-            'public_id'         => $req->public_id,
-            'customer_name'     => $req->customer_name,
-            'pickup_address'    => $req->pickup_address,
-            'dropoff_address'   => $req->dropoff_address,
-            'distance_km'       => (float) $req->distance_km,
-            'duration_minutes'  => (int) $req->duration_minutes,
-            'estimated_fare'    => $req->estimated_fare ? (float) $req->estimated_fare : null,
-            'expires_at'        => $req->offer_expires_at?->toIso8601String(),
-            'seconds_remaining' => max(0, (int) round(now()->diffInSeconds($req->offer_expires_at, false))),
+            'public_id'           => $req->public_id,
+            'customer_name'       => $identity['name'],
+            'customer_avatar_url' => $identity['avatar_url'],
+            'pickup_address'      => $req->pickup_address,
+            'dropoff_address'     => $req->dropoff_address,
+            'distance_km'         => (float) $req->distance_km,
+            'duration_minutes'    => (int) $req->duration_minutes,
+            'estimated_fare'      => $req->estimated_fare ? (float) $req->estimated_fare : null,
+            'expires_at'          => $req->offer_expires_at?->toIso8601String(),
+            'seconds_remaining'   => max(0, (int) round(now()->diffInSeconds($req->offer_expires_at, false))),
             // Fiyat pazarlığı — sürücü yolcunun teklifini görür, counter atabilir
-            'negotiation'       => $this->negotiationPayload($req),
+            'negotiation'         => $this->negotiationPayload($req),
         ];
     }
 
     private function activeRequestPayload(RideRequest $req): array
     {
         $trust = $this->trustService->getOrCreate($req->customer_phone);
+        $identity = $this->resolveCustomerIdentity($req);
 
         $arrivedAt = $req->driver_arrived_at;
         $waitSec   = $arrivedAt ? abs((int) $arrivedAt->diffInSeconds(now())) : 0;
@@ -946,8 +973,9 @@ class DriverPanelController extends Controller
 
         return [
             'public_id'             => $req->public_id,
-            'customer_name'         => $req->customer_name,
-            'customer_phone'        => $req->customer_phone,
+            'customer_name'         => $identity['name'],
+            'customer_avatar_url'   => $identity['avatar_url'],
+            // customer_phone KALDIRILDI — KVKK: sürücü numarayı görmez, arama WebRTC üzerinden yapılır.
             'customer_trust_label'  => $trust->trustLabel(),
             'customer_is_new'       => $trust->isNewCustomer(),
             'customer_completed_rides' => (int) $trust->total_completed,

@@ -266,19 +266,25 @@
 
                 <div class="p-5 space-y-4">
                     <div>
-                        <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center justify-between gap-2 mb-1.5">
                             <div class="text-[10px] uppercase tracking-wider text-zinc-500">Müşteri</div>
                             <span id="active-trust-badge" class="hidden text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"></span>
                         </div>
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="text-base font-semibold flex-1 min-w-0 truncate" id="active-customer">—</div>
+                        <div class="flex items-center gap-3">
+                            {{-- Avatar: kullanıcının fotoğrafı varsa göster, yoksa ismin ilk harfi --}}
+                            <div id="active-customer-avatar" class="shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-brand to-amber-700 text-black font-bold text-lg flex items-center justify-center overflow-hidden ring-2 ring-white/10">
+                                <span id="active-customer-initial">—</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-base font-semibold truncate" id="active-customer">—</div>
+                                <div id="active-customer-meta" class="text-[11px] text-zinc-500 mt-0.5"></div>
+                            </div>
                             <button type="button" id="active-call-btn"
-                                    class="shrink-0 w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition shadow-md shadow-emerald-500/30"
-                                    title="Müşteriyi ara">
+                                    class="shrink-0 w-10 h-10 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition shadow-md shadow-emerald-500/30"
+                                    title="Müşteriyi ara (WebRTC)">
                                 📞
                             </button>
                         </div>
-                        <div id="active-customer-meta" class="text-[11px] text-zinc-500 mt-0.5"></div>
                     </div>
 
                     <div class="bg-black/30 rounded-2xl p-4 space-y-3 border border-white/5">
@@ -613,7 +619,7 @@
         }
 
         function renderOffer(o) {
-            $('offer-customer').textContent = o.customer_name;
+            $('offer-customer').textContent = (o.customer_name || 'Müşteri').trim() || 'Müşteri';
             $('offer-pickup').textContent = o.pickup_address;
             $('offer-dropoff').textContent = o.dropoff_address;
             $('offer-distance').textContent = `${o.distance_km.toFixed(1)} km`;
@@ -875,7 +881,16 @@
             }
             activePickupCoords = { lat: a.pickup_lat, lng: a.pickup_lng };
 
-            $('active-customer').textContent = a.customer_name;
+            const customerName = (a.customer_name || '').trim() || 'Müşteri';
+            $('active-customer').textContent = customerName;
+            // Avatar: fotoğraf varsa <img>, yoksa isim baş harfi
+            const avatarEl = $('active-customer-avatar');
+            if (a.customer_avatar_url) {
+                avatarEl.innerHTML = '<img src="' + a.customer_avatar_url + '" alt="" class="w-full h-full object-cover">';
+            } else {
+                const initial = (customerName[0] || 'M').toUpperCase();
+                avatarEl.innerHTML = '<span>' + initial + '</span>';
+            }
             $('active-pickup').textContent = a.pickup_address;
             $('active-dropoff').textContent = a.dropoff_address;
 
