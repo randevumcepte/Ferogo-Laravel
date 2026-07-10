@@ -3339,4 +3339,5 @@
 </script>
 
 @include('partials.call-widget')
+@include('partials.panic-emergency', ['role' => 'customer'])
 @endpush
