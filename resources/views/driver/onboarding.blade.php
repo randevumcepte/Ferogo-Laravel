@@ -13,7 +13,18 @@
             theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }, colors: { brand: { DEFAULT: '#F0C040', 500: '#F0C040', 600: '#D9A621' } } } }
         }
     </script>
-    <style>body { font-family: 'Inter', sans-serif; } details > summary { list-style: none; } details > summary::-webkit-details-marker { display: none; }</style>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+        /* Dark tema select fix — açılan option'lar okunmuyordu */
+        select { color-scheme: dark; color: #fff; background-color: #0a0a0a; }
+        select option, select optgroup { background-color: #0f0f0f !important; color: #fff !important; padding: 8px 12px; }
+        select option:checked, select option:hover { background-color: #F0C040 !important; color: #000 !important; }
+        select option[disabled] { color: #666 !important; }
+        select:disabled { opacity: 0.5; cursor: not-allowed; }
+        select option[value=""] { color: #71717a; }
+    </style>
 </head>
 <body class="bg-black text-white min-h-screen pb-24">
 

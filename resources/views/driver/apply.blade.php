@@ -65,6 +65,31 @@
         background: rgba(240,192,64,0.04);
         box-shadow: 0 0 0 4px rgba(240,192,64,0.08);
     }
+    /* Select açılınca dropdown option'ları koyu tema — beyaz zeminli okunmaz option'lar için kritik fix */
+    select.form-input {
+        color: #fff;
+        background-color: #0a0a0a;
+        color-scheme: dark;
+    }
+    select.form-input option,
+    select.form-input optgroup {
+        background-color: #0f0f0f;
+        color: #fff;
+        padding: 8px 12px;
+    }
+    select.form-input option:checked,
+    select.form-input option:hover {
+        background-color: #F0C040;
+        color: #000;
+    }
+    select.form-input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    /* Firefox için ek stil */
+    select.form-input option[disabled] {
+        color: #666;
+    }
     .check-pill input:checked + div {
         background: rgba(240,192,64,0.12);
         border-color: #F0C040;

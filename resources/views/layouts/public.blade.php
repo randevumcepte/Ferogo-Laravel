@@ -41,6 +41,40 @@
             background: radial-gradient(ellipse at top, rgba(240,192,64,0.12), transparent 50%),
                         radial-gradient(ellipse at bottom, rgba(240,192,64,0.08), transparent 60%);
         }
+        /* ═══════════════════════════════════════════════════════════════
+           GLOBAL SELECT DROPDOWN FIX — dark tema için option'lar
+           ═══════════════════════════════════════════════════════════════
+           Native <select> tag'inin açılan option'ları OS varsayılan (beyaz)
+           renkleriyle geliyordu → dark tema üzerinde okunmuyordu.
+           color-scheme: dark tarayıcıya dark tema kullan der;
+           option'lar için de manuel arka plan + renk zorunlu.
+        */
+        select {
+            color-scheme: dark;
+            color: #fff;
+            background-color: #0a0a0a;
+        }
+        select option,
+        select optgroup {
+            background-color: #0f0f0f !important;
+            color: #fff !important;
+            padding: 8px 12px;
+        }
+        select option:checked,
+        select option:hover {
+            background-color: #F0C040 !important;
+            color: #000 !important;
+        }
+        select option[disabled] {
+            color: #666 !important;
+        }
+        select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* Placeholder etkisi: value="" option'ları soluk göster */
+        select:invalid { color: #71717a; }
+        select option[value=""] { color: #71717a; }
     </style>
 
     @stack('head')
