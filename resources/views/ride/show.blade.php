@@ -100,7 +100,15 @@
         backdrop-filter: blur(8px);
     }
     .leaflet-control-attribution a { color: #a1a1aa !important; }
-    .leaflet-control-zoom { display: none !important; }
+    /* Google Maps benzeri zoom butonlari — koyu tema uyumlu */
+    .leaflet-control-zoom { border: none !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+    .leaflet-control-zoom a {
+        background: #111 !important;
+        color: #fbbf24 !important;
+        border-color: #333 !important;
+        font-weight: 700;
+    }
+    .leaflet-control-zoom a:hover { background: #1a1a1a !important; }
     .leaflet-bar { border: none !important; }
 
     /* Pulse rings emanating from user pin */
