@@ -164,13 +164,50 @@
         actions.appendChild(btnEl('Kapat', 'bg-gray-100 hover:bg-gray-200 text-gray-700', closeModal));
     }
 
+    // Panik SONRASI canlı konum takibi: watchPosition ile gelen daha iyi/güncel
+    // konumu sunucuya yollar. Acil durumda alarmı geciktirmeden konumu "yakalar".
+    let liveWatchId = null, liveTimer = null;
+    function stopLiveLocation() {
+        try { if (liveWatchId !== null) navigator.geolocation.clearWatch(liveWatchId); } catch (_) {}
+        liveWatchId = null;
+        if (liveTimer) { clearTimeout(liveTimer); liveTimer = null; }
+    }
+    function startLiveLocation(publicId) {
+        if (!navigator.geolocation || !publicId) return;
+        stopLiveLocation();
+        const url = PANIC_URL + '/' + encodeURIComponent(publicId) + '/location';
+        const csrf = document.querySelector('meta[name="csrf-token"]').content;
+        let lastSent = 0, sends = 0;
+        liveWatchId = navigator.geolocation.watchPosition(function (pos) {
+            const now = Date.now();
+            // throttle: en fazla ~4 sn'de bir, toplam 45 gönderim (pil/gizlilik)
+            if (now - lastSent < 4000 || sends >= 45) return;
+            lastSent = now; sends++;
+            fetch(url, {
+                method: 'POST', keepalive: true,
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    location_accuracy_m: pos.coords.accuracy,
+                }),
+            }).catch(function () {});
+        }, function (_) {}, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+        // 3 dakika sonra takibi durdur
+        liveTimer = setTimeout(stopLiveLocation, 180000);
+    }
+
     async function sendPanic() {
         actions.innerHTML = '';
-        bodyEl.textContent = 'Alarm gönderiliyor…';
+        bodyEl.textContent = 'Konum alınıyor, alarm gönderiliyor…';
         let lat = null, lng = null, acc = null;
         if (navigator.geolocation) {
+            // Acil: yüksek doğruluk iste, önbellekteki taze konumu (30 sn) kabul et,
+            // 10 sn'ye kadar bekle (4 sn ilk GPS sabitlemesi için çok kısaydı).
             try {
-                const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 4000 }));
+                const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(
+                    res, rej, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+                ));
                 lat = pos.coords.latitude; lng = pos.coords.longitude; acc = pos.coords.accuracy;
             } catch (_) {}
         }
@@ -182,6 +219,8 @@
         try {
             const data = await postPanic(payload);
             showResult(!!data.success, data.message, data.call, data.alert_id);
+            // Alarm iletildi → konumu canlı takip et (ilk fix null olsa bile yakalar).
+            if (data.success && data.alert_id) startLiveLocation(data.alert_id);
         } catch (err) {
             qPush(payload);
             showOffline(payload);

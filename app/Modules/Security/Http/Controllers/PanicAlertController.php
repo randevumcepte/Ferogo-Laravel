@@ -109,6 +109,48 @@ class PanicAlertController extends Controller
     }
 
     /**
+     * POST /api/panic/{publicId}/location
+     * Panik gönderildikten sonra cihaz CANLI konumu gönderir (watchPosition).
+     * public_id (ULID) ile yetkilendirilir; kapalı/çözülmüş alarmın konumu güncellenmez.
+     * Daha DÜŞÜK doğruluklu (accuracy sayısı büyük) yeni fix, mevcut daha iyi fix'i ezmez.
+     */
+    public function updateLocation(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'lat'                 => ['required', 'numeric', 'between:-90,90'],
+            'lng'                 => ['required', 'numeric', 'between:-180,180'],
+            'location_accuracy_m' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $alert = PanicAlert::where('public_id', $publicId)->firstOrFail();
+
+        // Çözülmüş/yanlış alarm ise dokunma (geç gelen konum kapanmış vakayı bozmasın).
+        if (in_array($alert->status, [PanicAlert::STATUS_RESOLVED, PanicAlert::STATUS_FALSE_ALARM], true)) {
+            return response()->json(['success' => true, 'ignored' => 'closed']);
+        }
+
+        $newAcc = $validated['location_accuracy_m'] ?? null;
+        $oldAcc = $alert->location_accuracy_m;
+
+        // Elimizde hiç konum yoksa her zaman yaz. Varsa: yeni fix daha iyi (veya eşit)
+        // doğruluktaysa ya da doğruluk bilinmiyorsa güncelle; belirgin şekilde kötüyse ezme.
+        $shouldUpdate = $alert->lat === null
+            || $newAcc === null
+            || $oldAcc === null
+            || (float) $newAcc <= (float) $oldAcc + 25; // 25 m tolerans (hareket + jitter)
+
+        if ($shouldUpdate) {
+            $alert->update([
+                'lat'                 => $validated['lat'],
+                'lng'                 => $validated['lng'],
+                'location_accuracy_m' => $newAcc ?? $oldAcc,
+            ]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * Nöbetçi operatör(ler)e panik alarmını SMS ile haber ver.
      * services.panic.operator_phones boşsa sessizce atlar (sadece log).
      */

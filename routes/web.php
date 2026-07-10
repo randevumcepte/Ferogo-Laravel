@@ -283,6 +283,8 @@ Route::post('/api/security-incidents/{publicId}/photo',  [SecurityIncidentContro
 
 // Faz 7 — Acil yardım (panic) butonu (her iki taraf)
 Route::post('/api/panic', [PanicAlertController::class, 'trigger'])->name('security.panic.trigger');
+// Panik sonrası CANLI konum güncelleme (kişi tarafı — public_id ile yetki, ULID tahmin edilemez)
+Route::post('/api/panic/{publicId}/location', [PanicAlertController::class, 'updateLocation'])->name('security.panic.location');
 // Admin panel sesli/görsel alarm dinleyicisi buradan açık alarmları çeker (sadece giriş yapmış admin)
 Route::get('/admin/panic-poll', [PanicAlertController::class, 'poll'])
     ->middleware('auth')
