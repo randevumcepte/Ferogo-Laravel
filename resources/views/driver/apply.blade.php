@@ -368,8 +368,8 @@
                 <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3">
                     <div class="text-xl shrink-0">📋</div>
                     <div class="text-xs md:text-sm text-zinc-300 leading-relaxed">
-                        <div class="font-semibold text-amber-200 mb-1.5">Vergi Sorumluluğu</div>
-                        FerXGo <strong>paylaşımlı yolculuk platformudur</strong>. Kazançlar üye sürücünün ticari kazancıdır; vergi yükümlülüğü sürücüye aittir.
+                        <div class="font-semibold text-amber-200 mb-1.5">Paylaşımlı Yolculuk Modeli</div>
+                        FerXGo <strong>ticari taşımacılık hizmeti sunmaz</strong>. Aynı güzergâhı paylaşan yolcu ve üye sürücü, yolculuğun <strong>yakıt, aşınma ve yol masraflarını</strong> aralarında paylaşırlar. Yolcunun ödediği tutar, ticari bir hizmet bedeli değil; ortak yolculuk giderlerine katkı payıdır. FerXGo yalnızca aracılık ve eşleştirme hizmeti sunar.
                     </div>
                 </div>
 
