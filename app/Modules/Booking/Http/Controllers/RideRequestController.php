@@ -43,7 +43,7 @@ class RideRequestController extends Controller
         $validated = $request->validate([
             'lat'   => ['required', 'numeric', 'between:-90,90'],
             'lng'   => ['required', 'numeric', 'between:-180,180'],
-            'limit' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:30'],
         ]);
 
         $lat    = (float) $validated['lat'];

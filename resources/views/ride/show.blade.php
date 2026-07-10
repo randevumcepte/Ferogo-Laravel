@@ -1439,7 +1439,7 @@
     let realDriversTotalOnline = 0;
     async function fetchRealDrivers(center) {
         try {
-            const res = await fetch(`${NEARBY_URL}?lat=${center[0]}&lng=${center[1]}&limit=10`, {
+            const res = await fetch(`${NEARBY_URL}?lat=${center[0]}&lng=${center[1]}&limit=20`, {
                 headers: { 'Accept': 'application/json' }
             });
             if (!res.ok) {
@@ -1845,13 +1845,17 @@
         });
 
         map = L.map('ferogo-radar-map', {
-            zoomControl: false,
+            zoomControl: true,          // + / − butonları göster (sağ üstte özel konum)
             attributionControl: true,
-            scrollWheelZoom: false,
-            doubleClickZoom: false,
+            scrollWheelZoom: true,      // mouse tekerleği ile zoom (Google Maps gibi)
+            doubleClickZoom: true,      // çift tıklama ile yakınlaştır
+            touchZoom: true,            // mobilde pinch-to-zoom
             dragging: true,
             tap: true,
+            zoomSnap: 0.5,              // yumuşak zoom kademelemesi
         }).setView(center, 14);
+        // Zoom butonlarını sağ üste al (sol üst konum "beni bul" için)
+        map.zoomControl.setPosition('topright');
 
         // Dark map tiles — CartoDB Dark Matter
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
@@ -1868,6 +1872,27 @@
 
         userMarker = L.marker(center, { icon: userIcon(), interactive: false, zIndexOffset: 1000 }).addTo(map);
         window.userMarker = userMarker; // syncRealMarkers → fitBounds için
+
+        // "Konumuma dön" butonu — kullanıcı harita kaydırdıktan sonra tek tıkla merkeze döner
+        const LocateControl = L.Control.extend({
+            options: { position: 'topright' },
+            onAdd: function () {
+                const btn = L.DomUtil.create('div', 'leaflet-bar');
+                btn.innerHTML = '<a href="#" title="Konumuma dön" role="button" ' +
+                    'style="width:34px;height:34px;line-height:34px;text-align:center;font-size:16px;' +
+                    'background:#111;color:#fbbf24;border-color:#333;">🎯</a>';
+                btn.onclick = function (e) {
+                    e.preventDefault();
+                    if (window.userMarker) {
+                        map.setView(window.userMarker.getLatLng(), 14, { animate: true });
+                    }
+                    window.__ferxgoUserPannedMap = false; // otomatik fit tekrar aktif olsun
+                    return false;
+                };
+                return btn;
+            }
+        });
+        map.addControl(new LocateControl());
 
         // Kullanıcı manuel kaydırma/zoom yaptığında otomatik fitBounds'u durdur
         bindMapPanDetection();
