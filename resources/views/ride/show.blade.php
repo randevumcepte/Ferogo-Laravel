@@ -1346,6 +1346,9 @@
     @endunless
 
 </div>
+
+{{-- Konum zorunlu — reddedilirse ya da desteklenmiyorsa modal --}}
+@include('partials.geolocation-required', ['role' => 'passenger'])
 @endsection
 
 @push('scripts')
@@ -3234,7 +3237,18 @@
             },
             () => {
                 clearTimeout(fallbackTimer);
-                fallbackToIzmir();
+                // Kullanıcı izin vermedi → zorunlu popup göster.
+                // Konum lazım çünkü mesafe/süre hesabı + yakındaki sürücü listesi
+                // konuma bağlı. Kullanıcı izin verdiğinde otomatik startSimulation çağrılır.
+                if (window.GeolocationGate) {
+                    window.GeolocationGate.require({
+                        onGranted: (coords) => {
+                            startSimulation([coords.lat, coords.lng]);
+                        },
+                    });
+                } else {
+                    fallbackToIzmir();
+                }
             },
             { timeout: 8000, maximumAge: 60000, enableHighAccuracy: false }
         );

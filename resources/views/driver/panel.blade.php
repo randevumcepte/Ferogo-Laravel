@@ -413,17 +413,42 @@
 
         function startLocationTracking() {
             if (geoWatchId !== null || !('geolocation' in navigator)) return;
-            // İlk konumu hemen gönder — online olur olmaz radara düşsün (throttle beklemeden)
+
+            // İzin ver-kontrol: reddedilirse zorunlu popup göster.
+            // Konum vermeyen sürücü yolcuya görünmez, iş atanmaz — o yüzden zorunlu.
             navigator.geolocation.getCurrentPosition(
-                (pos) => { lastLocSentAt = Date.now(); pushLocation(pos.coords.latitude, pos.coords.longitude); },
-                () => {},
+                (pos) => {
+                    lastLocSentAt = Date.now();
+                    pushLocation(pos.coords.latitude, pos.coords.longitude);
+                    // Başarılıysa sürekli izleme başlat
+                    if (geoWatchId === null) {
+                        geoWatchId = navigator.geolocation.watchPosition(
+                            onGeoPosition,
+                            (err) => { console.warn('[geo] konum alınamadı:', err && err.message); },
+                            { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 }
+                        );
+                    }
+                },
+                (err) => {
+                    // İzin reddedildi ya da alınamadı → zorunlu popup
+                    if (window.GeolocationGate) {
+                        window.GeolocationGate.require({
+                            onGranted: (coords) => {
+                                lastLocSentAt = Date.now();
+                                pushLocation(coords.lat, coords.lng);
+                                if (geoWatchId === null) {
+                                    geoWatchId = navigator.geolocation.watchPosition(
+                                        onGeoPosition,
+                                        (e) => { console.warn('[geo] izleme hatası:', e && e.message); },
+                                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 }
+                                    );
+                                }
+                            },
+                        });
+                    }
+                    console.warn('[geo] ilk konum reddedildi:', err && err.message);
+                },
                 { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
-            );
-            // Sonra sürekli izle
-            geoWatchId = navigator.geolocation.watchPosition(
-                onGeoPosition,
-                (err) => { console.warn('[geo] konum alınamadı:', err && err.message); },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 }
             );
         }
 
@@ -1018,6 +1043,7 @@
     </script>
 
     @include('partials.call-widget')
+    @include('partials.geolocation-required', ['role' => 'driver'])
     @include('partials.mobile-action-bar')
 
     {{-- Faz 7: ACİL YARDIM butonu — sürücü güvenliği için sağ alt köşede sabit (sadece aktif yolculukta görünür) --}}
