@@ -41,14 +41,14 @@
                         🖼 Galeri
                     </label>
                 </div>
-                {{-- capture: kamerayı açan input --}}
+                {{-- capture: kamerayı açan input (form gönderimindeki alan) --}}
                 <input id="fu-cam-{{ $name }}" type="file" name="{{ $name }}"
                        accept="image/*"
                        @if($capture) capture="{{ $capture }}" @else capture @endif
                        class="hidden fu-input"
                        data-target="{{ $name }}"
-                       @if(($required ?? true)) required @endif>
-                {{-- galeri: normal file picker --}}
+                       @if(($required ?? true)) data-required="true" @endif>
+                {{-- galeri: normal file picker → JS ile üstteki inputa mirror --}}
                 <input id="fu-gal-{{ $name }}" type="file"
                        accept="image/*"
                        class="hidden fu-input"
@@ -64,7 +64,7 @@
                        accept="{{ $accept }}"
                        class="hidden fu-input"
                        data-target="{{ $name }}"
-                       @if(($required ?? true)) required @endif>
+                       @if(($required ?? true)) data-required="true" @endif>
             @endif
         </div>
 

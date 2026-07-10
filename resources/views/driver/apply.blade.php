@@ -887,14 +887,22 @@
             let file = input.files?.[0];
             if (!file) return;
 
-            // Galeri input'u seçildiyse dosyayı ana (kamera) input'a kopyala
+            // Galeri input'u seçildiyse dosyayı ana (kamera / name'li) input'a kopyala
             const mirrorId = input.dataset.mirror;
             if (mirrorId) {
                 const target = document.getElementById(mirrorId);
                 if (target) {
-                    const dt = new DataTransfer();
-                    dt.items.add(file);
-                    target.files = dt.files;
+                    try {
+                        const dt = new DataTransfer();
+                        dt.items.add(file);
+                        target.files = dt.files;
+                    } catch (e) {
+                        // Bazı tarayıcılarda DataTransfer atanamaz — bu durumda
+                        // ana input'un name'ini geçici olarak galeri input'una taşı
+                        const camInput = target;
+                        camInput.removeAttribute('name');
+                        input.setAttribute('name', name);
+                    }
                 }
             }
 
@@ -915,6 +923,58 @@
             prev.classList.remove('hidden');
         });
     });
+
+    // ============================================================
+    // 3) Submit-öncesi manuel validation — required file input'lar
+    //    HTML5 validation'a takıldığında hata mesajı görünmüyor
+    //    (gizli input üzerinde tarayıcı odaklanamıyor). Manuel yapıyoruz.
+    // ============================================================
+    const form = document.querySelector('form[action*="surucu-olun"]');
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            const missing = [];
+
+            // Kategori özel bölümleri — hangi belgeler zorunlu bakma
+            const activeCat = document.querySelector('.category-radio:checked')?.dataset?.slug;
+
+            document.querySelectorAll('.fu-input[data-required="true"]').forEach(inp => {
+                const name = inp.dataset.target;
+
+                // Kategori özel alanlar — pasif kategoride zorunlu değil
+                if (['src_file','taksi_plaka_file','taksimetre_file','oda_kaydi_file'].includes(name) && activeCat !== 'sari_taksi') return;
+                if (name === 'helmet_file' && activeCat !== 'motosiklet') return;
+
+                // Ana input'u bul (photo modunda cam input, doc modunda tek input)
+                const camInput = document.getElementById('fu-cam-' + name);
+                const docInput = document.getElementById('fu-' + name);
+                const galInput = document.getElementById('fu-gal-' + name);
+
+                const hasFile = (camInput?.files?.length > 0) ||
+                                (docInput?.files?.length > 0) ||
+                                (galInput?.files?.length > 0);
+                if (! hasFile) {
+                    missing.push(name);
+                }
+            });
+
+            if (missing.length > 0) {
+                e.preventDefault();
+                const firstName = missing[0];
+                const label = document.querySelector('.fu-empty-' + firstName)?.closest('.file-upload-widget')?.querySelector('label')?.textContent?.trim() || firstName;
+                alert('⚠ ' + missing.length + ' dosya eksik. İlk eksik: "' + label + '". Formun yukarısına scroll edip eksik olan kırmızı çerçeveli alanları doldur.');
+                // İlk eksik alana scroll et ve kırmızıya çevir
+                const widget = document.querySelector('.fu-empty-' + firstName)?.closest('.file-upload-widget');
+                if (widget) {
+                    widget.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    missing.forEach(n => {
+                        const w = document.querySelector('.fu-empty-' + n)?.closest('.file-upload-widget');
+                        w?.querySelector('.border-dashed')?.classList.add('!border-red-500');
+                    });
+                }
+                return false;
+            }
+        });
+    }
 })();
 </script>
 @endpush
