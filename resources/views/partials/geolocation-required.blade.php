@@ -70,6 +70,13 @@
                 </span>
             </div>
 
+            {{-- Konumsuz devam et — yalnızca yolcu tarafında, ilk başarısızlıktan sonra görünür.
+                 Konum vermeyen/veremeyen kullanıcı en azından haritayı görüp devam edebilsin (sürücü tarafında YOK). --}}
+            <button type="button" id="geo-req-skip-btn"
+                    class="hidden w-full text-center text-xs text-zinc-500 hover:text-zinc-300 underline underline-offset-4 pt-1">
+                Şimdilik konumsuz devam et
+            </button>
+
             <div class="text-[10px] text-zinc-500 text-center pt-1">
                 Konum yalnızca yolculuk süresince kullanılır ·
                 <a href="{{ route('legal.kvkk') }}" target="_blank" class="text-zinc-400 hover:text-brand underline underline-offset-2">KVKK Aydınlatma</a>
@@ -87,13 +94,30 @@
     const retryBtn   = document.getElementById('geo-req-retry-btn');
     const btnLabel   = document.getElementById('geo-req-btn-label');
     const reloadBtn  = document.getElementById('geo-req-reload-btn');
+    const skipBtn    = document.getElementById('geo-req-skip-btn');
     const autoPoll   = document.getElementById('geo-req-autopoll');
     const guideTitle = document.getElementById('geo-req-guide-title');
     const guideBody  = document.getElementById('geo-req-guide-body');
 
     let successCb = null;
     let deniedCb  = null;
+    let skipCb    = null;   // "konumsuz devam et" — yalnızca yolcu tarafı geçer
     let permissionPoll = null;
+    let geoAttempt = 0;     // GEO_LADDER içindeki deneme indeksi
+
+    // Konum alma merdiveni — izin açıkken bile TIMEOUT olmasın diye kademeli:
+    //  0) Yüksek doğruluk, ama son 5 dk'daki GPS fix'i varsa anında dön (maximumAge)
+    //     → çoğu cihazda önbellekte fix vardır, saniyesinde açılır, zaman aşımı olmaz.
+    //  1) Yüksek doğruluk, daha sabırlı (soğuk GPS / yavaş ağ için 25 sn).
+    //  2) SON ÇARE: düşük doğruluk — kaba konum döner (İzmir'e sapabilir) ama kullanıcı
+    //     hiç takılmaz; arka plandaki refineUserLocation() GPS gelince pini düzeltir.
+    // enableHighAccuracy:false'ı SADECE son basamakta kullanıyoruz (ilk seçenek yapılırsa
+    // IP/baz-istasyonuna düşüp Dikili yerine İzmir/Karabağlar gösteriyordu).
+    const GEO_LADDER = [
+        { enableHighAccuracy: true,  timeout: 15000, maximumAge: 300000 },
+        { enableHighAccuracy: true,  timeout: 25000, maximumAge: 600000 },
+        { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 },
+    ];
 
     // ── Platform detect ──────────────────────────────────
     const ua = navigator.userAgent || '';
@@ -103,6 +127,7 @@
     const isAndroid = /android/i.test(ua);
     const isChrome  = /chrome|crios/i.test(ua) && !/edg|opr|samsung/i.test(ua);
     const isMobile  = isIOS || isAndroid;
+    const isMac     = /Macintosh|Mac OS X/i.test(ua) && !isIOS;
 
     // ── Platform-özel görsel adım rehberi ────────────────
     function initialGuideHtml() {
@@ -309,11 +334,12 @@
             return;
         }
 
-        btnLabel.textContent = 'İzin isteniyor…';
+        btnLabel.textContent = geoAttempt === 0 ? 'İzin isteniyor…' : 'GPS konumun aranıyor…';
         retryBtn.disabled = true;
 
         navigator.geolocation.getCurrentPosition(
             (pos) => {
+                geoAttempt = 0;
                 btnLabel.textContent = '✓ Alındı';
                 retryBtn.disabled = false;
                 hide();
@@ -322,6 +348,16 @@
                 }
             },
             (err) => {
+                // Zaman aşımı (3) / servis-yok (2 = kCLErrorLocationUnknown) çoğu zaman GEÇİCİ ya da
+                // daha sabırlı/kaba bir denemeyle çözülür. Merdivende bir üst basamağa çık.
+                // (İzin reddi (1) tekrar denenmez — ayar rehberi gösterilir.)
+                if ((err.code === 3 || err.code === 2) && geoAttempt < GEO_LADDER.length - 1) {
+                    geoAttempt += 1;
+                    const backoff = err.code === 2 ? 1200 : 0; // kCLErrorLocationUnknown → kısa bekle
+                    setTimeout(tryGeolocation, backoff);
+                    return;
+                }
+                geoAttempt = 0;
                 btnLabel.textContent = 'Tekrar Dene';
                 retryBtn.disabled = false;
                 let msg = 'Konum alınamadı.';
@@ -331,24 +367,32 @@
                         msg = 'Konum izni reddedildi. Aşağıdaki adımları uygulayıp izni aç.';
                         isDenied = true;
                         break;
-                    case 2: // POSITION_UNAVAILABLE
-                        msg = 'Konum servisi şu an yanıt vermiyor. Cihazının GPS/konum ayarını aç.';
+                    case 2: // POSITION_UNAVAILABLE — macOS'ta genelde Wi-Fi kapalı/Konum Servisleri kapalı
+                        msg = isMac
+                            ? 'macOS konumu bulamadı (kCLErrorLocationUnknown). Wi-Fi’yi AÇ (Mac konumu Wi-Fi ile bulur) + Sistem Ayarları → Gizlilik ve Güvenlik → Konum Servisleri’ni ve tarayıcına iznini aç, sonra Tekrar Dene.'
+                            : 'Konum servisi yanıt vermiyor. Cihazının konum/GPS ayarını aç, sonra tekrar dene.';
                         break;
                     case 3: // TIMEOUT
-                        msg = 'Konum alma zaman aşımına uğradı.';
+                        msg = 'Konum alma zaman aşımına uğradı. Açık alanda / Wi-Fi açıkken tekrar dene.';
                         break;
                 }
                 show(msg, isDenied);
+                // İlk başarısızlıktan sonra "konumsuz devam et" seçeneğini göster (yalnızca izin verilmişse)
+                if (skipCb) skipBtn.classList.remove('hidden');
                 if (typeof deniedCb === 'function') deniedCb(err);
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            GEO_LADDER[Math.min(geoAttempt, GEO_LADDER.length - 1)]
         );
     }
 
-    retryBtn.addEventListener('click', tryGeolocation);
+    retryBtn.addEventListener('click', () => { geoAttempt = 0; tryGeolocation(); });
     reloadBtn.addEventListener('click', () => {
         // İzin verildikten sonra sayfayı yenile — hem Safari hem Chrome için en kesin yol
         window.location.reload();
+    });
+    skipBtn.addEventListener('click', () => {
+        hide();
+        if (typeof skipCb === 'function') skipCb();
     });
 
     // Public API
@@ -356,6 +400,10 @@
         require: (opts) => {
             successCb = opts?.onGranted || null;
             deniedCb  = opts?.onDenied  || null;
+            skipCb    = opts?.onSkip    || null;   // verilirse "konumsuz devam et" seçeneği açılır
+            geoAttempt = 0;
+            skipBtn.classList.add('hidden');
+            if (opts?.skipLabel) skipBtn.textContent = opts.skipLabel;
             renderGuide('initial');
             tryGeolocation();
         },

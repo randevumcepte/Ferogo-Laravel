@@ -155,6 +155,31 @@
         color: #0a0a0a;
     }
 
+    /* Marker isim etiketi — pin'in altında ortalanmış küçük isim balonu */
+    .marker-stack { position: relative; width: 100%; height: 100%; }
+    .marker-name {
+        position: absolute;
+        top: 100%; left: 50%;
+        transform: translateX(-50%);
+        margin-top: 3px;
+        white-space: nowrap;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+        color: #fafafa;
+        background: rgba(10,10,10,0.82);
+        border: 1px solid rgba(255,255,255,0.12);
+        padding: 2px 6px;
+        border-radius: 9999px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        pointer-events: none;
+    }
+    .marker-name.is-user {
+        color: #0a0a0a;
+        background: #F0C040;
+        border-color: rgba(240,192,64,0.5);
+    }
+
     /* Driver list rail */
     .driver-rail-card {
         background: rgba(20,20,20,0.85);
@@ -1446,11 +1471,12 @@
             positions.push(pos);
             // Premium/vip sınıfı hafif farklı marker; diğerleri altın (müsait)
             const state = (r.vehicle_class_slug === 'vip' || r.vehicle_class_slug === 'platinum') ? 'premium' : '';
+            const label = r.short_name || r.name || '';
             if (realMarkers[r.id]) {
                 realMarkers[r.id].setLatLng(pos);
-                realMarkers[r.id].setIcon(driverIcon(state));
+                realMarkers[r.id].setIcon(driverIcon(state, label));
             } else {
-                realMarkers[r.id] = L.marker(pos, { icon: driverIcon(state), interactive: false }).addTo(map);
+                realMarkers[r.id] = L.marker(pos, { icon: driverIcon(state, label), interactive: false }).addTo(map);
             }
         });
         // Artık listede olmayan (offline olmuş / uzaklaşmış) sürücülerin marker'ını kaldır
@@ -1532,10 +1558,15 @@
         return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM5 17v-5h14v5H5zm2-2.5c0 .83-.67 1.5-1.5 1.5S4 15.33 4 14.5 4.67 13 5.5 13s1.5.67 1.5 1.5zm13 0c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5.67-1.5 1.5-1.5 1.5.67 1.5 1.5z"/></svg>`;
     }
 
-    function driverIcon(state) {
+    function escapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+
+    function driverIcon(state, name) {
         const cls = state === 'busy' ? 'busy' : (state === 'premium' ? 'premium' : '');
+        const label = name ? `<div class="marker-name">${escapeHtml(name)}</div>` : '';
         return L.divIcon({
-            html: `<div class="driver-marker ${cls}">${carSvg()}</div>`,
+            html: `<div class="marker-stack"><div class="driver-marker ${cls}">${carSvg()}</div>${label}</div>`,
             className: 'driver-marker-wrapper',
             iconSize: [30, 30],
             iconAnchor: [15, 15],
@@ -1543,8 +1574,14 @@
     }
 
     function userIcon() {
+        // Giriş yapan müşterinin adını pin'in altında göster (yoksa "Sen")
+        let selfName = 'Sen';
+        try {
+            const n = (FEROGO_AUTH && FEROGO_AUTH.name) ? String(FEROGO_AUTH.name).trim().split(/\s+/)[0] : '';
+            if (n) selfName = n;
+        } catch (_) {}
         return L.divIcon({
-            html: userPinHtml(),
+            html: `<div class="marker-stack">${userPinHtml()}<div class="marker-name is-user">${escapeHtml(selfName)}</div></div>`,
             className: 'user-marker-wrapper',
             iconSize: [60, 60],
             iconAnchor: [30, 30],
@@ -1835,18 +1872,20 @@
         // Kullanıcı manuel kaydırma/zoom yaptığında otomatik fitBounds'u durdur
         bindMapPanDetection();
 
-        // İlk render (gerçek sürücü gelene kadar boş durum) + gerçek sürücüleri GPS'e göre çek
+        // İlk render (gerçek sürücü gelene kadar boş durum) + gerçek sürücüleri GPS'e göre çek.
+        // Not: interval'da userCenterGlobal kullanıyoruz ki refineUserLocation konumu
+        // düzeltince sürücü sorgusu da güncel merkezden yapılsın (yakalanmış eski center değil).
         renderRail(center);
         fetchRealDrivers(center);
         if (realDriversHandle) clearInterval(realDriversHandle);
-        realDriversHandle = setInterval(() => fetchRealDrivers(center), 3000);
+        realDriversHandle = setInterval(() => fetchRealDrivers(userCenterGlobal || center), 3000);
 
         // Ekrandan çıkınca gerçek sürücü sorgusunu duraklat (batarya/ağ tasarrufu)
         const io = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 if (e.isIntersecting && !realDriversHandle) {
-                    fetchRealDrivers(center);
-                    realDriversHandle = setInterval(() => fetchRealDrivers(center), 3000);
+                    fetchRealDrivers(userCenterGlobal || center);
+                    realDriversHandle = setInterval(() => fetchRealDrivers(userCenterGlobal || center), 3000);
                 } else if (!e.isIntersecting && realDriversHandle) {
                     clearInterval(realDriversHandle);
                     realDriversHandle = null;
@@ -3234,6 +3273,7 @@
             (pos) => {
                 clearTimeout(fallbackTimer);
                 startSimulation([pos.coords.latitude, pos.coords.longitude]);
+                refineUserLocation(); // arka planda daha keskin GPS fix'i bekle → pin'i düzelt
             },
             () => {
                 clearTimeout(fallbackTimer);
@@ -3244,14 +3284,65 @@
                     window.GeolocationGate.require({
                         onGranted: (coords) => {
                             startSimulation([coords.lat, coords.lng]);
+                            refineUserLocation();
                         },
+                        // Konum alınamazsa kullanıcı takılıp kalmasın — haritayı İzmir
+                        // merkezinden aç, en azından sürücüleri görsün. (Sürücü tarafında bu YOK.)
+                        skipLabel: 'Şimdilik konumsuz devam et (İzmir merkezi)',
+                        onSkip: () => fallbackToIzmir(),
                     });
                 } else {
                     fallbackToIzmir();
                 }
             },
-            { timeout: 8000, maximumAge: 60000, enableHighAccuracy: false }
+            // GPS-öncelikli (enableHighAccuracy:true): düşük doğruluk IP/baz-istasyonuna
+            // düşüp İzmir/Karabağlar gösteriyordu. maximumAge:300000 → son 5 dk'daki gerçek
+            // GPS fix'i anında dönsün (izin açıkken bile TIMEOUT olmasın). Hata olursa zaten
+            // modal (GeolocationGate) daha sabırlı merdivenle tekrar dener.
+            { timeout: 15000, maximumAge: 300000, enableHighAccuracy: true }
         );
+    }
+
+    // Harita açıldıktan sonra arka planda daha keskin GPS fix'i bekle; belirgin ölçüde
+    // farklı/daha doğru bir konum gelirse pin'i oraya taşı ve sürücüleri yeniden çek.
+    // (İlk fix bazen coarse gelir; watchPosition birkaç saniyede netleşir.)
+    function refineUserLocation() {
+        if (!('geolocation' in navigator)) return;
+        let best = null;
+        let settleTimer = null;
+        const wId = navigator.geolocation.watchPosition(
+            (pos) => {
+                const acc = pos.coords.accuracy || 99999;
+                const c = [pos.coords.latitude, pos.coords.longitude];
+                if (!best || acc < best.acc) best = { c, acc };
+                // Yeterince keskin fix (≤50m) geldiyse hemen uygula ve izlemeyi bırak
+                if (acc <= 50) {
+                    applyRefined(best.c);
+                    stop();
+                }
+            },
+            () => { stop(); },
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+        );
+        // En fazla 20 sn izle; en iyi fix neyse onu uygula
+        settleTimer = setTimeout(() => { if (best) applyRefined(best.c); stop(); }, 20000);
+        function stop() {
+            try { navigator.geolocation.clearWatch(wId); } catch (_) {}
+            if (settleTimer) { clearTimeout(settleTimer); settleTimer = null; }
+        }
+    }
+
+    // Pin + harita merkezini yeni (daha doğru) konuma taşı, sürücü sorgusunu tazele.
+    function applyRefined(center) {
+        if (!map || !center) return;
+        const prev = userCenterGlobal;
+        // 30 m'den az fark → görsel zıplama yaratma, boşuna uğraşma
+        if (prev && distanceKm(prev, center) < 0.03) return;
+        userCenterGlobal = center;
+        if (userMarker) userMarker.setLatLng(center);
+        reverseGeocode(center[0], center[1]).then(addr => { userAddressGlobal = addr; }).catch(() => {});
+        window.__ferxgoUserPannedMap = false; // yeniden ortala
+        fetchRealDrivers(center);
     }
 
     // Lazy init — wait until user scrolls near
