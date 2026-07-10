@@ -248,7 +248,7 @@ class RideRequestController extends Controller
             'success' => true,
             'driver'  => [
                 'id'             => $driver->id,
-                'name'           => $fullName,            // tam isim (radarda görünür)
+                'name'           => $shortName,           // ad tam + soyad tek harf (gizlilik)
                 'short_name'     => $shortName,
                 'avatar'         => $avatarUrl,           // temsili görsel
                 'rating'         => (float) $driver->rating,
@@ -895,7 +895,7 @@ class RideRequestController extends Controller
         // Public payload (eşleştirme öncesi): plaka YOK, gerçek araç fotoğrafı YOK
         $payload = [
             'id'                  => $d->id,
-            'name'                => $fullName,
+            'name'                => $shortName,
             'short_name'          => $shortName,
             'rating'              => (float) $d->rating,
             'trips'               => (int) $d->total_rides,
