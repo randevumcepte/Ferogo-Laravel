@@ -263,18 +263,26 @@
         miniEl = document.createElement('div');
         miniEl.id = 'ferxgo-panic-mini';
         var who = (alert.who || 'Kullanıcı') + (alert.name ? ' · ' + alert.name : '');
+        var active = !!(window.PanicRTC && window.PanicRTC.isActive());
+        var callBtnHtml = active ? '' : '<button type="button" class="pm-call" style="background:#16a34a;color:#fff">📞 Çağrıyı Aç</button>';
         miniEl.innerHTML =
             '<div class="pm-head"><span>🚨 Acil Çağrı</span><span>⠿ sürükle</span></div>' +
             '<div class="pm-body">' +
                 '<div class="pm-name">' + escapeHtml(who) + '</div>' +
-                '<div class="pm-status">' + (window.PanicRTC && window.PanicRTC.isActive() ? '🟢 Görüşülüyor' : 'Alarm açık') + '</div>' +
+                '<div class="pm-status">' + (active ? '🟢 Görüşülüyor' : 'Alarm açık') + '</div>' +
                 '<div class="pm-actions">' +
+                    callBtnHtml +
                     '<a class="pm-open" href="' + escapeAttr(alert.url) + '" target="_blank" rel="noopener">Paneli Aç</a>' +
                     '<button type="button" class="pm-close">Kapat</button>' +
                 '</div>' +
             '</div>';
         document.body.appendChild(miniEl);
 
+        var pmCall = miniEl.querySelector('.pm-call');
+        if (pmCall) pmCall.addEventListener('click', function () {
+            answerCall(alert.id, alert.phone);
+            pmCall.style.display = 'none';
+        });
         miniEl.querySelector('.pm-close').addEventListener('click', function () {
             endEverything(alert.id);
         });
@@ -339,9 +347,13 @@
                 if (!data || !data.alerts) return;
                 var live = data.alerts.filter(function (a) { return !dismissed[a.id]; });
                 if (live.length === 0) {
-                    removeOverlay(); stopSiren(); muted = false;
+                    // Açık alarm kalmadı (ör. panelden çözüldü) → çağrıyı da bitir
+                    if (minimized) { endEverything(null); }
+                    else { removeOverlay(); stopSiren(); muted = false; }
                     return;
                 }
+                // Mini moddayken (çağrı sürüyor) tam ekran alarmı yeniden AÇMA
+                if (minimized) return;
                 // En yeni açık alarmı göster
                 var top = live[0];
                 if (!current || current.id !== top.id) {
