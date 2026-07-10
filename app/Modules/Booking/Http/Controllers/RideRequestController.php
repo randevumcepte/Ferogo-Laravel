@@ -421,9 +421,12 @@ class RideRequestController extends Controller
         if ($isAuto) {
             $customerIsFemale = $authed && $authed->gender === 'female';
 
+            // Auto mod SINIF-BAĞIMSIZ: favoriler yolcunun tanıdığı sürücüler olduğu için
+            // sınıf fark etmeksizin hepsine gider; yakın havuz da sınıf filtresiz — yolcu
+            // bir tutar belirledi, ona razı olan en yakın/favori sürücü alır. (class = null)
             $favoriteIds = $this->favoriteService->dispatchableFavoriteIds(
                 $isAuthedCustomer ? $authed : null,
-                $vehicleClass->id,
+                null,
                 $customerIsFemale,
             );
             $isFavoriteWave = ! empty($favoriteIds);
@@ -433,7 +436,7 @@ class RideRequestController extends Controller
                 : $this->dispatcher->nearestDispatchableDriverIds(
                     (float) $validated['pickup_lat'],
                     (float) $validated['pickup_lng'],
-                    $vehicleClass->id,
+                    null,
                 );
 
             if (empty($poolIds)) {
