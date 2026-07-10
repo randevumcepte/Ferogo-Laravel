@@ -491,10 +491,12 @@
         await peer.setLocalDescription(offer);
         const sdp = peer.localDescription.sdp;
         console.log('[call] offer sent · len:', sdp.length, '· hash:', await _sdpHash(sdp), '· ua:', navigator.userAgent.match(/Chrome|Safari|Firefox|Edge/g)?.join(','));
+        console.log('[call][DBG] SENT sdp raw:', JSON.stringify(sdp)); // TEŞHİS — sonra silinecek
         pushSignal('offer', { sdp, type: peer.localDescription.type });
     }
     async function handleRemoteOffer(payload) {
         console.log('[call] remote offer received · len:', payload.sdp.length, '· hash:', await _sdpHash(payload.sdp), '· ua:', navigator.userAgent.match(/Chrome|Safari|Firefox|Edge/g)?.join(','));
+        console.log('[call][DBG] RECV sdp raw:', JSON.stringify(payload.sdp)); // TEŞHİS — sonra silinecek
         const peer = buildPc();
         // KRİTİK SIRA: önce setRemoteDescription (transceiver'lar kurulur), sonra addTrack
         await peer.setRemoteDescription({ type: payload.type, sdp: payload.sdp });
