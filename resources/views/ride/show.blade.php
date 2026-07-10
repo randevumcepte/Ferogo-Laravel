@@ -746,9 +746,16 @@
                 {{-- Error --}}
                 <div id="qm-error" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300"></div>
 
-                {{-- Submit --}}
-                <button type="submit" id="qm-submit" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-bold transition shadow-xl shadow-brand/30">
-                    <span id="qm-submit-text">Talebi Gönder</span>
+                {{-- Gönder — AUTO (favori-öncelikli) birincil, manuel ikincil --}}
+                <button type="button" id="qm-auto-submit" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-bold transition shadow-xl shadow-brand/30">
+                    <span id="qm-auto-submit-text">🔥 Hadi Gidelim</span>
+                    <svg id="qm-auto-submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                </button>
+                <p class="text-[10px] text-zinc-500 text-center leading-relaxed -mt-1">Talebin önce <span class="text-brand/80">favori sürücülerine</span>, onlar uygun değilse yakındaki üye sürücülere gider.</p>
+
+                {{-- Manuel: sadece açtığın sürücüye gönder --}}
+                <button type="submit" id="qm-submit" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-50 text-zinc-200 text-sm font-semibold transition">
+                    <span id="qm-submit-text">Sadece bu sürücüye gönder</span>
                     <svg id="qm-submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
                 </button>
             </form>
@@ -2442,6 +2449,72 @@
             await submitRideRequest(cached);
             return;
         }
+        await requestOtp(pendingPayload.customer_phone);
+    });
+
+    // ===== AUTO gönderim (favori-öncelikli: önce favoriler, yoksa yakındakiler) =====
+    // Sürücü seçimine bağlı DEĞİL: dispatch_mode='auto' ile backend önce yolcunun
+    // online favori sürücülerine, onlar uygun değilse yakındaki havuza teklif eder.
+    function buildAutoPayload() {
+        const fd = new FormData(modalForm);
+        const straight = distanceKm(userCenterGlobal, [selectedDropoff.lat, selectedDropoff.lng]);
+        const km = straight * 1.2;
+        const mins = Math.max(5, Math.round(km * 2.2 + 3));
+        const slug = (selectedRealDriver && selectedRealDriver.vehicle_class_slug) || 'easy';
+        const rates = {
+            easy:     { base: 50,  perKm: 22, min: 150 },
+            platinum: { base: 100, perKm: 35, min: 250 },
+            vip:      { base: 200, perKm: 55, min: 500 },
+        };
+        const r = rates[slug] || rates.easy;
+        const estFare = Math.max(r.min, r.base + km * r.perKm);
+        return {
+            vehicle_class_slug:  slug,
+            dispatch_mode:       'auto',
+            pickup_address:      qmPickupInput.value.trim() || `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`,
+            pickup_lat:          userCenterGlobal[0],
+            pickup_lng:          userCenterGlobal[1],
+            dropoff_address:     selectedDropoff.display_name,
+            dropoff_lat:         selectedDropoff.lat,
+            dropoff_lng:         selectedDropoff.lng,
+            customer_name:       fd.get('customer_name'),
+            customer_phone:      fd.get('customer_phone'),
+            distance_km:         parseFloat(km.toFixed(2)),
+            duration_minutes:    mins,
+            estimated_fare:      Math.round(estFare),
+            suggested_fare:      Math.round(suggestedFare || estFare),
+            customer_offer_fare: Math.round(customerOffer == null ? (suggestedFare || estFare) : customerOffer),
+            fingerprint:         deviceFingerprint,
+            kvkk_consent:        fd.get('kvkk_consent') ? 1 : 0,
+        };
+    }
+
+    const qmAutoSubmit = document.getElementById('qm-auto-submit');
+    if (qmAutoSubmit) qmAutoSubmit.addEventListener('click', async () => {
+        qmError.classList.add('hidden');
+        if (!userCenterGlobal) {
+            qmError.textContent = 'Konum bilgisi eksik. Konum izni ver veya sayfayı yenile.';
+            qmError.classList.remove('hidden'); return;
+        }
+        if (!selectedDropoff) {
+            qmError.textContent = 'Lütfen önerilerden bir bırakış noktası seç.';
+            qmError.classList.remove('hidden'); return;
+        }
+        const kvkkEl = modalForm.querySelector('[name="kvkk_consent"]');
+        if (kvkkEl && !kvkkEl.checked) {
+            qmError.textContent = 'Devam etmek için KVKK onayını işaretle.';
+            qmError.classList.remove('hidden'); return;
+        }
+        pendingPayload = buildAutoPayload();
+        if (!pendingPayload.customer_name || !pendingPayload.customer_phone) {
+            qmError.textContent = 'Ad ve telefon gerekli.';
+            qmError.classList.remove('hidden'); return;
+        }
+
+        // Login müşteri → direkt gönder; anonim → cache token varsa kullan, yoksa OTP
+        if (FEROGO_AUTH) { await submitRideRequest(null); return; }
+        const cached = storedTokenFor(pendingPayload.customer_phone);
+        if (cached) { await submitRideRequest(cached); return; }
         await requestOtp(pendingPayload.customer_phone);
     });
 
