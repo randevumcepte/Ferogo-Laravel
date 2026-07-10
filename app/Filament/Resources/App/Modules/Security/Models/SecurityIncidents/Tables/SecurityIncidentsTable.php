@@ -62,6 +62,14 @@ class SecurityIncidentsTable
                         'resolved_suspended'  => 'gray',
                         'escalated_police'    => 'danger',
                         default               => 'gray',
+                    })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'open'                => 'Açık',
+                        'investigating'       => 'İnceleniyor',
+                        'resolved_ok'         => 'Çözüldü',
+                        'resolved_suspended'  => 'Sürücü askıda',
+                        'escalated_police'    => 'Polise yönlendirildi',
+                        default               => $state,
                     }),
 
                 TextColumn::make('driver.user.name')

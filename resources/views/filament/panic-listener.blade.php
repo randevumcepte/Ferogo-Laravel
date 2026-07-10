@@ -52,6 +52,29 @@
         padding: 14px; margin: 14px 0 4px;
     }
     #ferxgo-panic-overlay .who-card .lbl { font-size: 12px; color: #991b1b; text-transform: uppercase; letter-spacing: .5px; }
+
+    /* Küçültülmüş sürüklenebilir çağrı kutusu */
+    #ferxgo-panic-mini {
+        position: fixed; top: 16px; right: 16px; z-index: 2147483647;
+        width: 270px; background: #fff; color: #111; border-radius: 14px;
+        box-shadow: 0 12px 40px rgba(0,0,0,.45); border: 2px solid #dc2626;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        overflow: hidden; user-select: none; touch-action: none;
+    }
+    #ferxgo-panic-mini .pm-head {
+        background: #dc2626; color: #fff; padding: 9px 12px; font-weight: 800;
+        font-size: 13px; cursor: move; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    #ferxgo-panic-mini .pm-body { padding: 11px 12px; }
+    #ferxgo-panic-mini .pm-name { font-weight: 700; font-size: 14px; }
+    #ferxgo-panic-mini .pm-status { font-size: 13px; color: #16a34a; margin: 4px 0 10px; font-weight: 700; }
+    #ferxgo-panic-mini .pm-actions { display: flex; gap: 8px; }
+    #ferxgo-panic-mini .pm-actions button, #ferxgo-panic-mini .pm-actions a {
+        flex: 1; border: 0; border-radius: 8px; padding: 9px; font-size: 12px; font-weight: 800; cursor: pointer;
+        text-align: center; text-decoration: none; display: inline-block;
+    }
+    #ferxgo-panic-mini .pm-open { background: #2563eb; color: #fff; }
+    #ferxgo-panic-mini .pm-close { background: #dc2626; color: #fff; }
 </style>
 
 <script>
@@ -65,6 +88,7 @@
     var dismissed = {};          // bu oturumda kapatılan alarm id'leri
     var audioCtx = null, beepTimer = null, muted = false;
     var overlay = null, current = null;
+    var miniEl = null, minimized = false, activeAlert = null, callPhone = null;
 
     // ---- Alarm sesi (WebAudio — dosya gerektirmez) ----
     function beepOnce() {
@@ -131,7 +155,7 @@
                     callBtn +
                     shareBtn +
                     mapBtn +
-                    '<a class="btn b-open" href="' + escapeAttr(alert.url) + '">Panelde Aç</a>' +
+                    '<a class="btn b-open" href="' + escapeAttr(alert.url) + '" target="_blank" rel="noopener">Paneli Aç</a>' +
                     '<button type="button" class="b-mute">🔇 Sessize Al</button>' +
                     '<button type="button" class="b-dismiss">Kapat</button>' +
                 '</div>' +
@@ -161,7 +185,15 @@
         var callEl = overlay.querySelector('.b-call');
         if (callEl) {
             callEl.addEventListener('click', function () {
-                answerCall(alert.id, callEl.getAttribute('data-phone'), callEl);
+                answerCall(alert.id, callEl.getAttribute('data-phone'));
+            });
+        }
+
+        // Paneli Aç — yeni sekmede detay panelini açar + çağrı kutusunu küçültür (sürüklenebilir)
+        var openEl = overlay.querySelector('.b-open');
+        if (openEl) {
+            openEl.addEventListener('click', function () {
+                collapseToMini(alert);   // yeni sekme zaten anchor target=_blank ile açılır
             });
         }
 
@@ -169,40 +201,123 @@
             muted = true; stopSiren(); this.textContent = '🔇 Susturuldu';
         });
         overlay.querySelector('.b-dismiss').addEventListener('click', function () {
-            if (window.PanicRTC && window.PanicRTC.isActive()) window.PanicRTC.hangup(true);
-            dismissed[alert.id] = true;
-            removeOverlay();
-            stopSiren();
+            endEverything(alert.id);
         });
     }
 
-    // Operatör WebRTC ile kişinin çağrısını cevaplar (tarayıcıda konuşur — santral gerekmez)
-    function answerCall(alertId, phone, el) {
-        if (!window.PanicRTC) {
-            if (phone) window.location.href = 'tel:' + phone;
-            return;
+    // Çağrı durumunu görünen UI'a (tam overlay ya da mini kutu) yaz
+    function callStatusText(s) {
+        return s === 'connecting' ? '📞 Bağlanıyor…'
+             : s === 'active'     ? '🟢 Görüşülüyor'
+             : s === 'failed'     ? '📞 Bağlantı kurulamadı'
+             : s === 'ended'      ? 'Görüşme bitti'
+             : s === 'mic-error'  ? 'Mikrofon açılamadı'
+             : s;
+    }
+    function setCallStatus(s) {
+        var txt = callStatusText(s);
+        if (overlay) {
+            var b = overlay.querySelector('.b-call');
+            if (b) { b.textContent = (s === 'active' ? '🟢 Görüşülüyor' : txt); b.disabled = (s === 'active' || s === 'connecting'); }
         }
+        if (miniEl) {
+            var st = miniEl.querySelector('.pm-status');
+            if (st) st.textContent = txt;
+        }
+    }
+
+    // Operatör WebRTC ile kişinin çağrısını cevaplar (tarayıcıda konuşur — santral gerekmez)
+    function answerCall(alertId, phone) {
+        if (!window.PanicRTC) { if (phone) window.location.href = 'tel:' + phone; return; }
+        callPhone = phone;
         muted = true; stopSiren(); // alarm sesini sustur, konuşmaya geç
         var base = root.getAttribute('data-signal-base');
         var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-        el.disabled = true; el.textContent = '📞 Bağlanıyor…';
+        setCallStatus('connecting');
         window.PanicRTC.start({
             role: 'operator',
             pushUrl: base + '/' + alertId + '/signal',
             pullUrl: base + '/' + alertId + '/signals',
             csrf: csrf,
             onStatus: function (s) {
-                if (s === 'connecting') el.textContent = '📞 Bağlanıyor…';
-                else if (s === 'active') { el.textContent = '🟢 Görüşülüyor (bitirmek için "Kapat")'; el.disabled = true; }
-                else if (s === 'failed') { el.textContent = '📞 Yeniden Dene'; el.disabled = false; }
-                else if (s === 'ended') { el.textContent = '📞 Çağrıyı Aç (Konuş)'; el.disabled = false; }
-                else if (s === 'mic-error') { el.textContent = 'Mikrofon açılamadı'; el.disabled = false;
-                    if (phone) window.location.href = 'tel:' + phone; }
+                setCallStatus(s);
+                if (s === 'mic-error' && phone) window.location.href = 'tel:' + phone;
             },
         }).catch(function () {
-            el.disabled = false; el.textContent = '📞 Çağrıyı Aç (Konuş)';
+            setCallStatus('failed');
             if (phone) window.location.href = 'tel:' + phone;
         });
+    }
+
+    // Tam overlay'i kapat ama çağrıyı SÜRDÜR; sağ üstte sürüklenebilir mini kutu göster
+    function collapseToMini(alert) {
+        minimized = true;
+        activeAlert = alert;
+        removeOverlay();          // çağrıyı bitirmeden sadece görseli kaldır
+        stopSiren();
+        buildMini(alert);
+    }
+
+    function buildMini(alert) {
+        removeMini();
+        miniEl = document.createElement('div');
+        miniEl.id = 'ferxgo-panic-mini';
+        var who = (alert.who || 'Kullanıcı') + (alert.name ? ' · ' + alert.name : '');
+        miniEl.innerHTML =
+            '<div class="pm-head"><span>🚨 Acil Çağrı</span><span>⠿ sürükle</span></div>' +
+            '<div class="pm-body">' +
+                '<div class="pm-name">' + escapeHtml(who) + '</div>' +
+                '<div class="pm-status">' + (window.PanicRTC && window.PanicRTC.isActive() ? '🟢 Görüşülüyor' : 'Alarm açık') + '</div>' +
+                '<div class="pm-actions">' +
+                    '<a class="pm-open" href="' + escapeAttr(alert.url) + '" target="_blank" rel="noopener">Paneli Aç</a>' +
+                    '<button type="button" class="pm-close">Kapat</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(miniEl);
+
+        miniEl.querySelector('.pm-close').addEventListener('click', function () {
+            endEverything(alert.id);
+        });
+        makeDraggable(miniEl, miniEl.querySelector('.pm-head'));
+    }
+
+    function removeMini() {
+        if (miniEl && miniEl.parentNode) miniEl.parentNode.removeChild(miniEl);
+        miniEl = null;
+    }
+
+    // Çağrıyı bitir + tüm görselleri kaldır + bu oturumda tekrar açılmasın
+    function endEverything(alertId) {
+        if (window.PanicRTC && window.PanicRTC.isActive()) window.PanicRTC.hangup(true);
+        if (alertId != null) dismissed[alertId] = true;
+        removeOverlay();
+        removeMini();
+        minimized = false;
+        activeAlert = null;
+        stopSiren();
+    }
+
+    // Mini kutuyu mouse/touch ile sürükle
+    function makeDraggable(el, handle) {
+        var dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+        handle.addEventListener('pointerdown', function (e) {
+            dragging = true;
+            var r = el.getBoundingClientRect();
+            ox = r.left; oy = r.top; sx = e.clientX; sy = e.clientY;
+            el.style.left = ox + 'px'; el.style.top = oy + 'px';
+            el.style.right = 'auto';
+            try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+        });
+        handle.addEventListener('pointermove', function (e) {
+            if (!dragging) return;
+            var nx = ox + (e.clientX - sx), ny = oy + (e.clientY - sy);
+            nx = Math.max(0, Math.min(nx, window.innerWidth - el.offsetWidth));
+            ny = Math.max(0, Math.min(ny, window.innerHeight - el.offsetHeight));
+            el.style.left = nx + 'px'; el.style.top = ny + 'px';
+        });
+        var stop = function () { dragging = false; };
+        handle.addEventListener('pointerup', stop);
+        handle.addEventListener('pointercancel', stop);
     }
 
     function removeOverlay() {
