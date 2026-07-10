@@ -40,6 +40,7 @@ class ViewSecurityIncident extends ViewRecord
                         'reviewed_at' => now(),
                     ]);
                     Notification::make()->title('Olay onaylandı, yolculuk devam ediyor.')->success()->send();
+                    $this->redirect(SecurityIncidentResource::getUrl('index'));
                 });
 
             $actions[] = Action::make('suspend')
@@ -70,6 +71,7 @@ class ViewSecurityIncident extends ViewRecord
                         'reviewed_at' => now(),
                     ]);
                     Notification::make()->title('Sürücü askıya alındı.')->danger()->send();
+                    $this->redirect(SecurityIncidentResource::getUrl('index'));
                 });
 
             $actions[] = Action::make('police')
@@ -82,6 +84,8 @@ class ViewSecurityIncident extends ViewRecord
                         'handler_user_id' => auth()->id(),
                         'resolved_at' => now(),
                     ]);
+                    Notification::make()->title('Olay polise yönlendirildi olarak kapatıldı.')->success()->send();
+                    $this->redirect(SecurityIncidentResource::getUrl('index'));
                 });
         }
 

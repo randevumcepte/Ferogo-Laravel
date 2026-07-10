@@ -66,6 +66,8 @@ class ViewPanicAlert extends ViewRecord
                         'status' => PanicAlert::STATUS_RESOLVED,
                         'resolved_at' => now(),
                     ]);
+                    Notification::make()->title('Alarm çözüldü olarak kapatıldı.')->success()->send();
+                    $this->redirect(PanicAlertResource::getUrl('index'));
                 });
 
             $actions[] = Action::make('false_alarm')
@@ -76,6 +78,8 @@ class ViewPanicAlert extends ViewRecord
                         'status' => PanicAlert::STATUS_FALSE_ALARM,
                         'resolved_at' => now(),
                     ]);
+                    Notification::make()->title('Yanlış alarm olarak kapatıldı.')->success()->send();
+                    $this->redirect(PanicAlertResource::getUrl('index'));
                 });
         }
 
