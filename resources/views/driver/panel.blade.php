@@ -113,6 +113,64 @@
         })();
     </script>
 
+    {{-- ===== Özel onay/uyarı modalı (native confirm/alert yerine) ===== --}}
+    <div id="fe-dialog" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+        <div id="fe-dialog-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-sm rounded-2xl bg-zinc-900 border border-white/10 shadow-2xl shadow-black/60 p-6">
+            <div id="fe-dialog-msg" class="text-white text-sm leading-relaxed mb-5 whitespace-pre-line"></div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" id="fe-dialog-cancel" class="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-200 text-sm font-semibold hover:bg-white/10 transition">İptal</button>
+                <button type="button" id="fe-dialog-ok" class="px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-600 text-black text-sm font-bold transition">Tamam</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var dlg = document.getElementById('fe-dialog');
+            var msg = document.getElementById('fe-dialog-msg');
+            var okBtn = document.getElementById('fe-dialog-ok');
+            var cancelBtn = document.getElementById('fe-dialog-cancel');
+            var backdrop = document.getElementById('fe-dialog-backdrop');
+            var current = null; // aktif resolve
+
+            function close(val) {
+                dlg.classList.add('hidden');
+                dlg.classList.remove('flex');
+                var r = current; current = null;
+                if (r) r(val);
+            }
+            okBtn.addEventListener('click', function () { close(true); });
+            cancelBtn.addEventListener('click', function () { close(false); });
+            backdrop.addEventListener('click', function () { close(false); });
+            document.addEventListener('keydown', function (e) {
+                if (current && e.key === 'Escape') close(false);
+                if (current && e.key === 'Enter') close(true);
+            });
+
+            // Özel onay: Promise<boolean> döner (await ile kullanılır)
+            window.feConfirm = function (message, opts) {
+                opts = opts || {};
+                // önceki açık diyaloğu kapat
+                if (current) close(false);
+                return new Promise(function (resolve) {
+                    current = resolve;
+                    msg.textContent = message == null ? '' : String(message);
+                    okBtn.textContent = opts.okText || 'Tamam';
+                    cancelBtn.textContent = opts.cancelText || 'İptal';
+                    cancelBtn.classList.toggle('hidden', opts.alert === true);
+                    okBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-bold transition ' +
+                        (opts.danger ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-brand hover:bg-brand-600 text-black');
+                    dlg.classList.remove('hidden');
+                    dlg.classList.add('flex');
+                });
+            };
+            // Özel uyarı: tek "Tamam" butonu (iptal gizli)
+            window.feAlert = function (message) {
+                return window.feConfirm(message, { alert: true, okText: 'Tamam' });
+            };
+        })();
+    </script>
+
     <main class="max-w-5xl mx-auto px-4 py-6 space-y-5">
 
         {{-- ===== Paket uyarısı (JS açıp kapatır) ===== --}}
@@ -590,7 +648,7 @@
                     renderAvailability(data.status);
                 } else if (data.code === 'package_required') {
                     // Paket yok → Paketler sayfasına yönlendir
-                    if (confirm(data.message + '\n\nPaketler sayfasına gidilsin mi?')) {
+                    if (await feConfirm(data.message + '\n\nPaketler sayfasına gidilsin mi?')) {
                         location.href = data.redirect || '{{ route('driver.packages.index') }}';
                     }
                 }
@@ -669,8 +727,8 @@
                             headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                         });
                         const data = await res.json();
-                        if (!data.ok) alert(data.message || 'Kabul edilemedi.');
-                    } catch (_) { alert('Bağlantı hatası.'); }
+                        if (!data.ok) feAlert(data.message || 'Kabul edilemedi.');
+                    } catch (_) { feAlert('Bağlantı hatası.'); }
                     finally { $('offer-accept').disabled = false; pollNow(); }
                 };
                 $('offer-reject').onclick = async () => {
@@ -712,9 +770,9 @@
                             body: JSON.stringify({ amount: offerCounterAmount }),
                         });
                         const data = await res.json();
-                        if (!data.ok) alert(data.message || 'Karşı teklif gönderilemedi.');
+                        if (!data.ok) feAlert(data.message || 'Karşı teklif gönderilemedi.');
                         else $('offer-counter-row').classList.add('hidden');
-                    } catch (_) { alert('Bağlantı hatası.'); }
+                    } catch (_) { feAlert('Bağlantı hatası.'); }
                     finally { $('offer-csend').disabled = false; pollNow(); }
                 };
             }
@@ -941,15 +999,15 @@
                     headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                 });
                 const data = await res.json();
-                if (!data.ok) alert(data.message || 'Varış işaretlenemedi.');
-            } catch (_) { alert('Bağlantı hatası.'); }
+                if (!data.ok) feAlert(data.message || 'Varış işaretlenemedi.');
+            } catch (_) { feAlert('Bağlantı hatası.'); }
             finally { pollNow(); }
         });
 
         // === NO-SHOW button ===
         $('active-no-show').addEventListener('click', async () => {
             if ($('active-no-show').disabled) return;
-            if (!confirm('Müşterinin gelmediğini onaylıyor musun? Bu kayıt müşterinin hesabına işlenir ve sana tazminat ödenir.')) return;
+            if (!await feConfirm('Müşterinin gelmediğini onaylıyor musun? Bu kayıt müşterinin hesabına işlenir ve sana tazminat ödenir.')) return;
 
             $('active-no-show').disabled = true;
 
@@ -964,16 +1022,16 @@
                     });
                     const data = await res.json();
                     if (!data.ok) {
-                        alert(data.message || 'No-show kaydedilemedi.');
+                        feAlert(data.message || 'No-show kaydedilemedi.');
                         $('active-no-show').disabled = false;
                         return;
                     }
-                    alert(data.message || 'Olay kayda alındı. Tazminat hesabına işlendi.');
+                    feAlert(data.message || 'Olay kayda alındı. Tazminat hesabına işlendi.');
                     lastMessageId = 0;
                     $('chat-list').innerHTML = '';
                     pollNow();
                 } catch (_) {
-                    alert('Bağlantı hatası.');
+                    feAlert('Bağlantı hatası.');
                     $('active-no-show').disabled = false;
                 }
             };
@@ -1017,7 +1075,7 @@
                     chat.appendChild(bubble);
                     chat.scrollTop = chat.scrollHeight;
                 }
-            } catch (_) { alert('Mesaj gönderilemedi.'); }
+            } catch (_) { feAlert('Mesaj gönderilemedi.'); }
         });
 
         // ===== Faz 5 — Tuzak soru & Ride start =====
@@ -1059,7 +1117,7 @@
 
         // YOLCULUĞU BAŞLAT — sarı buton
         $('active-start-ride').addEventListener('click', async () => {
-            if (!confirm('Müşteri araçta ve yola çıkmaya hazır mı? Yolculuğu başlatıyorum.')) return;
+            if (!await feConfirm('Müşteri araçta ve yola çıkmaya hazır mı? Yolculuğu başlatıyorum.')) return;
             $('active-start-ride').disabled = true;
             try {
                 const res = await fetch(START_RIDE_URL, {
@@ -1067,13 +1125,13 @@
                     headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                 });
                 if (res.ok) pollNow();
-                else alert('Başlatılamadı, sayfayı yenile.');
+                else feAlert('Başlatılamadı, sayfayı yenile.');
             } catch (_) {} finally { $('active-start-ride').disabled = false; }
         });
 
         // Complete
         $('active-complete').addEventListener('click', async () => {
-            if (!confirm('Yolculuğu tamamlandı olarak işaretle?')) return;
+            if (!await feConfirm('Yolculuğu tamamlandı olarak işaretle?')) return;
             try {
                 const res = await fetch(DONE_URL, {
                     method: 'POST',
@@ -1496,7 +1554,7 @@
                     modal.classList.add('hidden');
                     modal.classList.remove('flex');
                     document.body.style.overflow = '';
-                    alert('✓ 3 fotoğraf yüklendi. Çağrı merkezi inceliyor.');
+                    feAlert('✓ 3 fotoğraf yüklendi. Çağrı merkezi inceliyor.');
                 }, 400);
             }
         }
@@ -1597,7 +1655,7 @@
                     canvas.getContext('2d').drawImage(video, 0, 0, w, h);
                     canvas.toBlob(async (blob) => {
                         if (!blob) {
-                            alert('Fotoğraf alınamadı, tekrar deneyin.');
+                            feAlert('Fotoğraf alınamadı, tekrar deneyin.');
                             return;
                         }
                         const file = new File([blob], `${type}-${Date.now()}.jpg`, { type: 'image/jpeg' });
@@ -1637,10 +1695,10 @@
                     uploaded.add(type);
                     redrawProgress();
                 } else {
-                    alert('Foto yüklenemedi: ' + (data.message || 'Bilinmeyen hata'));
+                    feAlert('Foto yüklenemedi: ' + (data.message || 'Bilinmeyen hata'));
                 }
             } catch (err) {
-                alert('Bağlantı hatası. Tekrar deneyin.');
+                feAlert('Bağlantı hatası. Tekrar deneyin.');
             }
         }
 
@@ -1729,7 +1787,7 @@
                 body: JSON.stringify({ enabled: next }),
             });
             const data = await res.json();
-            if (!data.ok) { paint(!next); alert(data.message || 'İşlem başarısız.'); }
+            if (!data.ok) { paint(!next); feAlert(data.message || 'İşlem başarısız.'); }
             else { paint(!!data.women_only); }
         } catch (_) { paint(!next); } finally { btn.dataset.busy = ''; }
     });
