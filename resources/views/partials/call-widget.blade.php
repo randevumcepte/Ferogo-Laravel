@@ -473,6 +473,11 @@
         });
     }
     // SHA-256 hash — SDP'nin transit sırasında değişip değişmediğini teyit için
+    // SDP her satırı (sonuncusu dahil) \r\n ile bitmeli. Laravel TrimStrings sondaki
+    // \r\n'i kırpınca Chrome "Invalid SDP line" verir; burada garantiye alıyoruz.
+    function _fixSdp(sdp) {
+        return sdp.endsWith('\r\n') ? sdp : sdp + '\r\n';
+    }
     async function _sdpHash(s) {
         try {
             const buf = new TextEncoder().encode(s);
@@ -491,15 +496,13 @@
         await peer.setLocalDescription(offer);
         const sdp = peer.localDescription.sdp;
         console.log('[call] offer sent · len:', sdp.length, '· hash:', await _sdpHash(sdp), '· ua:', navigator.userAgent.match(/Chrome|Safari|Firefox|Edge/g)?.join(','));
-        console.log('[call][DBG] SENT sdp raw:', JSON.stringify(sdp)); // TEŞHİS — sonra silinecek
         pushSignal('offer', { sdp, type: peer.localDescription.type });
     }
     async function handleRemoteOffer(payload) {
         console.log('[call] remote offer received · len:', payload.sdp.length, '· hash:', await _sdpHash(payload.sdp), '· ua:', navigator.userAgent.match(/Chrome|Safari|Firefox|Edge/g)?.join(','));
-        console.log('[call][DBG] RECV sdp raw:', JSON.stringify(payload.sdp)); // TEŞHİS — sonra silinecek
         const peer = buildPc();
         // KRİTİK SIRA: önce setRemoteDescription (transceiver'lar kurulur), sonra addTrack
-        await peer.setRemoteDescription({ type: payload.type, sdp: payload.sdp });
+        await peer.setRemoteDescription({ type: payload.type, sdp: _fixSdp(payload.sdp) });
         remoteDescSet = true;
         const stream = await getMic();
         addLocalTracks(peer, stream);
@@ -513,7 +516,7 @@
     async function handleRemoteAnswer(payload) {
         if (!pc) return;
         console.log('[call] remote answer received · len:', payload.sdp.length, '· hash:', await _sdpHash(payload.sdp));
-        await pc.setRemoteDescription({ type: payload.type, sdp: payload.sdp });
+        await pc.setRemoteDescription({ type: payload.type, sdp: _fixSdp(payload.sdp) });
         remoteDescSet = true;
         await drainIceQueue();
     }
