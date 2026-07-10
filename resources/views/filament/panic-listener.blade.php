@@ -4,9 +4,12 @@
     /admin/panic-poll'u periyodik yoklar; yeni açık alarm gelince tam ekran kırmızı
     banner açar ve alarm sesi çalar (operatör "Sessize Al" / "Kapat" deyene dek).
 --}}
+@include('partials.panic-webrtc')
+
 <div id="ferxgo-panic-root"
      data-poll-url="{{ url('/admin/panic-poll') }}"
      data-call-url="{{ url('/admin/panic-call') }}"
+     data-signal-base="{{ url('/admin/panic-call') }}"
      style="display:none"></div>
 
 <style>
@@ -110,9 +113,7 @@
                 (alert.ago ? '<div class="meta">' + escapeHtml(alert.ago) + '</div>' : '') +
             '</div>';
 
-        var callBtn = alert.phone
-            ? '<button type="button" class="b-call" data-phone="' + escapeAttr(alert.phone) + '">📞 Hemen Ara</button>'
-            : '';
+        var callBtn = '<button type="button" class="b-call" data-phone="' + escapeAttr(alert.phone || '') + '">📞 Çağrıyı Aç (Konuş)</button>';
         var mapBtn = alert.map_url
             ? '<a class="btn b-map" href="' + escapeAttr(alert.map_url) + '" target="_blank" rel="noopener">📍 Haritada Aç</a>'
             : '';
@@ -156,11 +157,11 @@
             });
         }
 
-        // Click-to-call (santralden) — henüz kurulmadıysa tel: fallback
+        // Çağrıyı Aç — WebRTC ile kişiyle tarayıcı üzerinden sesli konuş (operatör = cevaplayan)
         var callEl = overlay.querySelector('.b-call');
         if (callEl) {
             callEl.addEventListener('click', function () {
-                triggerCall(alert.id, callEl.getAttribute('data-phone'), callEl);
+                answerCall(alert.id, callEl.getAttribute('data-phone'), callEl);
             });
         }
 
@@ -168,39 +169,40 @@
             muted = true; stopSiren(); this.textContent = '🔇 Susturuldu';
         });
         overlay.querySelector('.b-dismiss').addEventListener('click', function () {
+            if (window.PanicRTC && window.PanicRTC.isActive()) window.PanicRTC.hangup(true);
             dismissed[alert.id] = true;
             removeOverlay();
             stopSiren();
         });
     }
 
-    // Click-to-call: sunucuya istek at (santral originate). Kurulu değilse tel: ile aç.
-    function triggerCall(alertId, phone, el) {
-        var orig = el.textContent;
-        el.textContent = '📞 Aranıyor…';
-        el.disabled = true;
-        fetch(root.getAttribute('data-call-url'), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+    // Operatör WebRTC ile kişinin çağrısını cevaplar (tarayıcıda konuşur — santral gerekmez)
+    function answerCall(alertId, phone, el) {
+        if (!window.PanicRTC) {
+            if (phone) window.location.href = 'tel:' + phone;
+            return;
+        }
+        muted = true; stopSiren(); // alarm sesini sustur, konuşmaya geç
+        var base = root.getAttribute('data-signal-base');
+        var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+        el.disabled = true; el.textContent = '📞 Bağlanıyor…';
+        window.PanicRTC.start({
+            role: 'operator',
+            pushUrl: base + '/' + alertId + '/signal',
+            pullUrl: base + '/' + alertId + '/signals',
+            csrf: csrf,
+            onStatus: function (s) {
+                if (s === 'connecting') el.textContent = '📞 Bağlanıyor…';
+                else if (s === 'active') { el.textContent = '🟢 Görüşülüyor (bitirmek için "Kapat")'; el.disabled = true; }
+                else if (s === 'failed') { el.textContent = '📞 Yeniden Dene'; el.disabled = false; }
+                else if (s === 'ended') { el.textContent = '📞 Çağrıyı Aç (Konuş)'; el.disabled = false; }
+                else if (s === 'mic-error') { el.textContent = 'Mikrofon açılamadı'; el.disabled = false;
+                    if (phone) window.location.href = 'tel:' + phone; }
             },
-            credentials: 'same-origin',
-            body: JSON.stringify({ alert_id: alertId })
-        }).then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (data) {
-              if (data && data.success) {
-                  el.textContent = '✓ Çağrı başlatıldı';
-              } else {
-                  // Santral kurulu değil → tel: ile telefonun/softphone'un çeviricisini aç
-                  el.textContent = orig; el.disabled = false;
-                  if (phone) window.location.href = 'tel:' + phone;
-              }
-          }).catch(function () {
-              el.textContent = orig; el.disabled = false;
-              if (phone) window.location.href = 'tel:' + phone;
-          });
+        }).catch(function () {
+            el.disabled = false; el.textContent = '📞 Çağrıyı Aç (Konuş)';
+            if (phone) window.location.href = 'tel:' + phone;
+        });
     }
 
     function removeOverlay() {

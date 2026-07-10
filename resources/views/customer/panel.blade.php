@@ -781,6 +781,8 @@
     🚨
 </button>
 
+@include('partials.panic-webrtc')
+
 {{-- Sistem-içi acil yardım modal'ı (tarayıcı alert/confirm yerine) --}}
 <div id="cust-panic-modal" class="fixed inset-0 z-[110] items-center justify-center p-4"
      style="display:none; background:rgba(70,0,0,.75); backdrop-filter:blur(2px);">
@@ -808,7 +810,38 @@
     const actions = document.getElementById('cust-panic-actions');
 
     const openModal  = () => { modal.style.display = 'flex'; };
-    const closeModal = () => { modal.style.display = 'none'; actions.innerHTML = ''; };
+    const closeModal = () => {
+        if (window.PanicRTC && window.PanicRTC.isActive()) window.PanicRTC.hangup(true);
+        modal.style.display = 'none'; actions.innerHTML = '';
+    };
+
+    // Alarm iletildikten sonra destek çalışanını WebRTC ile "arar" (kişi = arayan)
+    function startSupportCall(publicId) {
+        if (!window.PanicRTC || !publicId) return;
+        var muteBtn = btnEl('🔇 Mikrofonu Kapat', 'bg-gray-100 hover:bg-gray-200 text-gray-700', function () {
+            var m = window.PanicRTC.toggleMute();
+            muteBtn.textContent = m ? '🎙️ Mikrofonu Aç' : '🔇 Mikrofonu Kapat';
+        });
+        var endBtn = btnEl('📴 Görüşmeyi Bitir', 'bg-red-600 hover:bg-red-700 text-white', function () {
+            window.PanicRTC.hangup(true); closeModal();
+        });
+        window.PanicRTC.start({
+            role: 'caller',
+            pushUrl: '{{ url('/api/panic') }}/' + publicId + '/signal',
+            pullUrl: '{{ url('/api/panic') }}/' + publicId + '/signals',
+            csrf: document.querySelector('meta[name="csrf-token"]').content,
+            onStatus: function (s) {
+                if (s === 'connecting') bodyEl.textContent = 'Destek ekibi aranıyor, lütfen hattı açık tutun…';
+                else if (s === 'active') bodyEl.textContent = '🟢 Destek ekibiyle görüşüyorsunuz. Sakin olun, buradayız.';
+                else if (s === 'mic-error') bodyEl.textContent = 'Mikrofon açılamadı. Aşağıdaki butonla arayın.';
+                else if (s === 'failed') bodyEl.textContent = 'Sesli bağlantı kurulamadı. Aşağıdan arayın.';
+            },
+        }).catch(function () {});
+        actions.innerHTML = '';
+        actions.appendChild(muteBtn);
+        actions.appendChild(endBtn);
+        actions.appendChild(linkEl('📞 Çağrı Merkezini Ara', 'tel:' + CALL_CENTER, 'bg-green-600 hover:bg-green-700 text-white'));
+    }
 
     function btnEl(label, cls, onClick) {
         const b = document.createElement('button');
@@ -836,13 +869,17 @@
         openModal();
     }
 
-    function showResult(ok, message, call) {
+    function showResult(ok, message, call, publicId) {
         head.style.background = ok ? '#16a34a' : '#dc2626';
         titleEl.textContent = ok ? '✓ Alarm İletildi' : 'Bağlantı Sorunu';
         bodyEl.textContent = ok
-            ? (message || 'Çağrı merkezi alarmınızı aldı. Güvenli bir yere geçin, çağrı merkezi sizi arayacak.')
+            ? (message || 'Çağrı merkezi alarmınızı aldı. Destek ekibi bağlanıyor…')
             : (message || 'İstek gönderilemedi. Lütfen doğrudan arayın.');
         actions.innerHTML = '';
+        if (ok && publicId && window.PanicRTC) {
+            startSupportCall(publicId);
+            return;
+        }
         const phone = call || '+908503403039';
         actions.appendChild(linkEl('📞 Çağrı Merkezini Ara', 'tel:' + phone, 'bg-green-600 hover:bg-green-700 text-white'));
         actions.appendChild(btnEl('Kapat', 'bg-gray-100 hover:bg-gray-200 text-gray-700', closeModal));
@@ -910,7 +947,7 @@
         };
         try {
             const data = await postPanic(payload);
-            showResult(!!data.success, data.message, data.call);
+            showResult(!!data.success, data.message, data.call, data.alert_id);
         } catch (err) {
             qPush(payload);
             showOffline(payload);

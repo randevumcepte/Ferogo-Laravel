@@ -292,6 +292,12 @@ Route::post('/admin/panic-call', [PanicAlertController::class, 'call'])
     ->middleware('auth')
     ->name('security.panic.call');
 
+// Panik WebRTC sesli görüşme sinyalleşmesi — kişi (public_id) ↔ operatör (admin auth)
+Route::post('/api/panic/{publicId}/signal',   [PanicAlertController::class, 'callerSignal'])->name('security.panic.caller_signal');
+Route::get('/api/panic/{publicId}/signals',   [PanicAlertController::class, 'callerSignals'])->name('security.panic.caller_signals');
+Route::post('/admin/panic-call/{id}/signal',  [PanicAlertController::class, 'operatorSignal'])->middleware('auth')->whereNumber('id')->name('security.panic.operator_signal');
+Route::get('/admin/panic-call/{id}/signals',  [PanicAlertController::class, 'operatorSignals'])->middleware('auth')->whereNumber('id')->name('security.panic.operator_signals');
+
 // ─────────────────────────────────────────────────────────
 // SÜRÜCÜ PAKET ABONELİĞİ — Martı TAG modeli (3 saatlik/günlük/haftalık/aylık)
 // Paket aktif değilse radar'a düşmez, iş atanmaz.

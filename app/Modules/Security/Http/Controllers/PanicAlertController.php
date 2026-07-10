@@ -7,6 +7,7 @@ use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Driver\Models\Driver;
 use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use App\Modules\Security\Models\PanicAlert;
+use App\Modules\Security\Models\PanicCallSignal;
 use App\Modules\Security\Services\ClickToCallService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -251,5 +252,95 @@ class PanicAlertController extends Controller
             'success' => $res['ok'],
             'message' => $res['message'] ?? ($res['ok'] ? 'Çağrı başlatıldı.' : 'Çağrı başlatılamadı.'),
         ], $res['ok'] ? 200 : 422);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // WebRTC sesli görüşme sinyalleşmesi (kişi ↔ destek çalışanı)
+    // Kişi = arayan (offer), operatör = cevaplayan (answer). Ses P2P, sinyal polling.
+    // ─────────────────────────────────────────────────────────
+
+    private const SIGNAL_TTL_SECONDS = 90;
+
+    /**
+     * POST /api/panic/{publicId}/signal   (kişi tarafı — public_id ile yetki)
+     * Body: { type: offer|answer|ice|bye, payload: {...} }
+     */
+    public function callerSignal(Request $request, string $publicId): JsonResponse
+    {
+        $alert = PanicAlert::where('public_id', $publicId)->firstOrFail();
+        return $this->pushSignal($request, $alert, 'user');
+    }
+
+    /**
+     * GET /api/panic/{publicId}/signals?since_id=N   (kişi tarafı)
+     * Operatörün yolladığı sinyalleri çeker.
+     */
+    public function callerSignals(Request $request, string $publicId): JsonResponse
+    {
+        $alert = PanicAlert::where('public_id', $publicId)->firstOrFail();
+        return $this->pullSignals($request, $alert, 'operator');
+    }
+
+    /**
+     * POST /admin/panic-call/{id}/signal   (operatör — admin auth)
+     */
+    public function operatorSignal(Request $request, int $id): JsonResponse
+    {
+        $alert = PanicAlert::findOrFail($id);
+        return $this->pushSignal($request, $alert, 'operator');
+    }
+
+    /**
+     * GET /admin/panic-call/{id}/signals?since_id=N   (operatör — admin auth)
+     * Kişinin yolladığı sinyalleri çeker.
+     */
+    public function operatorSignals(Request $request, int $id): JsonResponse
+    {
+        $alert = PanicAlert::findOrFail($id);
+        return $this->pullSignals($request, $alert, 'user');
+    }
+
+    private function pushSignal(Request $request, PanicAlert $alert, string $fromRole): JsonResponse
+    {
+        $validated = $request->validate([
+            'type'    => ['required', 'in:offer,answer,ice,bye'],
+            'payload' => ['required', 'array'],
+        ]);
+
+        PanicCallSignal::create([
+            'panic_alert_id' => $alert->id,
+            'from_role'      => $fromRole,
+            'type'           => $validated['type'],
+            'payload'        => $validated['payload'],
+            'created_at'     => now(),
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    private function pullSignals(Request $request, PanicAlert $alert, string $otherRole): JsonResponse
+    {
+        $sinceId = (int) $request->query('since_id', 0);
+
+        $signals = PanicCallSignal::where('panic_alert_id', $alert->id)
+            ->where('from_role', $otherRole)
+            ->where('id', '>', $sinceId)
+            ->orderBy('id')
+            ->limit(50)
+            ->get(['id', 'from_role', 'type', 'payload', 'created_at']);
+
+        // Eski sinyalleri temizle
+        PanicCallSignal::where('panic_alert_id', $alert->id)
+            ->where('created_at', '<', now()->subSeconds(self::SIGNAL_TTL_SECONDS))
+            ->delete();
+
+        return response()->json([
+            'success' => true,
+            'signals' => $signals->map(fn ($s) => [
+                'id'      => $s->id,
+                'type'    => $s->type,
+                'payload' => $s->payload,
+            ])->values(),
+        ]);
     }
 }
