@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\App\Modules\Legal\Models\LegalConsents\Pages;
 
 use App\Filament\Resources\App\Modules\Legal\Models\LegalConsents\LegalConsentResource;
-use Filament\Infolists\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;

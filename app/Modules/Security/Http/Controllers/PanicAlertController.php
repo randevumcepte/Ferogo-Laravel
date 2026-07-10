@@ -169,20 +169,23 @@ class PanicAlertController extends Controller
         ];
 
         $alerts = PanicAlert::query()
-            ->with('ride.driver.user', 'ride.customer')
+            ->with('ride.customer', 'driver.user', 'triggeredByUser')
             ->whereIn('status', $open)
             ->where('created_at', '>=', now()->subMinutes(30))
             ->latest()
             ->limit(10)
             ->get()
             ->map(function (PanicAlert $a) {
+                // Panik ride olmadan da tetiklenebilir → ismi doğrudan ilişkilerden çek
+                $name = $a->triggered_by_type === PanicAlert::TRIGGER_DRIVER
+                    ? ($a->driver?->user?->name ?? $a->triggeredByUser?->name)
+                    : ($a->triggeredByUser?->name ?? $a->ride?->customer?->name);
+
                 return [
                     'id'       => $a->id,
                     'who'      => $a->triggered_by_type === PanicAlert::TRIGGER_DRIVER ? 'Sürücü' : 'Yolcu',
                     'phone'    => $a->triggered_by_phone,
-                    'name'     => $a->triggered_by_type === PanicAlert::TRIGGER_DRIVER
-                        ? ($a->ride?->driver?->user?->name)
-                        : ($a->ride?->customer?->name),
+                    'name'     => $name,
                     'lat'      => $a->lat,
                     'lng'      => $a->lng,
                     'map_url'  => ($a->lat && $a->lng)

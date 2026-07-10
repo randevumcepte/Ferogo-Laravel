@@ -5,7 +5,7 @@ namespace App\Filament\Resources\App\Modules\Security\Models\PanicAlerts\Pages;
 use App\Filament\Resources\App\Modules\Security\Models\PanicAlerts\PanicAlertResource;
 use App\Modules\Security\Models\PanicAlert;
 use Filament\Actions\Action;
-use Filament\Infolists\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;

@@ -780,13 +780,77 @@
         aria-label="Acil yardım">
     🚨
 </button>
+
+{{-- Sistem-içi acil yardım modal'ı (tarayıcı alert/confirm yerine) --}}
+<div id="cust-panic-modal" class="fixed inset-0 z-[110] items-center justify-center p-4"
+     style="display:none; background:rgba(70,0,0,.75); backdrop-filter:blur(2px);">
+    <div class="w-full max-w-sm rounded-2xl bg-white text-gray-900 shadow-2xl overflow-hidden">
+        <div id="cust-panic-head" class="px-5 py-4 text-center text-white" style="background:#dc2626;">
+            <div class="text-3xl leading-none mb-1">🚨</div>
+            <h3 id="cust-panic-title" class="text-lg font-extrabold">ACİL YARDIM</h3>
+        </div>
+        <div class="px-5 py-4 text-center">
+            <p id="cust-panic-body" class="text-sm text-gray-700 leading-relaxed"></p>
+            <div id="cust-panic-actions" class="mt-5 flex flex-col gap-2"></div>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     const btn = document.getElementById('customer-panic-btn');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-        if (!confirm('🚨 ACİL YARDIM — çağrı merkezi sizinle hemen iletişime geçecek. Devam edilsin mi?')) return;
-        btn.disabled = true;
+    const modal = document.getElementById('cust-panic-modal');
+    if (!btn || !modal) return;
+
+    const head    = document.getElementById('cust-panic-head');
+    const titleEl = document.getElementById('cust-panic-title');
+    const bodyEl  = document.getElementById('cust-panic-body');
+    const actions = document.getElementById('cust-panic-actions');
+
+    const openModal  = () => { modal.style.display = 'flex'; };
+    const closeModal = () => { modal.style.display = 'none'; actions.innerHTML = ''; };
+
+    function btnEl(label, cls, onClick) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'w-full rounded-xl py-3 font-bold text-sm ' + cls;
+        b.textContent = label;
+        b.addEventListener('click', onClick);
+        return b;
+    }
+    function linkEl(label, href, cls) {
+        const a = document.createElement('a');
+        a.href = href;
+        a.className = 'w-full rounded-xl py-3 font-bold text-sm text-center block ' + cls;
+        a.textContent = label;
+        return a;
+    }
+
+    function showConfirm() {
+        head.style.background = '#dc2626';
+        titleEl.textContent = 'ACİL YARDIM';
+        bodyEl.textContent = 'Çağrı merkezi sizinle HEMEN iletişime geçecek. Acil bir durumdaysanız devam edin.';
+        actions.innerHTML = '';
+        actions.appendChild(btnEl('🚨 EVET, ACİL YARDIM İSTİYORUM', 'bg-red-600 hover:bg-red-700 text-white', sendPanic));
+        actions.appendChild(btnEl('Vazgeç', 'bg-gray-100 hover:bg-gray-200 text-gray-700', closeModal));
+        openModal();
+    }
+
+    function showResult(ok, message, call) {
+        head.style.background = ok ? '#16a34a' : '#dc2626';
+        titleEl.textContent = ok ? '✓ Alarm İletildi' : 'Bağlantı Sorunu';
+        bodyEl.textContent = ok
+            ? (message || 'Çağrı merkezi alarmınızı aldı. Güvenli bir yere geçin, çağrı merkezi sizi arayacak.')
+            : (message || 'İstek gönderilemedi. Lütfen doğrudan arayın.');
+        actions.innerHTML = '';
+        const phone = call || '+908503403039';
+        actions.appendChild(linkEl('📞 Çağrı Merkezini Ara', 'tel:' + phone, 'bg-green-600 hover:bg-green-700 text-white'));
+        actions.appendChild(btnEl('Kapat', 'bg-gray-100 hover:bg-gray-200 text-gray-700', closeModal));
+    }
+
+    async function sendPanic() {
+        actions.innerHTML = '';
+        bodyEl.textContent = 'Alarm gönderiliyor…';
         try {
             let lat = null, lng = null, acc = null;
             if (navigator.geolocation) {
@@ -806,17 +870,14 @@
                 }),
             });
             const data = await res.json();
-            if (data.success) {
-                alert('🚨 Çağrı merkezi alarmı alındı. ' + (data.call ? 'Aramak için: ' + data.call : '') + '\nGüvenli bir yere geçin. Çağrı merkezi sizi arayacak.');
-            } else {
-                alert(data.message || 'İstek alınamadı, lütfen direkt arayın: 0850 340 3039');
-            }
+            showResult(!!data.success, data.message, data.call);
         } catch (err) {
-            alert('İstek gönderilemedi, lütfen direkt arayın: 0850 340 3039');
-        } finally {
-            btn.disabled = false;
+            showResult(false, 'İstek gönderilemedi, lütfen doğrudan arayın: 0850 340 3039');
         }
-    });
+    }
+
+    btn.addEventListener('click', showConfirm);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 })();
 </script>
 @endif

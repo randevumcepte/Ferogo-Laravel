@@ -39,7 +39,7 @@ class SafetyAlerts extends BaseWidget
 
         return $table
             ->query(fn () => PanicAlert::query()
-                ->with('ride.driver.user', 'ride.customer')
+                ->with('ride.customer', 'driver.user', 'triggeredByUser')
                 ->where(function ($q) use ($openStatuses) {
                     $q->whereIn('status', $openStatuses)
                       ->orWhere('created_at', '>=', now()->subDay());
@@ -81,12 +81,11 @@ class SafetyAlerts extends BaseWidget
                     ->copyable()
                     ->placeholder('—'),
 
-                Tables\Columns\TextColumn::make('ride.customer.name')
-                    ->label('Yolcu')
-                    ->placeholder('—'),
-
-                Tables\Columns\TextColumn::make('ride.driver.user.name')
-                    ->label('Sürücü')
+                Tables\Columns\TextColumn::make('person_name')
+                    ->label('Ad Soyad')
+                    ->state(fn (PanicAlert $a) => $a->triggered_by_type === 'driver'
+                        ? ($a->driver?->user?->name ?? $a->triggeredByUser?->name)
+                        : ($a->triggeredByUser?->name ?? $a->ride?->customer?->name))
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('lat')
