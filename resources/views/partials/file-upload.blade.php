@@ -21,6 +21,29 @@
     <label class="block text-xs font-medium text-zinc-400 mb-2">{{ $label }}</label>
 
     <div class="rounded-xl border-2 border-dashed border-white/15 hover:border-brand/50 bg-white/[0.02] hover:bg-brand/[0.03] transition p-4 text-center">
+
+        {{-- INPUT'LAR — hem empty hem preview modunda paylaşılan gizli input'lar --}}
+        @if($mode === 'photo')
+            <input id="fu-cam-{{ $name }}" type="file" name="{{ $name }}"
+                   accept="image/*"
+                   @if($capture) capture="{{ $capture }}" @else capture @endif
+                   class="hidden fu-input"
+                   data-target="{{ $name }}"
+                   @if(($required ?? true)) data-required="true" @endif>
+            <input id="fu-gal-{{ $name }}" type="file"
+                   accept="image/*"
+                   class="hidden fu-input"
+                   data-target="{{ $name }}"
+                   data-mirror="fu-cam-{{ $name }}">
+        @else
+            <input id="fu-{{ $name }}" type="file" name="{{ $name }}"
+                   accept="{{ $accept }}"
+                   class="hidden fu-input"
+                   data-target="{{ $name }}"
+                   @if(($required ?? true)) data-required="true" @endif>
+        @endif
+
+        {{-- EMPTY STATE (henüz dosya seçilmedi) --}}
         <div class="fu-empty-{{ $name }}">
             <div class="text-3xl mb-1">📷</div>
             <div class="text-xs text-zinc-300 font-semibold mb-1">
@@ -41,37 +64,37 @@
                         🖼 Galeri
                     </label>
                 </div>
-                {{-- capture: kamerayı açan input (form gönderimindeki alan) --}}
-                <input id="fu-cam-{{ $name }}" type="file" name="{{ $name }}"
-                       accept="image/*"
-                       @if($capture) capture="{{ $capture }}" @else capture @endif
-                       class="hidden fu-input"
-                       data-target="{{ $name }}"
-                       @if(($required ?? true)) data-required="true" @endif>
-                {{-- galeri: normal file picker → JS ile üstteki inputa mirror --}}
-                <input id="fu-gal-{{ $name }}" type="file"
-                       accept="image/*"
-                       class="hidden fu-input"
-                       data-target="{{ $name }}"
-                       data-mirror="fu-cam-{{ $name }}">
             @else
-                {{-- Belge modu — PDF de kabul, kamera kısıtı yok --}}
                 <label for="fu-{{ $name }}"
                        class="cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-white text-xs font-semibold transition">
                     📎 Dosya seç
                 </label>
-                <input id="fu-{{ $name }}" type="file" name="{{ $name }}"
-                       accept="{{ $accept }}"
-                       class="hidden fu-input"
-                       data-target="{{ $name }}"
-                       @if(($required ?? true)) data-required="true" @endif>
             @endif
         </div>
 
+        {{-- PREVIEW STATE (dosya seçildi) — YİNE aynı buton'lar burada değişiklik için --}}
         <div class="fu-preview-{{ $name }} hidden">
             <img id="fu-img-{{ $name }}" class="mx-auto mb-2 max-h-32 rounded-lg" alt="">
-            <div id="fu-name-{{ $name }}" class="text-[10px] text-zinc-400 truncate"></div>
-            <div class="text-[10px] text-brand mt-1">✓ Değiştirmek için üstteki butonlara bas</div>
+            <div id="fu-name-{{ $name }}" class="text-[10px] text-zinc-400 truncate mb-1"></div>
+            <div class="text-[10px] text-emerald-400 mb-3">✓ Yüklendi</div>
+
+            @if($mode === 'photo')
+                <div class="grid grid-cols-2 gap-2">
+                    <label for="fu-cam-{{ $name }}"
+                           class="cursor-pointer inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-white text-xs font-semibold transition">
+                        📷 Yeniden çek
+                    </label>
+                    <label for="fu-gal-{{ $name }}"
+                           class="cursor-pointer inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-white text-xs font-semibold transition">
+                        🖼 Değiştir
+                    </label>
+                </div>
+            @else
+                <label for="fu-{{ $name }}"
+                       class="cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-white text-xs font-semibold transition">
+                    🔁 Değiştir
+                </label>
+            @endif
         </div>
     </div>
 </div>
