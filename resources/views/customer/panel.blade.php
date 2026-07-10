@@ -773,7 +773,8 @@
 
 @include('partials.mobile-action-bar')
 
-{{-- ACİL YARDIM (panic) butonu — her zaman görünür (yolculuk olsun olmasın) --}}
+{{-- Faz 7: ACİL YARDIM (panic) butonu — sadece aktif yolculuk varken --}}
+@if (isset($activeRideRequestPublicId) && $activeRideRequestPublicId)
 <button type="button" id="customer-panic-btn"
         class="fixed bottom-24 right-4 z-[100] w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-2xl shadow-red-500/50 border-2 border-white/20 flex items-center justify-center text-2xl font-bold animate-pulse"
         aria-label="Acil yardım">
@@ -941,7 +942,7 @@
         }
         const payload = {
             triggered_by_type: 'customer',
-            ride_request_public_id: '{{ $activeRideRequestPublicId ?? '' }}',
+            ride_request_public_id: '{{ $activeRideRequestPublicId }}',
             lat, lng, location_accuracy_m: acc,
         };
         try {
@@ -957,6 +958,7 @@
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 })();
 </script>
+@endif
 
 </body>
 </html>
