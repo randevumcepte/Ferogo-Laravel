@@ -7,6 +7,7 @@ use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use App\Modules\Driver\Models\Driver;
 use App\Modules\Driver\Models\DriverApplication;
 use App\Modules\Vehicle\Models\Vehicle;
+use App\Modules\Vehicle\Models\VehicleClass;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Placeholder;
@@ -189,6 +190,7 @@ class DriverApplicationsTable
                         // yoksa modaldeki admin şifresi kullanılsın.
                         $userPasswordHash = $a->password_hash ?: Hash::make($data['password']);
 
+                        try {
                         DB::transaction(function () use ($a, $data, $userPasswordHash) {
                             $user = User::create([
                                 'name'     => $a->full_name,
@@ -234,20 +236,54 @@ class DriverApplicationsTable
                             // Vehicle oluştur
                             if ($a->vehicle_make_id) {
                                 $photos = collect($a->vehicle_photos ?? [])->values()->all();
-                                $vehicle = Vehicle::create([
-                                    'vehicle_make_id'    => $a->vehicle_make_id,
-                                    'vehicle_model_id'   => $a->vehicle_model_id,
-                                    'brand'              => optional($a->vehicleMake)->name,
-                                    'model'              => optional($a->vehicleModel)->name,
-                                    'year_of_manufacture'=> $a->vehicle_year,
-                                    'color'              => $a->vehicle_color,
-                                    'capacity'           => $a->vehicle_capacity,
-                                    'plate'              => $a->vehicle_plate,
-                                    'status'             => 'active',
-                                    'photos'             => $photos,
-                                    'registration_file_path'   => $a->registration_file_path,
-                                    'registration_approved_at' => now(),
-                                ]);
+
+                                // vehicle_class_id NOT NULL — kategoriye göre default sınıf.
+                                // Admin isterse sonradan Filament > Filo > Araçlar'dan sınıfı değiştirebilir.
+                                $defaultVehicleClass = VehicleClass::query()
+                                    ->where('is_active', true)
+                                    ->orderBy('id')
+                                    ->first();
+
+                                // Plaka çakışırsa (aynı plaka daha önce onaylanmış): mevcut vehicle'a driver'ı bağla
+                                $existing = $a->vehicle_plate
+                                    ? Vehicle::withTrashed()->where('plate', $a->vehicle_plate)->first()
+                                    : null;
+
+                                if ($existing) {
+                                    // Aynı plaka zaten kayıtlı — mevcut aracı güncelleyip driver'a bağla
+                                    if ($existing->trashed()) $existing->restore();
+                                    $existing->update([
+                                        'vehicle_make_id'          => $a->vehicle_make_id,
+                                        'vehicle_model_id'         => $a->vehicle_model_id,
+                                        'brand'                    => optional($a->vehicleMake)->name ?: 'Bilinmiyor',
+                                        'model'                    => optional($a->vehicleModel)->name ?: 'Bilinmiyor',
+                                        'year_of_manufacture'      => $a->vehicle_year,
+                                        'color'                    => $a->vehicle_color,
+                                        'capacity'                 => $a->vehicle_capacity,
+                                        'status'                   => 'active',
+                                        'photos'                   => $photos ?: $existing->photos,
+                                        'registration_file_path'   => $a->registration_file_path ?: $existing->registration_file_path,
+                                        'registration_approved_at' => now(),
+                                    ]);
+                                    $vehicle = $existing;
+                                } else {
+                                    $vehicle = Vehicle::create([
+                                        'vehicle_class_id'   => $defaultVehicleClass?->id, // required
+                                        'vehicle_make_id'    => $a->vehicle_make_id,
+                                        'vehicle_model_id'   => $a->vehicle_model_id,
+                                        'brand'              => optional($a->vehicleMake)->name ?: 'Bilinmiyor',
+                                        'model'              => optional($a->vehicleModel)->name ?: 'Bilinmiyor',
+                                        'year_of_manufacture'=> $a->vehicle_year ?: date('Y'),
+                                        'color'              => $a->vehicle_color ?: 'Belirsiz',
+                                        'capacity'           => $a->vehicle_capacity,
+                                        'plate'              => $a->vehicle_plate,
+                                        'status'             => 'active',
+                                        'photos'             => $photos,
+                                        'registration_file_path'   => $a->registration_file_path,
+                                        'registration_approved_at' => now(),
+                                    ]);
+                                }
+
                                 $driver->update(['current_vehicle_id' => $vehicle->id]);
                             }
 
@@ -258,6 +294,19 @@ class DriverApplicationsTable
                                 'reviewed_by'  => auth()->id(),
                             ]);
                         });
+                        } catch (\Throwable $ex) {
+                            Log::error('[DriverApproval] transaction failed: ' . $ex->getMessage(), [
+                                'application_id' => $a->id,
+                                'trace' => $ex->getTraceAsString(),
+                            ]);
+                            Notification::make()
+                                ->danger()
+                                ->title('⚠ Onay başarısız')
+                                ->body('Hata: ' . $ex->getMessage())
+                                ->persistent()
+                                ->send();
+                            return;
+                        }
 
                         // ─── Sürücüye onay + giriş bilgisi SMS'i ───
                         $smsStatus = 'gonderilmedi';
