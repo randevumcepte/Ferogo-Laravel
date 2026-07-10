@@ -34,8 +34,8 @@
     {{-- ===== Top bar ===== --}}
     <header class="sticky top-0 z-30 bg-black/85 backdrop-blur-md border-b border-white/10">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-            <a href="{{ route('home') }}" class="flex items-center gap-2 min-w-0">
-                <span class="text-2xl font-extrabold tracking-tight">
+            <a href="{{ route('home') }}" class="flex items-center gap-2 shrink-0">
+                <span class="text-xl sm:text-2xl font-extrabold tracking-tight">
                     <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
                 </span>
             </a>
@@ -46,33 +46,51 @@
                     : null;
             @endphp
 
-            <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button id="availability-toggle"
-                        class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition border"
+                        class="inline-flex items-center gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold transition border shrink-0"
                         data-status="{{ $driver->availability_status }}">
                     <span id="availability-dot" class="w-2 h-2 rounded-full"></span>
                     <span id="availability-label">—</span>
                 </button>
+
+                {{-- Masaüstü: satır içi linkler --}}
                 <a href="{{ route('driver.reservations.page') }}"
-                   class="px-3 py-2 rounded-xl text-xs font-semibold text-zinc-200 hover:text-white border border-white/10 hover:border-white/30 transition">
+                   class="hidden md:inline-flex px-3 py-2 rounded-xl text-xs font-semibold text-zinc-200 hover:text-white border border-white/10 hover:border-white/30 transition">
                     Rezervasyonlar
                 </a>
                 <a href="{{ route('driver.packages.index') }}"
-                   class="px-3 py-2 rounded-xl text-xs font-semibold text-brand hover:text-black hover:bg-brand border border-brand/40 hover:border-brand transition">
+                   class="hidden md:inline-flex px-3 py-2 rounded-xl text-xs font-semibold text-brand hover:text-black hover:bg-brand border border-brand/40 hover:border-brand transition">
                     Paketler
                 </a>
-                <form method="POST" action="{{ route('driver.logout') }}" class="inline">
+                <form method="POST" action="{{ route('driver.logout') }}" class="hidden md:inline">
                     @csrf
                     <button type="submit" class="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition">Çıkış</button>
                 </form>
+
                 <a href="{{ route('driver.profile') }}" title="Profilim"
-                   class="relative w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-sm overflow-hidden border-2 border-brand/40 hover:border-brand hover:scale-105 transition shadow-lg shadow-brand/20">
+                   class="relative w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-black font-extrabold text-sm overflow-hidden border-2 border-brand/40 hover:border-brand hover:scale-105 transition shadow-lg shadow-brand/20">
                     @if ($navAvatarUrl)
                         <img src="{{ $navAvatarUrl }}" alt="" class="w-full h-full object-cover">
                     @else
                         {{ mb_strtoupper(mb_substr($driver->user->name, 0, 1)) }}
                     @endif
                 </a>
+
+                {{-- Mobil: kebab menü (JS gerektirmez — <details>) --}}
+                <details class="md:hidden relative shrink-0">
+                    <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer w-9 h-9 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </summary>
+                    <div class="absolute right-0 top-11 w-48 rounded-2xl bg-zinc-900 border border-white/10 shadow-2xl shadow-black/50 p-1.5 space-y-0.5 z-40">
+                        <a href="{{ route('driver.reservations.page') }}" class="block px-3 py-2.5 rounded-xl text-sm font-semibold text-zinc-200 hover:bg-white/5 hover:text-white transition">Rezervasyonlar</a>
+                        <a href="{{ route('driver.packages.index') }}" class="block px-3 py-2.5 rounded-xl text-sm font-semibold text-brand hover:bg-brand/10 transition">Paketler</a>
+                        <form method="POST" action="{{ route('driver.logout') }}">
+                            @csrf
+                            <button type="submit" class="block w-full text-left px-3 py-2.5 rounded-xl text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition">Çıkış</button>
+                        </form>
+                    </div>
+                </details>
             </div>
         </div>
     </header>
