@@ -77,8 +77,8 @@
                     @endif
                 </a>
 
-                {{-- Mobil: kebab menü (JS gerektirmez — <details>) --}}
-                <details class="md:hidden relative shrink-0">
+                {{-- Mobil: kebab menü (<details>; dışarı tıklayınca kapanır) --}}
+                <details data-autoclose class="md:hidden relative shrink-0">
                     <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer w-9 h-9 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </summary>
@@ -94,6 +94,24 @@
             </div>
         </div>
     </header>
+
+    {{-- Kebab menüyü dışarı/ESC ile kapat --}}
+    <script>
+        (function () {
+            document.addEventListener('click', function (e) {
+                document.querySelectorAll('details[data-autoclose][open]').forEach(function (d) {
+                    if (!d.contains(e.target)) d.removeAttribute('open');
+                });
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('details[data-autoclose][open]').forEach(function (d) {
+                        d.removeAttribute('open');
+                    });
+                }
+            });
+        })();
+    </script>
 
     <main class="max-w-5xl mx-auto px-4 py-6 space-y-5">
 
