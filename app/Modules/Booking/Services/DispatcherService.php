@@ -82,11 +82,14 @@ class DispatcherService
 
     /**
      * Süresi gelmiş pool_expanded talepleri tüketildi (exhausted) yapar.
+     * NOT: favori dalgasındaki (is_favorite_wave=true) talepler HARİÇ — onları
+     * tickFavoriteWaves() yakındaki havuza düşürür (erken exhaust olmasınlar).
      */
     public function tickStalePoolOffers(): int
     {
         $count = RideRequest::query()
             ->where('status', 'pool_expanded')
+            ->where('is_favorite_wave', false)
             ->whereNotNull('offer_expires_at')
             ->where('offer_expires_at', '<=', now())
             ->update([
@@ -94,6 +97,122 @@ class DispatcherService
                 'updated_at' => now(),
             ]);
         return (int) $count;
+    }
+
+    /**
+     * Favori dalgası süresi dolan (kimse kabul etmemiş) talepleri YAKINDAKİ havuza
+     * düşürür. Favori sürücüler cevap vermediyse yolcu yakınındaki diğer üye
+     * sürücülere teklif gider. Cron her dakika çağırır.
+     */
+    public function tickFavoriteWaves(): int
+    {
+        $waves = RideRequest::query()
+            ->where('status', 'pool_expanded')
+            ->where('is_favorite_wave', true)
+            ->whereNull('accepted_driver_id')
+            ->whereNotNull('offer_expires_at')
+            ->where('offer_expires_at', '<=', now())
+            ->limit(50)
+            ->get();
+
+        $processed = 0;
+        foreach ($waves as $req) {
+            if ($this->fallbackToNearbyPool($req)) {
+                $processed++;
+            }
+        }
+        return $processed;
+    }
+
+    /**
+     * Favori dalgasını yakındaki havuza düşürür (favoriler hariç). Havuz boşsa
+     * talep tükenir. Atomik: hala favori dalgasında + kimse kabul etmemişse çalışır.
+     */
+    private function fallbackToNearbyPool(RideRequest $req): bool
+    {
+        return DB::transaction(function () use ($req) {
+            $req = $req->fresh();
+            if ($req->status !== 'pool_expanded' || $req->is_favorite_wave !== true || $req->accepted_driver_id) {
+                return false;
+            }
+
+            // Favori sürücüleri + reddedenleri hariç tut
+            $excludeIds = array_values(array_unique(array_map('intval', array_merge(
+                $req->pool_candidate_driver_ids ?? [],
+                $req->pool_rejected_driver_ids ?? [],
+            ))));
+
+            $candidates = $this->findNearestDispatchableDrivers(
+                lat: (float) $req->pickup_lat,
+                lng: (float) $req->pickup_lng,
+                maxKm: self::POOL_MAX_KM,
+                limit: self::POOL_MAX_SIZE,
+                excludeIds: $excludeIds,
+                vehicleClassId: $req->vehicle_class_id,
+            );
+
+            if (empty($candidates)) {
+                RideRequest::where('id', $req->id)
+                    ->where('status', 'pool_expanded')
+                    ->where('is_favorite_wave', true)
+                    ->update(['status' => 'exhausted', 'offer_expires_at' => null, 'updated_at' => now()]);
+                RideMessage::create([
+                    'ride_request_id' => $req->id,
+                    'sender'          => 'system',
+                    'body'            => 'Favori sürücülerin şu an uygun değil ve yakında başka üye sürücü bulunamadı.',
+                ]);
+                return true;
+            }
+
+            // Atomik: favori dalgasından yakın havuza geç
+            $claimed = RideRequest::where('id', $req->id)
+                ->where('status', 'pool_expanded')
+                ->where('is_favorite_wave', true)
+                ->whereNull('accepted_driver_id')
+                ->update([
+                    'is_favorite_wave'          => false,
+                    'pool_candidate_driver_ids' => $candidates,
+                    'pool_rejected_driver_ids'  => [],
+                    'offer_expires_at'          => now()->addSeconds(self::POOL_OFFER_TTL_SECONDS),
+                    'negotiation_state'         => 'customer_offered',
+                    'driver_counter_fare'       => null,
+                    'updated_at'                => now(),
+                ]);
+
+            if ($claimed === 0) {
+                return false;
+            }
+
+            RideMessage::create([
+                'ride_request_id' => $req->id,
+                'sender'          => 'system',
+                'body'            => 'Favori sürücülerinden dönüş olmadı — yakın bölgedeki ' . count($candidates) . ' üye sürücüye talep iletildi.',
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Controller için: en yakın dispatchable sürücü id'leri (yakın havuz seed'i).
+     * Auto modda favori yoksa doğrudan yakın havuza teklif göndermek için kullanılır.
+     *
+     * @return int[]
+     */
+    public function nearestDispatchableDriverIds(
+        float $lat,
+        float $lng,
+        ?int $vehicleClassId = null,
+        array $excludeIds = [],
+    ): array {
+        return $this->findNearestDispatchableDrivers(
+            lat: $lat,
+            lng: $lng,
+            maxKm: self::POOL_MAX_KM,
+            limit: self::POOL_MAX_SIZE,
+            excludeIds: $excludeIds,
+            vehicleClassId: $vehicleClassId,
+        );
     }
 
     /**

@@ -295,6 +295,10 @@ class RideRequestController extends Controller
         $authed = $customerAuthed;
         $isAuthedCustomer = $authed && $authed->type === 'customer';
 
+        // Dağıtım modu: 'auto' → favori-öncelikli dalga (yolcu sürücü seçmez);
+        // 'manual' (varsayılan) → yolcu radardan sürücü seçer (preferred_driver_id).
+        $isAuto = $request->input('dispatch_mode') === 'auto';
+
         // Authed customer'a phone_verified_at null geldiyse, transparan olarak şimdi işaretle
         if ($isAuthedCustomer && ! $authed->phone_verified_at) {
             $authed->forceFill(['phone_verified_at' => now()])->save();
@@ -318,7 +322,8 @@ class RideRequestController extends Controller
                 'estimated_fare'        => ['nullable', 'numeric', 'min:0'],
                 'suggested_fare'        => ['nullable', 'numeric', 'min:0'],
                 'customer_offer_fare'   => ['nullable', 'numeric', 'min:0'],
-                'preferred_driver_id'   => ['required', 'integer', 'exists:drivers,id'],
+                'dispatch_mode'         => ['nullable', Rule::in(['auto', 'manual'])],
+                'preferred_driver_id'   => [$isAuto ? 'nullable' : 'required', 'integer', 'exists:drivers,id'],
                 'fallback_driver_ids'   => ['nullable', 'array', 'max:5'],
                 'fallback_driver_ids.*' => ['integer', 'exists:drivers,id'],
                 'kvkk_consent'          => ['required', 'accepted'],
@@ -408,6 +413,72 @@ class RideRequestController extends Controller
         // ─── /KORUMA KATMANI ────────────────────────────────────
 
         $vehicleClass = VehicleClass::where('slug', $validated['vehicle_class_slug'])->firstOrFail();
+
+        // ─── AUTO MOD: favori-öncelikli dalga ───────────────────────
+        // Yolcu sürücü seçmez; talep ÖNCE online favori sürücülere (mesafe sınırsız)
+        // aynı anda gider. Favori yoksa/uygun değilse doğrudan yakındaki havuza.
+        // Favori dalgası dönmezse cron (tickFavoriteWaves) yakına düşürür.
+        if ($isAuto) {
+            $customerIsFemale = $authed && $authed->gender === 'female';
+
+            $favoriteIds = $this->favoriteService->dispatchableFavoriteIds(
+                $isAuthedCustomer ? $authed : null,
+                $vehicleClass->id,
+                $customerIsFemale,
+            );
+            $isFavoriteWave = ! empty($favoriteIds);
+
+            $poolIds = $isFavoriteWave
+                ? $favoriteIds
+                : $this->dispatcher->nearestDispatchableDriverIds(
+                    (float) $validated['pickup_lat'],
+                    (float) $validated['pickup_lng'],
+                    $vehicleClass->id,
+                );
+
+            if (empty($poolIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Şu an uygun üye sürücü bulunamadı. Birazdan tekrar dene.',
+                ], 422);
+            }
+
+            $req = $this->service->create([
+                'customer_name'        => $validated['customer_name'],
+                'customer_phone'       => $validated['customer_phone'],
+                'vehicle_class_id'     => $vehicleClass->id,
+                'pickup_address'       => $validated['pickup_address'],
+                'pickup_lat'           => (float) $validated['pickup_lat'],
+                'pickup_lng'           => (float) $validated['pickup_lng'],
+                'dropoff_address'      => $validated['dropoff_address'],
+                'dropoff_lat'          => isset($validated['dropoff_lat']) ? (float) $validated['dropoff_lat'] : null,
+                'dropoff_lng'          => isset($validated['dropoff_lng']) ? (float) $validated['dropoff_lng'] : null,
+                'distance_km'          => (float) $validated['distance_km'],
+                'duration_minutes'     => (int) $validated['duration_minutes'],
+                'estimated_fare'       => isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null,
+                'suggested_fare'       => isset($validated['suggested_fare']) ? (float) $validated['suggested_fare'] : (isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null),
+                'customer_offer_fare'  => isset($validated['customer_offer_fare']) ? (float) $validated['customer_offer_fare'] : null,
+                'pool_driver_ids'      => $poolIds,
+                'is_favorite_wave'     => $isFavoriteWave,
+                'phone_verified_at'    => now(),
+                'verification_token'   => $validated['verification_token'] ?? null,
+                'client_ip'            => $ip,
+                'client_fingerprint'   => $fingerprint,
+                'user_agent'           => substr((string) $request->userAgent(), 0, 500),
+            ]);
+
+            $this->trustService->recordRequestCreated(
+                $validated['customer_phone'], $ip, $fingerprint,
+            );
+
+            return response()->json([
+                'success'   => true,
+                'public_id' => $req->public_id,
+                'dispatch'  => $isFavoriteWave ? 'favorites' : 'nearby',
+                'status'    => $this->statusPayload($req),
+            ]);
+        }
+        // ─── /AUTO MOD ──────────────────────────────────────────────
 
         $candidates = array_unique(array_merge(
             [(int) $validated['preferred_driver_id']],

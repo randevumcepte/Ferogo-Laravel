@@ -125,6 +125,37 @@ class FavoriteDriverService
     }
 
     /**
+     * Favori-öncelikli dispatch için: müşterinin ŞU AN teklif gönderilebilecek
+     * (dispatchable) favori sürücülerinin id'leri. MESAFE SINIRSIZ — favori online
+     * olduğu sürece nerede olursa olsun teklif alır (çok uzaksa kendisi reddeder).
+     *
+     * Filtreler: approved + online + paket aktif + askıda değil + sınıf eşleşmesi.
+     * Kadın-yolcu-only sürücüler yalnızca kadın müşteriye aday olur.
+     *
+     * @return array<int>
+     */
+    public function dispatchableFavoriteIds(?User $user, ?int $vehicleClassId = null, bool $customerIsFemale = false): array
+    {
+        if (! $user) {
+            return [];
+        }
+
+        return $user->favoriteDrivers()
+            ->where('approval_status', 'approved')
+            ->where('availability_status', 'online')
+            ->where('is_suspended', false)
+            ->when(config('services.driver.enforce_packages', true), fn ($q) => $q
+                ->whereNotNull('package_active_until')
+                ->where('package_active_until', '>', now()))
+            ->when(! $customerIsFemale, fn ($q) => $q->where('women_passengers_only', false))
+            ->when($vehicleClassId, fn ($q) => $q->whereHas('currentVehicle', fn ($v) => $v
+                ->where('vehicle_class_id', $vehicleClassId)))
+            ->pluck('drivers.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
      * Favori sürücüleri ilişkili user + araç ile yükle (kart listesi için).
      * En son favorilenen üstte.
      */

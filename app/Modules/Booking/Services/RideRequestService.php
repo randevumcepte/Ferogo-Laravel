@@ -17,6 +17,9 @@ class RideRequestService
     /** Seçilen sürücü kabul etmezse havuza yayılma süresi (sn) — Faz 3 dispatcher. */
     public const POOL_EXPAND_AFTER_SECONDS = 30;
 
+    /** Favori dalgası / doğrudan havuz teklifinin geçerlilik süresi (sn). */
+    public const FAVORITE_WAVE_TTL_SECONDS = 45;
+
     /** Fiyat pazarlığında izin verilen maksimum karşı-teklif turu (sonra sadece kabul/ret). */
     public const MAX_NEGOTIATION_ROUNDS = 4;
 
@@ -74,14 +77,6 @@ class RideRequestService
     public function create(array $data): RideRequest
     {
         return DB::transaction(function () use ($data) {
-            $candidates = array_values(array_filter(
-                array_map('intval', $data['candidate_driver_ids']),
-                fn ($id) => $id > 0
-            ));
-            if (empty($candidates)) {
-                throw new \InvalidArgumentException('En az 1 aday sürücü gerekli.');
-            }
-
             // ─── Fiyat pazarlığı başlangıcı ───
             // suggested_fare = sistem önerisi (çapa). customer_offer_fare = yolcunun
             // +/- ile belirlediği ilk teklif (verilmezse öneriye eşit). Banda kırpılır.
@@ -93,28 +88,68 @@ class RideRequestService
                 ? $this->clampToBand((float) $data['customer_offer_fare'], $suggested)
                 : $suggested;
 
-            $req = RideRequest::create([
-                'customer_name'           => $data['customer_name'],
-                'customer_phone'          => $data['customer_phone'],
-                'phone_verified_at'       => $data['phone_verified_at'] ?? null,
-                'verification_token'      => $data['verification_token'] ?? null,
-                'client_ip'               => $data['client_ip'] ?? null,
-                'client_fingerprint'      => $data['client_fingerprint'] ?? null,
-                'user_agent'              => $data['user_agent'] ?? null,
-                'vehicle_class_id'        => $data['vehicle_class_id'],
-                'pickup_address'          => $data['pickup_address'],
-                'pickup_lat'              => $data['pickup_lat'],
-                'pickup_lng'              => $data['pickup_lng'],
-                'dropoff_address'         => $data['dropoff_address'],
-                'dropoff_lat'             => $data['dropoff_lat'] ?? null,
-                'dropoff_lng'             => $data['dropoff_lng'] ?? null,
-                'distance_km'             => $data['distance_km'],
-                'duration_minutes'        => $data['duration_minutes'],
-                'estimated_fare'          => $data['estimated_fare'] ?? null,
-                'suggested_fare'          => $suggested,
-                'customer_offer_fare'     => $customerOffer,
-                'negotiation_state'       => 'customer_offered',
-                'negotiation_round'       => 0,
+            // Ortak alanlar (her iki dispatch şekli için).
+            $base = [
+                'customer_name'       => $data['customer_name'],
+                'customer_phone'      => $data['customer_phone'],
+                'phone_verified_at'   => $data['phone_verified_at'] ?? null,
+                'verification_token'  => $data['verification_token'] ?? null,
+                'client_ip'           => $data['client_ip'] ?? null,
+                'client_fingerprint'  => $data['client_fingerprint'] ?? null,
+                'user_agent'          => $data['user_agent'] ?? null,
+                'vehicle_class_id'    => $data['vehicle_class_id'],
+                'pickup_address'      => $data['pickup_address'],
+                'pickup_lat'          => $data['pickup_lat'],
+                'pickup_lng'          => $data['pickup_lng'],
+                'dropoff_address'     => $data['dropoff_address'],
+                'dropoff_lat'         => $data['dropoff_lat'] ?? null,
+                'dropoff_lng'         => $data['dropoff_lng'] ?? null,
+                'distance_km'         => $data['distance_km'],
+                'duration_minutes'    => $data['duration_minutes'],
+                'estimated_fare'      => $data['estimated_fare'] ?? null,
+                'suggested_fare'      => $suggested,
+                'customer_offer_fare' => $customerOffer,
+                'negotiation_state'   => 'customer_offered',
+                'negotiation_round'   => 0,
+            ];
+
+            // ─── Şekil A: doğrudan HAVUZ teklifi (favori dalgası veya yakın havuz) ───
+            // pool_driver_ids verildiyse tek bir sürücüye değil, birden çok sürücüye
+            // AYNI ANDA teklif gider (Martı/inDrive havuz mantığı). is_favorite_wave=true
+            // ise bunlar yolcunun online favori sürücüleridir; dönüş olmazsa cron
+            // (tickFavoriteWaves) yakındaki havuza düşürür.
+            $poolIds = array_values(array_filter(
+                array_map('intval', $data['pool_driver_ids'] ?? []),
+                fn ($id) => $id > 0
+            ));
+
+            if (! empty($poolIds)) {
+                $req = RideRequest::create($base + [
+                    'status'                    => 'pool_expanded',
+                    'is_favorite_wave'          => (bool) ($data['is_favorite_wave'] ?? false),
+                    'pool_candidate_driver_ids' => $poolIds,
+                    'pool_expanded_at'          => now(),
+                    'offer_expires_at'          => now()->addSeconds(self::FAVORITE_WAVE_TTL_SECONDS),
+                    'current_candidate_index'   => 0,
+                ]);
+
+                if ($customerOffer !== null) {
+                    $this->logOffer($req, 'customer', 'offer', $customerOffer, 0);
+                }
+
+                return $req->fresh();
+            }
+
+            // ─── Şekil B: 1:1 aday akışı (yolcu manuel sürücü seçti) ───
+            $candidates = array_values(array_filter(
+                array_map('intval', $data['candidate_driver_ids'] ?? []),
+                fn ($id) => $id > 0
+            ));
+            if (empty($candidates)) {
+                throw new \InvalidArgumentException('En az 1 aday sürücü gerekli.');
+            }
+
+            $req = RideRequest::create($base + [
                 'status'                  => 'pending',
                 'candidate_driver_ids'    => $candidates,
                 'current_candidate_index' => 0,
