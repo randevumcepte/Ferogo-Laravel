@@ -35,11 +35,17 @@
         border: 0; border-radius: 10px; padding: 12px 18px; font-size: 15px; font-weight: 700;
         cursor: pointer; text-decoration: none; display: inline-block;
     }
+    #ferxgo-panic-overlay .b-call { background: #16a34a; color: #fff; font-size: 17px; padding: 14px 26px; }
     #ferxgo-panic-overlay .b-map { background: #2563eb; color: #fff; }
     #ferxgo-panic-overlay .b-open { background: #b91c1c; color: #fff; }
     #ferxgo-panic-overlay .b-mute { background: #f3f4f6; color: #111; }
     #ferxgo-panic-overlay .b-dismiss { background: #e5e7eb; color: #444; }
     #ferxgo-panic-overlay .count { margin-top: 12px; font-size: 13px; color: #666; }
+    #ferxgo-panic-overlay .who-card {
+        background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px;
+        padding: 14px; margin: 14px 0 4px;
+    }
+    #ferxgo-panic-overlay .who-card .lbl { font-size: 12px; color: #991b1b; text-transform: uppercase; letter-spacing: .5px; }
 </style>
 
 <script>
@@ -84,10 +90,22 @@
         overlay = document.createElement('div');
         overlay.id = 'ferxgo-panic-overlay';
 
-        var nameLine = alert.name ? ('<div class="meta">Ad: <b>' + escapeHtml(alert.name) + '</b></div>') : '';
-        var phoneLine = alert.phone
-            ? ('<div class="meta">Telefon: <a href="tel:' + escapeHtml(alert.phone) + '">' + escapeHtml(alert.phone) + '</a></div>')
-            : '<div class="meta">Telefon: —</div>';
+        var phoneTxt = alert.phone ? escapeHtml(alert.phone) : '—';
+        var nameTxt  = alert.name ? escapeHtml(alert.name) : '(isim kayıtlı değil)';
+
+        // Kimden geldiği — belirgin bilgi kartı
+        var whoCard =
+            '<div class="who-card">' +
+                '<div class="lbl">Alarmı gönderen</div>' +
+                '<div class="who">' + escapeHtml(alert.who || 'Kullanıcı') + '</div>' +
+                '<div class="meta">Ad: <b>' + nameTxt + '</b></div>' +
+                '<div class="meta">Telefon: <b>' + phoneTxt + '</b></div>' +
+                (alert.ago ? '<div class="meta">' + escapeHtml(alert.ago) + '</div>' : '') +
+            '</div>';
+
+        var callBtn = alert.phone
+            ? '<a class="btn b-call" href="tel:' + escapeAttr(alert.phone) + '">📞 Hemen Ara</a>'
+            : '';
         var mapBtn = alert.map_url
             ? '<a class="btn b-map" href="' + escapeAttr(alert.map_url) + '" target="_blank" rel="noopener">📍 Haritada Aç</a>'
             : '';
@@ -97,9 +115,9 @@
             '<div class="box" role="alertdialog" aria-label="Acil yardım alarmı">' +
                 '<h1>🚨 ACİL YARDIM ALARMI</h1>' +
                 '<div class="sub">Bir kullanıcı panik butonuna bastı — HEMEN müdahale edin.</div>' +
-                '<div class="who">' + escapeHtml(alert.who || '') + (alert.ago ? ' · ' + escapeHtml(alert.ago) : '') + '</div>' +
-                nameLine + phoneLine +
+                whoCard +
                 '<div class="btns">' +
+                    callBtn +
                     mapBtn +
                     '<a class="btn b-open" href="' + escapeAttr(alert.url) + '">Panelde Aç</a>' +
                     '<button type="button" class="b-mute">🔇 Sessize Al</button>' +

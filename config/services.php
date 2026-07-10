@@ -115,11 +115,11 @@ return [
      * Sürücü/yolcu ACİL YARDIM'a bastığında nöbetçi operatör(ler)e anında SMS gider.
      *
      * .env:
-     *   PANIC_SMS_ENABLED=true
+     *   PANIC_SMS_ENABLED=true                            (varsayılan: KAPALI — istenirse açılır)
      *   PANIC_OPERATOR_PHONES="05xxxxxxxxx,05yyyyyyyyy"   (virgülle ayır, cep numarası — sabit hat SMS almaz!)
      */
     'panic' => [
-        'sms_enabled'     => (bool) env('PANIC_SMS_ENABLED', true),
+        'sms_enabled'     => (bool) env('PANIC_SMS_ENABLED', false),
         'operator_phones' => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('PANIC_OPERATOR_PHONES', ''))
