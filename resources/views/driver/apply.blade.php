@@ -391,10 +391,35 @@
                     </label>
                 </div>
 
+                {{-- Eksik dosya uyarı banner'ı (JS submit-öncesi validation ile göstererir/gizler) --}}
+                <div id="form-error-banner" class="hidden rounded-2xl border border-red-500/40 bg-red-500/10 p-4 md:p-5">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 text-lg">⚠</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-red-200 mb-1">Başvurun eksik</div>
+                            <div class="text-sm text-red-300/90" id="form-error-body">
+                                Aşağıdaki alanlar boş — doldurup tekrar denemelisin.
+                            </div>
+                            <ul id="form-error-list" class="mt-2 space-y-0.5 text-xs text-red-300/70 list-disc list-inside"></ul>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-8 py-5 rounded-2xl bg-brand hover:bg-brand-600 text-black font-bold text-lg transition-all shadow-2xl shadow-brand/30 hover:shadow-brand/50">
                     Başvurumu Gönder
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                 </button>
+
+                {{-- Sağ alt köşede uçan toast (üstteki banner'la beraber görünür, hızlı geri bildirim için) --}}
+                <div id="form-error-toast" class="hidden fixed bottom-6 right-6 z-50 max-w-sm rounded-2xl border-2 border-red-500/60 bg-red-950/95 backdrop-blur-xl shadow-2xl shadow-red-500/30 p-4 animate-pulse">
+                    <div class="flex items-start gap-3">
+                        <div class="text-2xl shrink-0">⚠</div>
+                        <div>
+                            <div class="font-bold text-red-100 text-sm mb-1" id="form-error-toast-title">Eksik alan</div>
+                            <div class="text-xs text-red-200/90" id="form-error-toast-body">Alan eksik</div>
+                        </div>
+                    </div>
+                </div>
 
                 <p class="text-xs text-zinc-500 text-center">
                     Sorun var mı? → <a href="tel:+908503403039" class="text-brand hover:underline font-semibold">0850 340 3039</a>
@@ -921,6 +946,10 @@
             nameEl.textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
             empty.classList.add('hidden');
             prev.classList.remove('hidden');
+
+            // Kullanıcı düzeltiyor — hata kırmızı çerçevesi kaldır
+            const w = empty.closest('.file-upload-widget');
+            w?.querySelector('.border-dashed')?.classList.remove('!border-red-500', '!bg-red-500/5');
         });
     });
 
@@ -959,19 +988,53 @@
 
             if (missing.length > 0) {
                 e.preventDefault();
-                const firstName = missing[0];
-                const label = document.querySelector('.fu-empty-' + firstName)?.closest('.file-upload-widget')?.querySelector('label')?.textContent?.trim() || firstName;
-                alert('⚠ ' + missing.length + ' dosya eksik. İlk eksik: "' + label + '". Formun yukarısına scroll edip eksik olan kırmızı çerçeveli alanları doldur.');
-                // İlk eksik alana scroll et ve kırmızıya çevir
-                const widget = document.querySelector('.fu-empty-' + firstName)?.closest('.file-upload-widget');
-                if (widget) {
-                    widget.scrollIntoView({behavior: 'smooth', block: 'center'});
-                    missing.forEach(n => {
-                        const w = document.querySelector('.fu-empty-' + n)?.closest('.file-upload-widget');
-                        w?.querySelector('.border-dashed')?.classList.add('!border-red-500');
-                    });
+
+                // Her eksik alan için insan-okunabilir label çıkar
+                const labels = missing.map(n => {
+                    const w = document.querySelector('.fu-empty-' + n)?.closest('.file-upload-widget');
+                    return w?.querySelector('label')?.textContent?.trim() || n;
+                });
+
+                // 1) Üstteki inline banner
+                const banner = document.getElementById('form-error-banner');
+                const body   = document.getElementById('form-error-body');
+                const list   = document.getElementById('form-error-list');
+                if (banner && body && list) {
+                    body.textContent = missing.length + ' dosya eksik. Aşağıdaki alanlar boş — doldurup tekrar denemelisin.';
+                    list.innerHTML = labels.map(l => '<li>' + l + '</li>').join('');
+                    banner.classList.remove('hidden');
                 }
+
+                // 2) Sağ alt uçan toast (5 sn sonra gizlenir)
+                const toast     = document.getElementById('form-error-toast');
+                const toastBody = document.getElementById('form-error-toast-body');
+                const toastTitle= document.getElementById('form-error-toast-title');
+                if (toast && toastBody && toastTitle) {
+                    toastTitle.textContent = missing.length + ' dosya eksik';
+                    toastBody.textContent  = 'İlk eksik: "' + labels[0] + '". Formu kaydırıp kırmızı alanları doldur.';
+                    toast.classList.remove('hidden');
+                    clearTimeout(window.__ferxgoToastTimer);
+                    window.__ferxgoToastTimer = setTimeout(() => toast.classList.add('hidden'), 6000);
+                }
+
+                // 3) İlk eksik alana yumuşak scroll + tüm eksikleri kırmızı çerçeve
+                const firstName = missing[0];
+                const widget = document.querySelector('.fu-empty-' + firstName)?.closest('.file-upload-widget');
+                if (widget) widget.scrollIntoView({behavior: 'smooth', block: 'center'});
+
+                missing.forEach(n => {
+                    const w = document.querySelector('.fu-empty-' + n)?.closest('.file-upload-widget');
+                    const box = w?.querySelector('.border-dashed');
+                    if (box) {
+                        box.classList.add('!border-red-500', '!bg-red-500/5');
+                    }
+                });
+
                 return false;
+            } else {
+                // Form geçerliyse gizli banner'ları temizle
+                document.getElementById('form-error-banner')?.classList.add('hidden');
+                document.getElementById('form-error-toast')?.classList.add('hidden');
             }
         });
     }
