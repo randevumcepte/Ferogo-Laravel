@@ -149,6 +149,8 @@
     let speakerOn       = true;
     let pendingIceQueue = [];
     let remoteDescSet   = false;
+    let pulling         = false; // pullSignals re-entrancy guard
+    let offerMade       = false; // makeOffer yalnız bir kez
     let statsHandle     = null;
     let lastBytesReceived = 0;
     let iceWatchdog     = null;
@@ -480,6 +482,8 @@
     }
 
     async function makeOffer() {
+        if (offerMade) { console.log('[call] makeOffer yok sayıldı — offer zaten gönderildi'); return; }
+        offerMade = true;
         const stream = await getMic();
         const peer = buildPc();
         addLocalTracks(peer, stream);
@@ -544,6 +548,10 @@
     }
     async function pullSignals() {
         if (!currentCallId) return;
+        // Re-entrancy guard: önceki pull (getMic/setRemoteDescription bekliyor olabilir) bitmeden
+        // yenisi girip aynı sinyali iki kez işlemesin → çift offer / "Invalid SDP line" önlenir.
+        if (pulling) return;
+        pulling = true;
         try {
             const res = await fetch(`${callUrl('signals')}?since_id=${lastSignalId}`, {
                 headers: { 'Accept': 'application/json' },
@@ -559,6 +567,8 @@
             }
         } catch (e) {
             console.warn('[call] pullSignals failed', e);
+        } finally {
+            pulling = false;
         }
     }
 
@@ -629,6 +639,8 @@
     async function startCall() {
         const pid = getPid();
         console.log('[call] startCall pid=', pid);
+        // Zaten aktif bir çağrı akışı varsa yeniden başlatma (çift offer'ı önler)
+        if (currentStatus !== 'idle' || currentCallId) { console.log('[call] startCall yok sayıldı — zaten aktif'); return; }
         if (!pid) { showError('Aktif yolculuk yok.'); return; }
         clearError();
         try {
@@ -687,6 +699,8 @@
         stopTimer();
         remoteDescSet = false;
         pendingIceQueue = [];
+        pulling = false;
+        offerMade = false;
         if (pc) { try { pc.close(); } catch (e) {} pc = null; }
         if (localStream) {
             localStream.getTracks().forEach(t => t.stop());
