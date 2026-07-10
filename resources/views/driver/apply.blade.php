@@ -950,6 +950,35 @@
             // Kullanıcı düzeltiyor — hata kırmızı çerçevesi kaldır
             const w = empty.closest('.file-upload-widget');
             w?.querySelector('.border-dashed')?.classList.remove('!border-red-500', '!bg-red-500/5');
+
+            // "Kaldır" (X) butonunu göster
+            w?.querySelector('.fu-clear-btn')?.classList.remove('hidden');
+        });
+    });
+
+    // ============================================================
+    // 2b) "Kaldır" (X) butonu — dosyayı temizle, empty state'e dön
+    // ============================================================
+    document.querySelectorAll('.fu-clear-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const name = btn.dataset.clearTarget;
+
+            // Ana + galeri input'larını temizle
+            const camInput = document.getElementById('fu-cam-' + name);
+            const galInput = document.getElementById('fu-gal-' + name);
+            const docInput = document.getElementById('fu-' + name);
+            [camInput, galInput, docInput].forEach(i => { if (i) i.value = ''; });
+
+            // Preview kapat, empty aç
+            const empty = document.querySelector('.fu-empty-' + name);
+            const prev  = document.querySelector('.fu-preview-' + name);
+            const img   = document.getElementById('fu-img-' + name);
+            empty?.classList.remove('hidden');
+            prev?.classList.add('hidden');
+            if (img) img.src = '';
+
+            // X butonunu gizle
+            btn.classList.add('hidden');
         });
     });
 
