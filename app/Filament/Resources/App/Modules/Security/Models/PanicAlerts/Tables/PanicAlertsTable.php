@@ -25,6 +25,17 @@ class PanicAlertsTable
                     ->color(fn (string $state) => $state === 'driver' ? 'warning' : 'info')
                     ->formatStateUsing(fn ($state) => $state === 'driver' ? 'Üye Sürücü' : 'Yolcu'),
 
+                TextColumn::make('person_name')
+                    ->label('Ad Soyad')
+                    ->weight('bold')
+                    ->state(function ($record) {
+                        $name = $record->triggered_by_type === 'driver'
+                            ? ($record->driver?->user?->name ?? $record->triggeredByUser?->name)
+                            : ($record->rideRequest?->customer_name ?? $record->triggeredByUser?->name);
+
+                        return $name ?: '—';
+                    }),
+
                 TextColumn::make('triggered_by_phone')
                     ->label('Telefon')
                     ->copyable()
@@ -70,6 +81,7 @@ class PanicAlertsTable
                     ->label('Operatör')
                     ->placeholder('—'),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with(['driver.user', 'rideRequest', 'triggeredByUser']))
             ->defaultSort('created_at', 'desc')
             ->filters([
                 SelectFilter::make('status')
