@@ -283,6 +283,10 @@ Route::post('/api/security-incidents/{publicId}/photo',  [SecurityIncidentContro
 
 // Faz 7 — Acil yardım (panic) butonu (her iki taraf)
 Route::post('/api/panic', [PanicAlertController::class, 'trigger'])->name('security.panic.trigger');
+// Admin panel sesli/görsel alarm dinleyicisi buradan açık alarmları çeker (sadece giriş yapmış admin)
+Route::get('/admin/panic-poll', [PanicAlertController::class, 'poll'])
+    ->middleware('auth')
+    ->name('security.panic.poll');
 
 // ─────────────────────────────────────────────────────────
 // SÜRÜCÜ PAKET ABONELİĞİ — Martı TAG modeli (3 saatlik/günlük/haftalık/aylık)

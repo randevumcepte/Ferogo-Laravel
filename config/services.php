@@ -110,6 +110,22 @@ return [
      * test_mode=true iken PayTR test kartları ile çalışır, gerçek tahsilat yok.
      * Canlıya geçerken FerXGo'ya özel mağaza credential'ları + test_mode=false.
      */
+    /*
+     * Acil yardım (panic) alarmı — operatör bilgilendirme.
+     * Sürücü/yolcu ACİL YARDIM'a bastığında nöbetçi operatör(ler)e anında SMS gider.
+     *
+     * .env:
+     *   PANIC_SMS_ENABLED=true
+     *   PANIC_OPERATOR_PHONES="05xxxxxxxxx,05yyyyyyyyy"   (virgülle ayır, cep numarası — sabit hat SMS almaz!)
+     */
+    'panic' => [
+        'sms_enabled'     => (bool) env('PANIC_SMS_ENABLED', true),
+        'operator_phones' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('PANIC_OPERATOR_PHONES', ''))
+        ))),
+    ],
+
     'paytr' => [
         'enabled'         => (bool) env('PAYTR_ENABLED', false),
         'merchant_id'     => env('PAYTR_MERCHANT_ID'),

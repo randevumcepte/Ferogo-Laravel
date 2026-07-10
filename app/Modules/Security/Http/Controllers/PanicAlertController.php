@@ -5,10 +5,12 @@ namespace App\Modules\Security\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Driver\Models\Driver;
+use App\Modules\Booking\Services\Sms\VoiceTelekomClient;
 use App\Modules\Security\Models\PanicAlert;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 
@@ -90,11 +92,110 @@ class PanicAlertController extends Controller
             'device_fingerprint'    => $request->input('fingerprint'),
         ]);
 
+        // Operatöre SMS — yanıtı bekletmeden, sürücüyü yavaşlatmadan gönder.
+        dispatch(function () use ($alert) {
+            $this->notifyOperators($alert);
+        })->afterResponse();
+
         return response()->json([
             'success'   => true,
             'alert_id'  => $alert->public_id,
             'message'   => 'Acil yardım talebiniz alındı. Çağrı merkezi sizinle anında iletişime geçecek.',
             'call'      => '+908503403039',
+        ]);
+    }
+
+    /**
+     * Nöbetçi operatör(ler)e panik alarmını SMS ile haber ver.
+     * services.panic.operator_phones boşsa sessizce atlar (sadece log).
+     */
+    protected function notifyOperators(PanicAlert $alert): void
+    {
+        if (! config('services.panic.sms_enabled', true)) {
+            return;
+        }
+
+        $phones = config('services.panic.operator_phones', []);
+        if (empty($phones)) {
+            Log::warning('[Panic] Operatör SMS atlandı — PANIC_OPERATOR_PHONES tanımlı değil.', [
+                'alert_id' => $alert->public_id,
+            ]);
+            return;
+        }
+
+        $who    = $alert->triggered_by_type === PanicAlert::TRIGGER_DRIVER ? 'SÜRÜCÜ' : 'YOLCU';
+        $phone  = $alert->triggered_by_phone ?: '-';
+        $mapUrl = ($alert->lat && $alert->lng)
+            ? sprintf('maps.google.com/?q=%s,%s', $alert->lat, $alert->lng)
+            : 'konum yok';
+
+        $content = sprintf(
+            'FERXGO ACIL YARDIM! %s panik butonuna basti. Tel: %s. Konum: %s. Hemen panele bakin ve arayin.',
+            $who,
+            $phone,
+            $mapUrl
+        );
+
+        $sms = app(VoiceTelekomClient::class);
+        foreach ($phones as $to) {
+            try {
+                $res = $sms->sendSingle($to, $content);
+                if (! ($res['ok'] ?? false)) {
+                    Log::error('[Panic] Operatör SMS gönderilemedi', [
+                        'alert_id' => $alert->public_id,
+                        'message'  => $res['message'] ?? 'unknown',
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('[Panic] Operatör SMS istisna: ' . $e->getMessage(), [
+                    'alert_id' => $alert->public_id,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * GET /admin/panic-poll
+     * Admin panelinin JS dinleyicisi buradan açık alarmları çeker → sesli/görsel pop-up.
+     * Sadece son 30 dakikanın açık (çözülmemiş) alarmları döner.
+     */
+    public function poll(): JsonResponse
+    {
+        $open = [
+            PanicAlert::STATUS_TRIGGERED,
+            PanicAlert::STATUS_ACKNOWLEDGED,
+            PanicAlert::STATUS_CONTACTING,
+            PanicAlert::STATUS_POLICE_DISPATCHED,
+        ];
+
+        $alerts = PanicAlert::query()
+            ->with('ride.driver.user', 'ride.customer')
+            ->whereIn('status', $open)
+            ->where('created_at', '>=', now()->subMinutes(30))
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->map(function (PanicAlert $a) {
+                return [
+                    'id'       => $a->id,
+                    'who'      => $a->triggered_by_type === PanicAlert::TRIGGER_DRIVER ? 'Sürücü' : 'Yolcu',
+                    'phone'    => $a->triggered_by_phone,
+                    'name'     => $a->triggered_by_type === PanicAlert::TRIGGER_DRIVER
+                        ? ($a->ride?->driver?->user?->name)
+                        : ($a->ride?->customer?->name),
+                    'lat'      => $a->lat,
+                    'lng'      => $a->lng,
+                    'map_url'  => ($a->lat && $a->lng)
+                        ? 'https://www.google.com/maps?q=' . $a->lat . ',' . $a->lng
+                        : null,
+                    'ago'      => $a->created_at?->diffForHumans(),
+                    'url'      => url('/admin/panic-alerts/' . $a->id),
+                ];
+            });
+
+        return response()->json([
+            'count'  => $alerts->count(),
+            'alerts' => $alerts,
         ]);
     }
 }
