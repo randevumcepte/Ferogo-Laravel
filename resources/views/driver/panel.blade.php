@@ -738,6 +738,19 @@
             const noShowBtn  = $('active-no-show');
             const label      = $('active-no-show-label');
 
+            // Yolculuk başladıysa iki buton da anlamsız — gizle ve timer'ı durdur.
+            // Müşteri araca binmiş; "no-show" iddiası artık geçersiz.
+            if (a.started_at) {
+                arrivedBtn.classList.add('hidden');
+                noShowBtn.classList.add('hidden');
+                if (noShowTickHandle) { clearInterval(noShowTickHandle); noShowTickHandle = null; }
+                return;
+            }
+
+            // Aktif yolculuğa dönüldüğünde tekrar görünür yap (state değişebilir)
+            arrivedBtn.classList.remove('hidden');
+            noShowBtn.classList.remove('hidden');
+
             if (!a.arrived_at) {
                 arrivedBtn.disabled = false;
                 arrivedBtn.classList.remove('opacity-50');
