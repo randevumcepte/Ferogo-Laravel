@@ -98,7 +98,7 @@ class CustomerRideController extends Controller
         }
         RateLimiter::hit($rl, 60);
 
-        $cacheKey = 'places:tr-izmir:v3:' . sha1($q);
+        $cacheKey = 'places:tr-izmir:v4:' . sha1($q);
         $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
             // Önce Photon (OSM autocomplete — İzmir bias, zengin POI/işletme), boşsa Nominatim
             $r = $this->photonSearch($q);
@@ -120,13 +120,28 @@ class CustomerRideController extends Controller
             ])->timeout(3)->get('https://photon.komoot.io/api/', [
                 'q'     => $q,
                 'lang'  => 'default', // 'tr' desteklenmiyor; default = yerel (Türkçe) isimler
-                'lat'   => 38.4237,
+                'lat'   => 38.4237,   // İzmir merkez bias (sonuçlar koordinatla ayrıca filtreleniyor)
                 'lon'   => 27.1428,
-                'limit' => 20,
+                'limit' => 25,
             ]);
             if (! $response->ok()) return [];
             $features = $response->json('features');
             if (! is_array($features)) return [];
+
+            // Türkçe karakterleri sadeleştir (karşılaştırma için): ç->c, ş->s, ı->i ...
+            $fold = static function (string $s): string {
+                $s = strtr($s, ['İ' => 'i', 'I' => 'i', 'Ş' => 's', 'Ç' => 'c', 'Ğ' => 'g', 'Ü' => 'u', 'Ö' => 'o']);
+                $s = mb_strtolower($s, 'UTF-8');
+                return strtr($s, ['ş' => 's', 'ç' => 'c', 'ı' => 'i', 'ğ' => 'g', 'ü' => 'u', 'ö' => 'o', 'â' => 'a', 'î' => 'i', 'û' => 'u']);
+            };
+
+            // Alaka çıpası: sorgunun en uzun kelimesi (>=3 harf) sonuç metninde geçmeli
+            $anchor = '';
+            foreach (preg_split('/\s+/', $fold($q)) as $tok) {
+                if (mb_strlen($tok) >= 3 && mb_strlen($tok) > mb_strlen($anchor)) {
+                    $anchor = $tok;
+                }
+            }
 
             $out = [];
             $seen = [];
@@ -135,6 +150,11 @@ class CustomerRideController extends Controller
                 $coords = $f['geometry']['coordinates'] ?? null;
                 if (! is_array($coords) || count($coords) < 2) continue;
                 if (($p['countrycode'] ?? '') !== 'TR') continue;
+
+                // İzmir kutusu dışını ele (Muğla/başka il sonuçları gitsin)
+                $lat = (float) $coords[1];
+                $lon = (float) $coords[0];
+                if ($lat < 37.9 || $lat > 38.8 || $lon < 26.3 || $lon > 27.7) continue;
 
                 // Başlık: isim > cadde(+no) > mahalle/ilçe/şehir
                 $title = trim((string) ($p['name'] ?? ''));
@@ -157,14 +177,19 @@ class CustomerRideController extends Controller
                 $secondary = implode(', ', array_slice($parts, 0, 3));
                 $display = $secondary !== '' ? ($title . ', ' . $secondary) : $title;
 
+                // Alaka filtresi: sorgu kelimesi sonuç metninde geçmiyorsa ele (saçma eşleşmeleri at)
+                if ($anchor !== '' && ! str_contains($fold($title . ' ' . $secondary), $anchor)) {
+                    continue;
+                }
+
                 // Tekrarlari ele (ayni isimli 13 "Karsiyaka" gibi)
                 $key = mb_strtolower($display);
                 if (isset($seen[$key])) continue;
                 $seen[$key] = true;
 
                 $out[] = [
-                    'lat'          => (float) $coords[1],
-                    'lon'          => (float) $coords[0],
+                    'lat'          => $lat,
+                    'lon'          => $lon,
                     'display_name' => $display,
                 ];
                 if (count($out) >= 10) break;
