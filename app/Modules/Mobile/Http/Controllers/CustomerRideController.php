@@ -98,7 +98,7 @@ class CustomerRideController extends Controller
         }
         RateLimiter::hit($rl, 60);
 
-        $cacheKey = 'places:tr-izmir:v2:' . sha1($q);
+        $cacheKey = 'places:tr-izmir:v3:' . sha1($q);
         $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
             // Önce Photon (OSM autocomplete — İzmir bias, zengin POI/işletme), boşsa Nominatim
             $r = $this->photonSearch($q);
@@ -119,16 +119,17 @@ class CustomerRideController extends Controller
                 'User-Agent' => 'FerXGo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
             ])->timeout(3)->get('https://photon.komoot.io/api/', [
                 'q'     => $q,
-                'lang'  => 'tr',
+                'lang'  => 'default', // 'tr' desteklenmiyor; default = yerel (Türkçe) isimler
                 'lat'   => 38.4237,
                 'lon'   => 27.1428,
-                'limit' => 15,
+                'limit' => 20,
             ]);
             if (! $response->ok()) return [];
             $features = $response->json('features');
             if (! is_array($features)) return [];
 
             $out = [];
+            $seen = [];
             foreach ($features as $f) {
                 $p = $f['properties'] ?? [];
                 $coords = $f['geometry']['coordinates'] ?? null;
@@ -154,13 +155,19 @@ class CustomerRideController extends Controller
                     }
                 }
                 $secondary = implode(', ', array_slice($parts, 0, 3));
+                $display = $secondary !== '' ? ($title . ', ' . $secondary) : $title;
+
+                // Tekrarlari ele (ayni isimli 13 "Karsiyaka" gibi)
+                $key = mb_strtolower($display);
+                if (isset($seen[$key])) continue;
+                $seen[$key] = true;
 
                 $out[] = [
                     'lat'          => (float) $coords[1],
                     'lon'          => (float) $coords[0],
-                    'display_name' => $secondary !== '' ? ($title . ', ' . $secondary) : $title,
+                    'display_name' => $display,
                 ];
-                if (count($out) >= 12) break;
+                if (count($out) >= 10) break;
             }
             return $out;
         } catch (\Throwable $e) {
