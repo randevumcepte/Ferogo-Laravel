@@ -98,36 +98,105 @@ class CustomerRideController extends Controller
         }
         RateLimiter::hit($rl, 60);
 
-        $cacheKey = 'places:tr-izmir:v1:' . sha1($q);
+        $cacheKey = 'places:tr-izmir:v2:' . sha1($q);
         $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
-            try {
-                $response = Http::withHeaders([
-                    'User-Agent'      => 'FerXGo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
-                    'Accept-Language' => 'tr,en',
-                ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
-                    'q'              => $q,
-                    'format'         => 'json',
-                    'addressdetails' => 0,
-                    'limit'          => 6,
-                    'countrycodes'   => 'tr',
-                    'viewbox'        => '26.7,38.6,27.5,38.2',
-                    'bounded'        => 0,
-                ]);
-                if (! $response->ok()) return [];
-                $rows = $response->json();
-                if (! is_array($rows)) return [];
-                return array_map(static fn ($r) => [
-                    'lat'         => (float) ($r['lat'] ?? 0),
-                    'lon'         => (float) ($r['lon'] ?? 0),
-                    'display_name'=> (string) ($r['display_name'] ?? ''),
-                ], array_slice($rows, 0, 6));
-            } catch (\Throwable $e) {
-                report($e);
-                return [];
+            // Önce Photon (OSM autocomplete — İzmir bias, zengin POI/işletme), boşsa Nominatim
+            $r = $this->photonSearch($q);
+            if (empty($r)) {
+                $r = $this->nominatimSearch($q);
             }
+            return $r;
         });
 
         return response()->json(['ok' => true, 'results' => $results]);
+    }
+
+    /** Photon (OSM autocomplete) — İzmir merkez bias + TR filtresi + zengin POI/işletme. */
+    private function photonSearch(string $q): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => 'FerXGo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
+            ])->timeout(3)->get('https://photon.komoot.io/api/', [
+                'q'     => $q,
+                'lang'  => 'tr',
+                'lat'   => 38.4237,
+                'lon'   => 27.1428,
+                'limit' => 15,
+            ]);
+            if (! $response->ok()) return [];
+            $features = $response->json('features');
+            if (! is_array($features)) return [];
+
+            $out = [];
+            foreach ($features as $f) {
+                $p = $f['properties'] ?? [];
+                $coords = $f['geometry']['coordinates'] ?? null;
+                if (! is_array($coords) || count($coords) < 2) continue;
+                if (($p['countrycode'] ?? '') !== 'TR') continue;
+
+                // Başlık: isim > cadde(+no) > mahalle/ilçe/şehir
+                $title = trim((string) ($p['name'] ?? ''));
+                if ($title === '') {
+                    $title = trim(((string) ($p['street'] ?? '')) . ' ' . ((string) ($p['housenumber'] ?? '')));
+                }
+                if ($title === '') {
+                    $title = trim((string) ($p['district'] ?? $p['city'] ?? $p['locality'] ?? ''));
+                }
+                if ($title === '') continue;
+
+                // İkincil satır: cadde/mahalle/ilçe/şehir (başlığı tekrar etme, tekilleştir)
+                $parts = [];
+                foreach ([$p['street'] ?? null, $p['district'] ?? null, $p['city'] ?? null, $p['state'] ?? null] as $seg) {
+                    $seg = trim((string) ($seg ?? ''));
+                    if ($seg !== '' && $seg !== $title && ! in_array($seg, $parts, true)) {
+                        $parts[] = $seg;
+                    }
+                }
+                $secondary = implode(', ', array_slice($parts, 0, 3));
+
+                $out[] = [
+                    'lat'          => (float) $coords[1],
+                    'lon'          => (float) $coords[0],
+                    'display_name' => $secondary !== '' ? ($title . ', ' . $secondary) : $title,
+                ];
+                if (count($out) >= 12) break;
+            }
+            return $out;
+        } catch (\Throwable $e) {
+            report($e);
+            return [];
+        }
+    }
+
+    /** Nominatim yedeği — Photon boş/erişilemezse. */
+    private function nominatimSearch(string $q): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'User-Agent'      => 'FerXGo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
+                'Accept-Language' => 'tr,en',
+            ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
+                'q'              => $q,
+                'format'         => 'json',
+                'addressdetails' => 0,
+                'limit'          => 10,
+                'countrycodes'   => 'tr',
+                'viewbox'        => '26.7,38.6,27.5,38.2',
+                'bounded'        => 0,
+            ]);
+            if (! $response->ok()) return [];
+            $rows = $response->json();
+            if (! is_array($rows)) return [];
+            return array_map(static fn ($r) => [
+                'lat'         => (float) ($r['lat'] ?? 0),
+                'lon'         => (float) ($r['lon'] ?? 0),
+                'display_name'=> (string) ($r['display_name'] ?? ''),
+            ], array_slice($rows, 0, 10));
+        } catch (\Throwable $e) {
+            report($e);
+            return [];
+        }
     }
 
     /**
