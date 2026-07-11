@@ -7,6 +7,7 @@ use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Models\RideMessage;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Booking\Services\CustomerTrustService;
+use App\Modules\Booking\Services\DispatcherService;
 use App\Modules\Booking\Services\FavoriteDriverService;
 use App\Modules\Booking\Services\NoShowService;
 use App\Modules\Booking\Services\RideRequestService;
@@ -41,6 +42,7 @@ class CustomerRideController extends Controller
         private NoShowService $noShowService,
         private FareCalculator $calculator,
         private FavoriteDriverService $favoriteService,
+        private DispatcherService $dispatcher,
     ) {}
 
     // ─────────────────────────────────────────────────────────────
@@ -374,6 +376,10 @@ class CustomerRideController extends Controller
         $vehicleClassSlugs = VehicleClass::where('is_active', true)->pluck('slug')->toArray();
         $user = $request->user();
 
+        // Dağıtım modu: 'auto' → favori-öncelikli dalga (yolcu sürücü seçmez, "Hadi Gidelim");
+        // 'manual' (varsayılan) → yolcu radardan sürücü seçer (preferred_driver_id).
+        $isAuto = $request->input('dispatch_mode') === 'auto';
+
         $validated = $request->validate([
             'vehicle_class_slug'    => ['required', Rule::in($vehicleClassSlugs)],
             'pickup_address'        => ['required', 'string', 'max:255'],
@@ -387,7 +393,8 @@ class CustomerRideController extends Controller
             'estimated_fare'        => ['nullable', 'numeric', 'min:0'],
             'suggested_fare'        => ['nullable', 'numeric', 'min:0'],
             'customer_offer_fare'   => ['nullable', 'numeric', 'min:0'],
-            'preferred_driver_id'   => ['required', 'integer', 'exists:drivers,id'],
+            'dispatch_mode'         => ['nullable', Rule::in(['auto', 'manual'])],
+            'preferred_driver_id'   => [$isAuto ? 'nullable' : 'required', 'integer', 'exists:drivers,id'],
             'fallback_driver_ids'   => ['nullable', 'array', 'max:5'],
             'fallback_driver_ids.*' => ['integer', 'exists:drivers,id'],
             'kvkk_consent'          => ['required', 'accepted'],
@@ -432,6 +439,76 @@ class CustomerRideController extends Controller
         RateLimiter::hit($ipKey, 600);
 
         $vehicleClass = VehicleClass::where('slug', $validated['vehicle_class_slug'])->firstOrFail();
+
+        $customerIsFemale = $user->gender === 'female';
+
+        // ─── AUTO MOD: favori-öncelikli dalga ("Hadi Gidelim") ──────
+        // Yolcu sürücü seçmez; talep ÖNCE online favori sürücülere (mesafe sınırsız)
+        // aynı anda gider. Favori yoksa/uygun değilse doğrudan yakındaki havuza.
+        // Favori dalgası dönmezse cron (tickFavoriteWaves) yakına düşürür.
+        // Auto mod SINIF-BAĞIMSIZ (class = null) — web parite.
+        if ($isAuto) {
+            $favoriteIds = $this->favoriteService->dispatchableFavoriteIds(
+                $user, null, $customerIsFemale,
+            );
+            $isFavoriteWave = ! empty($favoriteIds);
+
+            $poolIds = $isFavoriteWave
+                ? $favoriteIds
+                : $this->dispatcher->nearestDispatchableDriverIds(
+                    (float) $validated['pickup_lat'],
+                    (float) $validated['pickup_lng'],
+                    null,
+                );
+
+            if (empty($poolIds)) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => 'Şu an uygun üye sürücü bulunamadı. Birazdan tekrar dene.',
+                ], 422);
+            }
+
+            $req = $this->service->create([
+                'customer_name'        => $user->name ?? 'Müşteri',
+                'customer_phone'       => $user->phone,
+                'vehicle_class_id'     => $vehicleClass->id,
+                'pickup_address'       => $validated['pickup_address'],
+                'pickup_lat'           => (float) $validated['pickup_lat'],
+                'pickup_lng'           => (float) $validated['pickup_lng'],
+                'dropoff_address'      => $validated['dropoff_address'],
+                'dropoff_lat'          => isset($validated['dropoff_lat']) ? (float) $validated['dropoff_lat'] : null,
+                'dropoff_lng'          => isset($validated['dropoff_lng']) ? (float) $validated['dropoff_lng'] : null,
+                'distance_km'          => (float) $validated['distance_km'],
+                'duration_minutes'     => (int) $validated['duration_minutes'],
+                'estimated_fare'       => isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null,
+                'suggested_fare'       => isset($validated['suggested_fare']) ? (float) $validated['suggested_fare'] : (isset($validated['estimated_fare']) ? (float) $validated['estimated_fare'] : null),
+                'customer_offer_fare'  => isset($validated['customer_offer_fare']) ? (float) $validated['customer_offer_fare'] : null,
+                'pool_driver_ids'      => $poolIds,
+                'is_favorite_wave'     => $isFavoriteWave,
+                'phone_verified_at'    => now(),
+                'verification_token'   => null,
+                'client_ip'            => $request->ip(),
+                'client_fingerprint'   => $deviceId,
+                'user_agent'           => substr((string) $request->userAgent(), 0, 500),
+            ]);
+
+            $this->trustService->recordRequestCreated($user->phone, $request->ip(), $deviceId);
+
+            Log::info('[mobile-ride] auto_request_created', [
+                'user_id'   => $user->id,
+                'public_id' => $req->public_id,
+                'dispatch'  => $isFavoriteWave ? 'favorites' : 'nearby',
+                'pool'      => $poolIds,
+            ]);
+
+            return response()->json([
+                'ok'        => true,
+                'public_id' => $req->public_id,
+                'dispatch'  => $isFavoriteWave ? 'favorites' : 'nearby',
+                'status'    => $this->statusPayload($req),
+            ]);
+        }
+        // ─── /AUTO MOD ──────────────────────────────────────────────
 
         // Aday sürücü listesi: preferred + fallback'lerden online+approved olanlar
         $candidates = array_unique(array_merge(
@@ -576,6 +653,40 @@ class CustomerRideController extends Controller
     }
 
     /**
+     * POST /api/v1/customer/ride-requests/{publicId}/reconfirm
+     * Body: { accept } — auto/havuz akışında eşleşen üye sürücüyü onayla (true) ya da reddet (false).
+     */
+    public function reconfirm(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'accept' => ['required', 'boolean'],
+        ]);
+
+        $req = $this->ownedRequest($publicId);
+
+        if ($req->status !== 'awaiting_customer_reconfirm') {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Bu talep şu an onay bekliyor değil.',
+            ], 422);
+        }
+
+        try {
+            $req = $this->dispatcher->customerReconfirm($req, (bool) $validated['accept']);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Sürücü az önce müsait olmaktan çıktı. Tekrar dene.',
+            ], 409);
+        }
+
+        return response()->json([
+            'ok'     => true,
+            'status' => $this->statusPayload($req),
+        ]);
+    }
+
+    /**
      * GET /api/v1/customer/ride-requests/{publicId}/messages?since_id=
      */
     public function messages(Request $request, string $publicId): JsonResponse
@@ -704,14 +815,23 @@ class CustomerRideController extends Controller
 
     private function statusPayload(RideRequest $req): array
     {
+        // Sayaç: pending / pool_expanded / awaiting_customer_reconfirm üçü de timer kullanır
+        $secondsRemaining = 0;
+        if (in_array($req->status, ['pending', 'pool_expanded', 'awaiting_customer_reconfirm'], true) && $req->offer_expires_at) {
+            $secondsRemaining = max(0, (int) round(now()->diffInSeconds($req->offer_expires_at, false)));
+        }
+
         $payload = [
             'status'                => $req->status,
             'rejection_count'       => (int) $req->rejection_count,
             'current_index'         => (int) $req->current_candidate_index,
             'total_candidates'      => count($req->candidate_driver_ids ?? []),
-            'seconds_remaining'     => $req->status === 'pending'
-                ? max(0, (int) round(now()->diffInSeconds($req->offer_expires_at, false)))
-                : 0,
+            'seconds_remaining'     => $secondsRemaining,
+            // Auto / havuz dağıtımı (Hadi Gidelim)
+            'is_favorite_wave'      => (bool) $req->is_favorite_wave,
+            'pool_expanded_at'      => $req->pool_expanded_at?->toIso8601String(),
+            'reconfirm_required_at' => $req->reconfirm_required_at?->toIso8601String(),
+            'customer_reconfirmed_at' => $req->customer_reconfirmed_at?->toIso8601String(),
             'offered_driver'        => null,
             'accepted_driver'       => null,
             'ride_public_id'        => $req->ride?->public_id,

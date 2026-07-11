@@ -57,6 +57,8 @@ Route::middleware(['auth:sanctum', 'device', 'role:customer', 'ability:customer:
         Route::get('ride-requests/{publicId}',                                             [CustomerRideController::class, 'showRequest']);
         Route::post('ride-requests/{publicId}/cancel',                                     [CustomerRideController::class, 'cancelRequest']);
         Route::post('ride-requests/{publicId}/confirm',                                    [CustomerRideController::class, 'confirmRequest']);
+        // Auto/havuz akışı ("Hadi Gidelim"): eşleşen üye sürücüyü onayla/reddet
+        Route::post('ride-requests/{publicId}/reconfirm',                                  [CustomerRideController::class, 'reconfirm']);
         // Fiyat pazarlığı: müşteri karşı teklif / kabul
         Route::middleware('throttle:30,1')->post('ride-requests/{publicId}/counter',       [CustomerRideController::class, 'counter']);
         Route::post('ride-requests/{publicId}/accept-price',                               [CustomerRideController::class, 'acceptPrice']);
