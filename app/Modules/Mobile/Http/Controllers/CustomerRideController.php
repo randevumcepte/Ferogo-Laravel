@@ -529,20 +529,23 @@ class CustomerRideController extends Controller
             ], 429);
         }
 
-        // Per-phone rate limit: 10 dk / 2 talep
+        // Per-phone rate limit: 10 dk / 8 talep.
+        // (Kademeli akış tek seferde 3 talep üretebilir: 1:1 → tüm favoriler → yakın;
+        //  ayrıca ret/iptal sonrası yeniden deneme normal. Spam için 8 yeterince yüksek eşik.)
         $phoneNorm = $this->trustService->normalizePhone($user->phone);
         $phoneKey  = 'rr_create_phone:' . $phoneNorm;
-        if (RateLimiter::tooManyAttempts($phoneKey, 2)) {
+        if (RateLimiter::tooManyAttempts($phoneKey, 8)) {
+            $wait = RateLimiter::availableIn($phoneKey);
             return response()->json([
                 'ok'          => false,
-                'message'     => 'Çok hızlı talep gönderiyorsun. Önceki çağrını tamamla.',
-                'retry_after' => RateLimiter::availableIn($phoneKey),
+                'message'     => 'Kısa sürede çok fazla talep oluşturdun. ' . max(1, (int) ceil($wait / 60)) . ' dk sonra tekrar dene.',
+                'retry_after' => $wait,
             ], 429);
         }
 
-        // Per-IP rate limit: 10 dk / 5 talep
+        // Per-IP rate limit: 10 dk / 15 talep
         $ipKey = 'rr_create_ip:' . $request->ip();
-        if (RateLimiter::tooManyAttempts($ipKey, 5)) {
+        if (RateLimiter::tooManyAttempts($ipKey, 15)) {
             return response()->json([
                 'ok'          => false,
                 'message'     => 'Bu ağdan çok fazla talep. Daha sonra dene.',
