@@ -957,15 +957,41 @@ class RideRequestController extends Controller
         return "https://ui-avatars.com/api/?name={$encoded}&background=F0C040&color=000&size=256&bold=true&format=svg";
     }
 
-    /** Aracın gerçek fotoğraf galerisi varsa onu döner; yoksa sınıf bazlı temsili tek görsel array'i. */
+    /**
+     * Görsel doğrulama için araç fotoğrafları (öncelik sırasıyla):
+     *   1) Onboarding'de yüklenen GERÇEK 6 açılı fotoğraflar (photo_angles) — en güçlü doğrulama
+     *   2) Eski galeri (photos)
+     *   3) Sınıf bazlı temsili tek görsel
+     * Doğrulama modalı ilk 3'ü gösterdiği için dış cepheler (ön/sol/sağ) öne alınır.
+     */
     private function vehiclePhotos($v, $vClass): array
     {
-        if ($v && is_array($v->photos) && count($v->photos) > 0) {
-            return array_map(
-                fn ($p) => str_starts_with($p, 'http') ? $p : asset('storage/' . $p),
-                $v->photos
-            );
+        $toUrl = fn ($p) => str_starts_with($p, 'http') ? $p : asset('storage/' . $p);
+
+        // 1) Gerçek 6 açılı onboarding fotoğrafları — doğrulama için anlamlı sıra
+        if ($v && is_array($v->photo_angles) && count($v->photo_angles) > 0) {
+            $order = ['front', 'left', 'right', 'back', 'interior_front', 'interior_back'];
+            $ordered = [];
+            foreach ($order as $angle) {
+                if (! empty($v->photo_angles[$angle])) {
+                    $ordered[] = $v->photo_angles[$angle];
+                }
+            }
+            // Sırada tanımlı olmayan ekstra açı varsa sona ekle
+            foreach ($v->photo_angles as $p) {
+                if ($p && ! in_array($p, $ordered, true)) $ordered[] = $p;
+            }
+            if (! empty($ordered)) {
+                return array_map($toUrl, $ordered);
+            }
         }
+
+        // 2) Eski galeri
+        if ($v && is_array($v->photos) && count($v->photos) > 0) {
+            return array_map($toUrl, $v->photos);
+        }
+
+        // 3) Sınıf bazlı temsili tek görsel
         return [$this->vehiclePhotoUrl($v, $vClass)];
     }
 
