@@ -373,6 +373,14 @@ class RideRequestService
                 'status' => 'cancelled',
             ]);
             $this->trustService->recordCustomerCancellation($req->customer_phone, late: true);
+
+            // Sürücü buluşmaya gidiyor olabilir → iptal push'u (best-effort).
+            try {
+                app(\App\Modules\Notification\Services\NotificationService::class)
+                    ->rideCancelledToDriver($req);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[RideRequestService] cancel push', ['err' => $e->getMessage()]);
+            }
         }
         return $req->fresh();
     }
@@ -413,6 +421,14 @@ class RideRequestService
         ]);
         $this->logOffer($req, 'driver', 'counter', $amount, $round, $driver->id);
 
+        // Sürücü karşı teklif verdi → müşteriye push (best-effort).
+        try {
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->driverCounterToCustomer($req, $amount);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[RideRequestService] driver counter push', ['err' => $e->getMessage()]);
+        }
+
         return [
             'ok'          => true,
             'amount'      => $amount,
@@ -452,6 +468,14 @@ class RideRequestService
         ]);
         $this->logOffer($req, 'customer', 'counter', $amount, $round);
 
+        // Yolcu karşı teklif verdi → sürücüye push (best-effort).
+        try {
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->customerCounterToDriver($req, $amount);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[RideRequestService] customer counter push', ['err' => $e->getMessage()]);
+        }
+
         return [
             'ok'          => true,
             'amount'      => $amount,
@@ -485,6 +509,15 @@ class RideRequestService
             $req = $this->accept($req->fresh(), $driver, $agreed);
         } catch (\RuntimeException $e) {
             return ['ok' => false, 'message' => $e->getMessage()];
+        }
+
+        // Yolcu sürücünün karşı teklifini kabul etti → sürücüye push (best-effort).
+        // (accept() zaten müşteriye "sürücün yolda" atar; burada sürücü haberdar edilir.)
+        try {
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->agreementToDriver($req);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[RideRequestService] agreement push', ['err' => $e->getMessage()]);
         }
 
         return ['ok' => true, 'request' => $req];

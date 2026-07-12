@@ -115,6 +115,78 @@ class NotificationService
         });
     }
 
+    /** Sürücü karşı teklif verdi → müşteriye. */
+    public function driverCounterToCustomer(RideRequest $req, float $amount): void
+    {
+        $this->safe(function () use ($req, $amount) {
+            $user = $this->customerUser($req->customer_phone);
+            if (! $user) {
+                return;
+            }
+            $this->deliver([$user->id], [
+                'type'      => 'driver_counter',
+                'title'     => 'Sürücüden karşı teklif 💰',
+                'body'      => number_format($amount, 0, ',', '.') . ' ₺ karşı teklif geldi.',
+                'deep_link' => '/ride/' . $req->public_id,
+                'data'      => ['type' => 'driver_counter', 'public_id' => $req->public_id],
+            ]);
+        });
+    }
+
+    /** Yolcu karşı teklif verdi → (masadaki) sürücüye. */
+    public function customerCounterToDriver(RideRequest $req, float $amount): void
+    {
+        $this->safe(function () use ($req, $amount) {
+            $userIds = $this->driverUserIds([$req->offered_driver_id]);
+            if (empty($userIds)) {
+                return;
+            }
+            $this->deliver($userIds, [
+                'type'      => 'customer_counter',
+                'title'     => 'Yolcudan yeni teklif 💰',
+                'body'      => number_format($amount, 0, ',', '.') . ' ₺ teklif geldi.',
+                'deep_link' => '/driver/offer/' . $req->public_id,
+                'data'      => ['type' => 'customer_counter', 'public_id' => $req->public_id],
+            ]);
+        });
+    }
+
+    /** Yolcu, sürücünün karşı teklifini kabul etti → sürücüye (anlaşma, yola çık). */
+    public function agreementToDriver(RideRequest $req): void
+    {
+        $this->safe(function () use ($req) {
+            $userIds = $this->driverUserIds([$req->accepted_driver_id ?: $req->offered_driver_id]);
+            if (empty($userIds)) {
+                return;
+            }
+            $this->deliver($userIds, [
+                'type'      => 'ride_agreed',
+                'title'     => 'Yolcu teklifini kabul etti ✅',
+                'body'      => 'Anlaşma tamam — buluşma noktasına gidebilirsin.',
+                'deep_link' => '/driver/ride/' . $req->public_id,
+                'data'      => ['type' => 'ride_agreed', 'public_id' => $req->public_id],
+            ]);
+        });
+    }
+
+    /** Yolcu, kabul edilmiş yolculuğu iptal etti → (yoldaki) sürücüye. */
+    public function rideCancelledToDriver(RideRequest $req): void
+    {
+        $this->safe(function () use ($req) {
+            $userIds = $this->driverUserIds([$req->accepted_driver_id]);
+            if (empty($userIds)) {
+                return;
+            }
+            $this->deliver($userIds, [
+                'type'      => 'ride_cancelled',
+                'title'     => 'Yolcu yolculuğu iptal etti ❌',
+                'body'      => 'Yolcu talebi iptal etti. Başka işlere dönebilirsin.',
+                'deep_link' => '/driver',
+                'data'      => ['type' => 'ride_cancelled', 'public_id' => $req->public_id],
+            ]);
+        });
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  KAMPANYA GÖNDERİMİ
     // ─────────────────────────────────────────────────────────────

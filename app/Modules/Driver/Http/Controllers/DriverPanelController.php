@@ -687,6 +687,14 @@ class DriverPanelController extends Controller
             'body'            => $validated['body'],
         ]);
 
+        // Web'den sürücü mesajı → müşteriye push (mobil parite, best-effort).
+        try {
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->newMessage($req, 'driver', $validated['body']);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[DriverPanelController] message push', ['err' => $e->getMessage()]);
+        }
+
         return response()->json([
             'ok' => true,
             'message' => [

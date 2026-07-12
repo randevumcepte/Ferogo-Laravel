@@ -797,6 +797,14 @@ class RideRequestController extends Controller
             'body'            => $validated['body'],
         ]);
 
+        // Web'den yolcu mesajı → sürücüye push (mobil parite, best-effort).
+        try {
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->newMessage($req, 'customer', $validated['body']);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[RideRequestController] message push', ['err' => $e->getMessage()]);
+        }
+
         return response()->json([
             'success' => true,
             'message' => [
