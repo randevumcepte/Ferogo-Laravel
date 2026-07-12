@@ -101,8 +101,14 @@ class DriverOnboardingController extends Controller
             'year'             => ['required', 'integer', 'between:1990,' . (date('Y') + 1)],
             'color'            => ['required', 'string', 'max:30'],
             'plate'            => ['required', 'string', 'max:20'],
-            'vehicle_class_id' => ['required', 'integer', 'exists:vehicle_classes,id'],
+            // Tek-kademe model: sürücü sınıf seçmez; sunucu aktif sınıfı atar.
+            'vehicle_class_id' => ['nullable', 'integer', 'exists:vehicle_classes,id'],
         ]);
+
+        // Sürücü sınıf seçmediğinde aktif varsayılan sınıfa düş.
+        if (empty($data['vehicle_class_id'])) {
+            $data['vehicle_class_id'] = VehicleClass::activeDefault()?->id;
+        }
 
         // Model gerçekten seçilen markaya mı ait?
         $model = VehicleModel::where('id', $data['vehicle_model_id'])

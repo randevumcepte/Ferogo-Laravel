@@ -320,7 +320,8 @@ class RideRequestController extends Controller
 
         try {
             $validated = $request->validate([
-                'vehicle_class_slug'    => ['required', Rule::in($vehicleClassSlugs)],
+                // Tek-kademe model: yolcu sınıf seçmez; boşsa sunucu aktif sınıfa düşer.
+                'vehicle_class_slug'    => ['nullable', Rule::in($vehicleClassSlugs)],
                 'pickup_address'        => ['required', 'string', 'max:255'],
                 'pickup_lat'            => ['required', 'numeric'],
                 'pickup_lng'            => ['required', 'numeric'],
@@ -426,7 +427,8 @@ class RideRequestController extends Controller
         RateLimiter::hit($ipKey, 600);
         // ─── /KORUMA KATMANI ────────────────────────────────────
 
-        $vehicleClass = VehicleClass::where('slug', $validated['vehicle_class_slug'])->firstOrFail();
+        $resolvedClassSlug = $validated['vehicle_class_slug'] ?? optional(VehicleClass::activeDefault())->slug;
+        $vehicleClass = VehicleClass::where('slug', $resolvedClassSlug)->firstOrFail();
 
         // ─── AUTO MOD: favori-öncelikli dalga ───────────────────────
         // Yolcu sürücü seçmez; talep ÖNCE online favori sürücülere (mesafe sınırsız)

@@ -17,6 +17,8 @@ class VehicleForm
                 ->label('Sınıf')
                 ->relationship('vehicleClass', 'name')
                 ->required()
+                // Tek-kademe (Martı TAG) model: aktif varsayılan sınıfa otomatik ayarlanır.
+                ->default(fn () => \App\Modules\Vehicle\Models\VehicleClass::activeDefault()?->id)
                 ->searchable()
                 ->preload(),
 

@@ -57,8 +57,8 @@ class DriverOnboardingService
                 && $v->vehicle_model_id
                 && $v->year_of_manufacture
                 && filled($v->color)
-                && filled($v->plate)
-                && $v->vehicle_class_id),
+                // Tek-kademe model: sürücü sınıf seçmez (sunucu atar), bu yüzden gate'ten çıkarıldı.
+                && filled($v->plate)),
 
             $this->step('vehicle_photos',   'Araç Fotoğrafları', 'arac',
                 $this->allAnglesPresent($v?->photo_angles)),

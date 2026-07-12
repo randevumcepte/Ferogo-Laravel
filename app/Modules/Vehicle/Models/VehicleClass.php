@@ -47,6 +47,11 @@ class VehicleClass extends Model
         'boarding_fee_suspicious' => 'decimal:2',
     ];
 
+    public static function activeDefault(): ?self
+    {
+        return static::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->first();
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

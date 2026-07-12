@@ -216,7 +216,8 @@ class DriverPanelController extends Controller
             //     Sonraki DÜZENLEMELER yukarıdaki admin-onaylı change-request akışından geçer
             //     (Easy'den VIP'e sessiz yükseltmeyi engellemek için).
             $vehicleData = $request->validate([
-                'vehicle_class_id' => ['required', 'integer', 'exists:vehicle_classes,id'],
+                // Tek-kademe model: sürücü sınıf seçmez; sunucu aktif sınıfı atar.
+                'vehicle_class_id' => ['nullable', 'integer', 'exists:vehicle_classes,id'],
                 'vehicle_brand'    => ['required', 'string', 'max:60'],
                 'vehicle_model'    => ['required', 'string', 'max:60'],
                 'vehicle_year'     => ['required', 'integer', 'between:1990,2030'],
@@ -233,7 +234,7 @@ class DriverPanelController extends Controller
 
             $newVehicle = \App\Modules\Vehicle\Models\Vehicle::create([
                 'tenant_id'           => $driver->tenant_id,
-                'vehicle_class_id'    => $vehicleData['vehicle_class_id'],
+                'vehicle_class_id'    => $vehicleData['vehicle_class_id'] ?? \App\Modules\Vehicle\Models\VehicleClass::activeDefault()?->id,
                 'brand'               => $vehicleData['vehicle_brand'],
                 'model'               => $vehicleData['vehicle_model'],
                 'year_of_manufacture' => $vehicleData['vehicle_year'],

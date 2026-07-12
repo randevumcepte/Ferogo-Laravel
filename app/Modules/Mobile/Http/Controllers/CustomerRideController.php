@@ -240,7 +240,8 @@ class CustomerRideController extends Controller
     {
         $validated = $request->validate([
             'city_id'          => ['nullable', 'integer', 'exists:cities,id'],
-            'vehicle_class_id' => ['required', 'integer', 'exists:vehicle_classes,id'],
+            // Tek-kademe model: sınıf opsiyonel; boşsa aktif sınıf kullanılır.
+            'vehicle_class_id' => ['nullable', 'integer', 'exists:vehicle_classes,id'],
             'distance_km'      => ['required', 'numeric', 'min:0', 'max:1000'],
             'duration_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
             'scheduled_at'     => ['nullable', 'date'],
@@ -255,9 +256,13 @@ class CustomerRideController extends Controller
         $cityId = (int) ($validated['city_id'] ?? \App\Modules\Shared\Models\City::where('is_active', true)
             ->orderBy('sort_order')->value('id'));
 
+        $vehicleClassId = ! empty($validated['vehicle_class_id'])
+            ? (int) $validated['vehicle_class_id']
+            : (int) VehicleClass::activeDefault()?->id;
+
         $fare = $this->calculator->calculate(
             cityId:           $cityId,
-            vehicleClassId:   (int) $validated['vehicle_class_id'],
+            vehicleClassId:   $vehicleClassId,
             distanceKm:       (float) $validated['distance_km'],
             durationMinutes:  (int) $validated['duration_minutes'],
             extras:           $validated['extras'] ?? [],
@@ -488,7 +493,8 @@ class CustomerRideController extends Controller
         $isPool   = $isAuto || $isNearby || $isList;
 
         $validated = $request->validate([
-            'vehicle_class_slug'    => ['required', Rule::in($vehicleClassSlugs)],
+            // Tek-kademe model: yolcu sınıf seçmez; boşsa sunucu aktif sınıfa düşer.
+            'vehicle_class_slug'    => ['nullable', Rule::in($vehicleClassSlugs)],
             'pickup_address'        => ['required', 'string', 'max:255'],
             'pickup_lat'            => ['required', 'numeric'],
             'pickup_lng'            => ['required', 'numeric'],
@@ -547,7 +553,7 @@ class CustomerRideController extends Controller
         RateLimiter::hit($phoneKey, 600);
         RateLimiter::hit($ipKey, 600);
 
-        $vehicleClass = VehicleClass::where('slug', $validated['vehicle_class_slug'])->firstOrFail();
+        $vehicleClass = VehicleClass::where('slug', $validated['vehicle_class_slug'] ?? optional(VehicleClass::activeDefault())->slug)->firstOrFail();
 
         $customerIsFemale = $user->gender === 'female';
 
@@ -878,6 +884,14 @@ class CustomerRideController extends Controller
             'sender'          => 'customer',
             'body'            => $validated['body'],
         ]);
+
+        // Sürücüye "yeni mesaj" push (best-effort).
+        try {
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->newMessage($req, 'customer', $validated['body']);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[CustomerRide] message push', ['err' => $e->getMessage()]);
+        }
 
         return response()->json([
             'ok'      => true,

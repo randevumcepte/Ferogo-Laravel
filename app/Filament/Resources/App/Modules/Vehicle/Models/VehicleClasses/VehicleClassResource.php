@@ -32,6 +32,13 @@ class VehicleClassResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;
 
+    // Tek-kademe (Martı TAG) model: araç sınıfı yönetimi gizli — kaynak korunur,
+    // yalnızca navigasyondan çıkarıldı.
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return VehicleClassForm::configure($schema);

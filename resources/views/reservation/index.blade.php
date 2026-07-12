@@ -206,23 +206,8 @@
                         </select>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-zinc-300 mb-3">Araç Sınıfı</label>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            @foreach($vehicleClasses as $class)
-                                <label class="cursor-pointer">
-                                    <input type="radio" name="vehicle_class_id" value="{{ $class->id }}"
-                                        class="peer sr-only vehicle-class-radio"
-                                        {{ old('vehicle_class_id', $vehicleClasses->first()->id) == $class->id ? 'checked' : '' }}
-                                        required>
-                                    <div class="border-2 border-white/10 rounded-xl p-4 peer-checked:border-brand peer-checked:bg-brand/5 transition">
-                                        <div class="font-bold text-lg mb-1">{{ $class->name }}</div>
-                                        <div class="text-xs text-zinc-400">👤 {{ $class->max_passengers }} kişi · 🧳 {{ $class->max_luggage }} bagaj</div>
-                                    </div>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
+                    {{-- Tek-kademe (Martı TAG) model: araç sınıfı seçimi kaldırıldı.
+                         Sunucu aktif varsayılan sınıfı otomatik atar. --}}
                 </div>
 
                 {{-- Step 2: Rota --}}
@@ -787,9 +772,11 @@ const FeroGoForm = (function() {
         const formData = new FormData();
         formData.append('_token', document.querySelector('meta[name=csrf-token]').content);
         formData.append('city_id', document.getElementById('city-select').value);
+        // Tek-kademe model: araç sınıfı gönderilmez; sunucu aktif sınıfı çözer.
         const checkedClass = document.querySelector('.vehicle-class-radio:checked');
-        if (!checkedClass) return;
-        formData.append('vehicle_class_id', checkedClass.value);
+        if (checkedClass) {
+            formData.append('vehicle_class_id', checkedClass.value);
+        }
         formData.append('distance_km', km);
         formData.append('duration_minutes', min);
         formData.append('scheduled_at', document.getElementById('scheduled-at').value);

@@ -145,17 +145,8 @@
                     <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Plaka</label>
                     <input type="text" name="plate" maxlength="20" required value="{{ optional($vehicle)->plate }}" placeholder="35 ABC 123" class="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white uppercase focus:outline-none focus:border-brand/40">
                 </div>
-                <div class="sm:col-span-2">
-                    <label class="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Araç Sınıfı (önerin — admin onaylar)</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        @foreach ($vehicleClasses as $vc)
-                            <label class="cursor-pointer">
-                                <input type="radio" name="vehicle_class_id" value="{{ $vc->id }}" class="peer sr-only" {{ optional($vehicle)->vehicle_class_id == $vc->id ? 'checked' : '' }} required>
-                                <div class="text-center py-2.5 rounded-xl border border-white/10 text-xs font-bold text-zinc-300 peer-checked:border-brand peer-checked:bg-brand/10 peer-checked:text-brand transition">{{ $vc->name }}</div>
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
+                {{-- Tek-kademe (Martı TAG) model: araç sınıfı seçimi kaldırıldı.
+                     Sunucu aktif varsayılan sınıfı otomatik atar. --}}
                 <div class="sm:col-span-2">
                     <button type="submit" class="w-full py-3 rounded-xl bg-brand hover:bg-brand-600 text-black font-bold text-sm transition">Araç Bilgilerini Kaydet</button>
                 </div>

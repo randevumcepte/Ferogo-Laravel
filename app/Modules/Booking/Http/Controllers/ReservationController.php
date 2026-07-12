@@ -51,7 +51,8 @@ class ReservationController extends Controller
 
         $validated = $request->validate([
             'city_id' => ['required', Rule::in($cityIds)],
-            'vehicle_class_id' => ['required', Rule::in($vehicleClassIds)],
+            // Tek-kademe (Martı TAG) modeli: yolcu araç sınıfı seçmez, sunucu aktif sınıfı atar.
+            'vehicle_class_id' => ['nullable', Rule::in($vehicleClassIds)],
 
             'pickup_address' => ['required', 'string', 'max:255'],
             'pickup_lat' => ['nullable', 'numeric'],
@@ -97,6 +98,11 @@ class ReservationController extends Controller
             'customer_tc_no.digits'   => 'T.C. Kimlik numarası 11 haneli olmalıdır.',
             'transport_scheduled_at.required_with' => 'Ulaşım tipi seçtiyseniz planlanan varış saatini girmelisiniz.',
         ]);
+
+        // Tek-kademe model: yolcu sınıf seçmediyse aktif varsayılan sınıfa düş.
+        if (empty($validated['vehicle_class_id'])) {
+            $validated['vehicle_class_id'] = VehicleClass::activeDefault()?->id;
+        }
 
         $ride = $this->service->create($validated);
 
@@ -233,7 +239,8 @@ class ReservationController extends Controller
         $vehicleClassSlugs = VehicleClass::where('is_active', true)->pluck('slug')->toArray();
 
         $validated = $request->validate([
-            'vehicle_class_slug' => ['required', Rule::in($vehicleClassSlugs)],
+            // Tek-kademe model: sınıf opsiyonel; boşsa sunucu aktif sınıfı çözer.
+            'vehicle_class_slug' => ['nullable', Rule::in($vehicleClassSlugs)],
             'pickup_address' => ['required', 'string', 'max:255'],
             'pickup_lat' => ['required', 'numeric'],
             'pickup_lng' => ['required', 'numeric'],
@@ -252,7 +259,8 @@ class ReservationController extends Controller
             'kvkk_consent.accepted' => 'KVKK onayını işaretlemen gerekiyor.',
         ]);
 
-        $vehicleClass = VehicleClass::where('slug', $validated['vehicle_class_slug'])->firstOrFail();
+        $resolvedSlug = $validated['vehicle_class_slug'] ?? optional(VehicleClass::activeDefault())->slug;
+        $vehicleClass = VehicleClass::where('slug', $resolvedSlug)->firstOrFail();
 
         // Varsayılan şehir: İzmir (radar sadece İzmir kapsamında çalışıyor)
         $city = City::where('is_active', true)
@@ -379,7 +387,8 @@ class ReservationController extends Controller
     {
         $validated = $request->validate([
             'city_id' => ['required', 'integer', 'exists:cities,id'],
-            'vehicle_class_id' => ['required', 'integer', 'exists:vehicle_classes,id'],
+            // Tek-kademe model: sınıf opsiyonel; boşsa aktif sınıf kullanılır.
+            'vehicle_class_id' => ['nullable', 'integer', 'exists:vehicle_classes,id'],
             'distance_km' => ['required', 'numeric', 'min:0', 'max:1000'],
             'duration_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
             'scheduled_at' => ['nullable', 'date'],
@@ -401,9 +410,13 @@ class ReservationController extends Controller
         }
         $tier = $this->calculator->resolveTierForPhone($normalizedPhone);
 
+        $vehicleClassId = ! empty($validated['vehicle_class_id'])
+            ? (int) $validated['vehicle_class_id']
+            : (int) VehicleClass::activeDefault()?->id;
+
         $fare = $this->calculator->calculate(
             cityId: (int) $validated['city_id'],
-            vehicleClassId: (int) $validated['vehicle_class_id'],
+            vehicleClassId: $vehicleClassId,
             distanceKm: (float) $validated['distance_km'],
             durationMinutes: (int) $validated['duration_minutes'],
             extras: $validated['extras'] ?? [],

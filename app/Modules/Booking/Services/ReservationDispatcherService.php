@@ -346,15 +346,15 @@ class ReservationDispatcherService
     {
         $rejected = $ride->rejected_driver_ids ?? [];
 
+        // Tek-kademe (Martı TAG) model: araç sınıfı sınıf-bağımsız — sadece aracı olan
+        // uygun sürücüler süzülür, sınıf eşleşmesi aranmaz.
         $query = Driver::query()
             ->where('approval_status', 'approved')
             ->where('is_suspended', false)
             ->where('city_id', $ride->city_id)
             ->whereNotNull('package_active_until')
             ->where('package_active_until', '>', now())
-            ->whereHas('currentVehicle', function ($q) use ($ride) {
-                $q->where('vehicle_class_id', $ride->vehicle_class_id);
-            });
+            ->whereHas('currentVehicle');
 
         if (! empty($rejected)) {
             $query->whereNotIn('id', $rejected);
@@ -377,10 +377,11 @@ class ReservationDispatcherService
         if ((int) $driver->city_id !== (int) $ride->city_id) {
             throw new RuntimeException('Bu şehirde değilsin.');
         }
-        // Araç sınıfı kontrolü
+        // Tek-kademe (Martı TAG) model: araç sınıfı eşleşmesi aranmaz (no-op).
+        // Yalnızca sürücünün aktif bir aracı olması yeterli.
         $vehicle = $driver->currentVehicle;
-        if (! $vehicle || (int) $vehicle->vehicle_class_id !== (int) $ride->vehicle_class_id) {
-            throw new RuntimeException('Aracın bu rezervasyonun araç sınıfına uygun değil.');
+        if (! $vehicle) {
+            throw new RuntimeException('Aracın tanımlı değil.');
         }
     }
 
