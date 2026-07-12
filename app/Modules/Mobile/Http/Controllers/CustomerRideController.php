@@ -989,6 +989,10 @@ class CustomerRideController extends Controller
             'offered_driver'        => null,
             'accepted_driver'       => null,
             'ride_public_id'        => $req->ride?->public_id,
+            // Buluşma noktası — sürücü→pickup ETA + haritada rota için
+            'pickup_lat'            => $req->pickup_lat !== null ? (float) $req->pickup_lat : null,
+            'pickup_lng'            => $req->pickup_lng !== null ? (float) $req->pickup_lng : null,
+            'pickup_address'        => $req->pickup_address,
             'arrived_at'            => $req->driver_arrived_at?->toIso8601String(),
             'customer_confirmed_at' => $req->customer_confirmed_at?->toIso8601String(),
             'no_show_at'            => $req->no_show_at?->toIso8601String(),
@@ -1001,8 +1005,13 @@ class CustomerRideController extends Controller
             $payload['offered_driver'] = $this->driverShortPayload($req->offeredDriver);
         }
         if ($req->accepted_driver_id) {
-            $req->loadMissing(['acceptedDriver.user:id,name,avatar', 'acceptedDriver.currentVehicle.vehicleClass']);
-            $payload['accepted_driver'] = $this->driverShortPayload($req->acceptedDriver);
+            $req->loadMissing(['acceptedDriver.user:id,name,avatar,phone', 'acceptedDriver.currentVehicle.vehicleClass']);
+            $dp = $this->driverShortPayload($req->acceptedDriver);
+            if ($dp) {
+                // Anlaşma sağlandı → sürücüyü aramak için telefon aç (gizlilik: yalnızca burada)
+                $dp['phone'] = $req->acceptedDriver?->user?->phone;
+            }
+            $payload['accepted_driver'] = $dp;
         }
 
         return $payload;
@@ -1043,7 +1052,9 @@ class CustomerRideController extends Controller
             'vehicle_label'      => $v ? trim(($v->brand ?? '') . ' ' . ($v->model ?? '')) : null,
             'vehicle_year'       => $v?->year_of_manufacture,
             'vehicle_color'      => $v?->color,
+            'max_passengers'     => (int) ($vClass?->max_passengers ?? 4),
             'plate'              => $v?->plate,
+            // NOT: 'phone' bilerek burada YOK — gizlilik. Yalnızca accepted_driver'a eklenir.
             // Mobil harita marker'ı için sürücünün canlı GPS konumu
             'current_lat'        => $d->current_lat !== null ? (float) $d->current_lat : null,
             'current_lng'        => $d->current_lng !== null ? (float) $d->current_lng : null,
