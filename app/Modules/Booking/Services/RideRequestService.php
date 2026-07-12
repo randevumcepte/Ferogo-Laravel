@@ -76,7 +76,7 @@ class RideRequestService
      */
     public function create(array $data): RideRequest
     {
-        return DB::transaction(function () use ($data) {
+        $created = DB::transaction(function () use ($data) {
             // ─── Fiyat pazarlığı başlangıcı ───
             // suggested_fare = sistem önerisi (çapa). customer_offer_fare = yolcunun
             // +/- ile belirlediği ilk teklif (verilmezse öneriye eşit). Banda kırpılır.
@@ -165,6 +165,28 @@ class RideRequestService
 
             return $req->fresh();
         });
+
+        // Yeni talep oluştu → hedef sürücü(ler)e push bildirimi (best-effort).
+        $this->notifyNewOffer($created);
+
+        return $created;
+    }
+
+    /** Yeni oluşturulan talep için hedef sürücülere "yeni teklif" bildirimi. */
+    private function notifyNewOffer(RideRequest $req): void
+    {
+        try {
+            $driverIds = $req->status === 'pool_expanded'
+                ? ($req->pool_candidate_driver_ids ?? [])
+                : array_values(array_filter([$req->offered_driver_id]));
+
+            if (! empty($driverIds)) {
+                app(\App\Modules\Notification\Services\NotificationService::class)
+                    ->rideOfferToDrivers($driverIds, $req);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[RideRequestService] offer push', ['err' => $e->getMessage()]);
+        }
     }
 
     /** Pazarlık adımını denetim kaydına yazar (sessiz, best-effort). */
@@ -216,7 +238,7 @@ class RideRequestService
      */
     public function accept(RideRequest $req, Driver $acceptingDriver, ?float $agreedFare = null): RideRequest
     {
-        return DB::transaction(function () use ($req, $acceptingDriver, $agreedFare) {
+        $result = DB::transaction(function () use ($req, $acceptingDriver, $agreedFare) {
             // Atomik claim — direkt seçilen sürücü teklifi VE
             // müşterinin reconfirm onayı sonrası (havuzdaki sürücüyü accept et) iki durumu kapsar
             $current = $req->fresh();
@@ -322,6 +344,16 @@ class RideRequestService
 
             return $req->fresh();
         });
+
+        // Sürücü kabul etti → müşteriye push (best-effort).
+        try {
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->rideAcceptedToCustomer($result);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[RideRequestService] accept push', ['err' => $e->getMessage()]);
+        }
+
+        return $result;
     }
 
     /** Müşteri talebi iptal eder (henüz kimse kabul etmemişken). */

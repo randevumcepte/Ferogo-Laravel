@@ -366,6 +366,14 @@ class DriverController extends Controller
             'body'            => $validated['body'],
         ]);
 
+        // Müşteriye "yeni mesaj" push (best-effort).
+        try {
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->newMessage($req, 'driver', $validated['body']);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[Driver] message push', ['err' => $e->getMessage()]);
+        }
+
         return response()->json([
             'ok'      => true,
             'message' => [

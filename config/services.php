@@ -154,4 +154,24 @@ return [
         'max_installment' => (int) env('PAYTR_MAX_INSTALLMENT', 1), // 1 = tek çekim
     ],
 
+    /*
+     * Firebase Cloud Messaging (FCM HTTP v1) — mobil push bildirimleri.
+     *
+     * Kurulum:
+     *   1. Firebase Console → proje → Ayarlar → Servis Hesapları → "Yeni özel anahtar üret"
+     *   2. İnen JSON'u sunucuya koy: storage/app/firebase/service-account.json
+     *   3. .env:
+     *        FCM_ENABLED=true
+     *        FCM_PROJECT_ID=ferxgo-xxxx           (JSON içindeki project_id)
+     *        FCM_CREDENTIALS_PATH=/tam/yol/service-account.json   (opsiyonel; varsayılan storage yolu)
+     *
+     * enabled=false veya JSON yoksa → PushService MOCK moduna düşer: gönderimi
+     * loga yazar, hata fırlatmaz. Böylece uygulama credential olmadan da çalışır.
+     */
+    'firebase' => [
+        'enabled'          => (bool) env('FCM_ENABLED', false),
+        'project_id'       => env('FCM_PROJECT_ID'),
+        'credentials_path' => env('FCM_CREDENTIALS_PATH', storage_path('app/firebase/service-account.json')),
+    ],
+
 ];

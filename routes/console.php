@@ -25,3 +25,21 @@ Schedule::command('reservations:tick --quiet')
     ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();
+
+/*
+ * Anlık dispatcher — pending→havuz yayma, favori dalgası→yakın havuz düşürme,
+ * stale teklif/reconfirm temizliği. Bu OLMAZSA üç katmanlı eşleştirmenin
+ * otomatik geçişleri çalışmaz (seçilen sürücü cevap vermezse talep havuza düşmez).
+ */
+Schedule::command('dispatcher:tick --quiet')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+/*
+ * Bildirim kampanyaları — zamanı gelmiş (scheduled) toplu bildirimleri gönderir.
+ */
+Schedule::command('notifications:dispatch --quiet')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();

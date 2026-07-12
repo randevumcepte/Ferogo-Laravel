@@ -160,6 +160,14 @@ class NoShowService
             $req->ride->update(['driver_arrived_at' => now()]);
         }
 
+        // Sürücü buluşma noktasına vardı → müşteriye push (best-effort).
+        try {
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->rideArrivedToCustomer($req);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[NoShowService] arrived push', ['err' => $e->getMessage()]);
+        }
+
         return [
             'ok'         => true,
             'message'    => 'Varış kaydedildi. 5 dk sonra "müşteri gelmedi" butonu aktif olur.',
