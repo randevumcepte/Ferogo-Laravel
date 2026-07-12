@@ -95,7 +95,8 @@ class GeoService
             // Yandex Geocoder (uri en isabetli; yoksa metin)
             if ($this->geocoderEnabled()) {
                 $r = $this->yandexGeocode($uri, $text);
-                if ($r !== null) {
+                // Yalnız İzmir ili içi — dışı (Kars vb.) reddedilir.
+                if ($r !== null && $this->withinIzmir($r['lat'], $r['lon'])) {
                     return $r;
                 }
             }
@@ -104,11 +105,15 @@ class GeoService
             if ($text !== null && $text !== '') {
                 $rows = $this->nominatimSearch($text);
                 if (! empty($rows)) {
-                    return [
-                        'lat'          => (float) $rows[0]['lat'],
-                        'lon'          => (float) $rows[0]['lon'],
-                        'display_name' => (string) $rows[0]['display_name'],
-                    ];
+                    $lat = (float) $rows[0]['lat'];
+                    $lon = (float) $rows[0]['lon'];
+                    if ($this->withinIzmir($lat, $lon)) {
+                        return [
+                            'lat'          => $lat,
+                            'lon'          => $lon,
+                            'display_name' => (string) $rows[0]['display_name'],
+                        ];
+                    }
                 }
             }
 
@@ -208,6 +213,8 @@ class GeoService
                 'results'       => 10, // max 10
                 'll'            => config('services.yandex.ll'),
                 'spn'           => config('services.yandex.spn'),
+                'bbox'          => self::yandexBbox(), // İzmir ili sınırları
+                'strict_bounds' => 1,                  // SADECE bbox içi (Kars vb. dışını getirme)
                 'attrs'         => 'uri',   // seçilince Geocoder'a verilecek uri
                 'print_address' => 1,       // ikincil satır (adres) için
             ]);
@@ -321,6 +328,20 @@ class GeoService
     // ------------------------------------------------------------------
     // Photon / Nominatim (OSM yedek)
     // ------------------------------------------------------------------
+
+    /** Yandex Geosuggest/Geocoder için İzmir bbox — "lonMin,latMin~lonMax,latMax". */
+    private static function yandexBbox(): string
+    {
+        [$latMin, $latMax, $lonMin, $lonMax] = self::IZMIR_BBOX;
+        return $lonMin . ',' . $latMin . '~' . $lonMax . ',' . $latMax;
+    }
+
+    /** Koordinat İzmir ili sınırları içinde mi? (hizmet alanı dışını reddet) */
+    private function withinIzmir(float $lat, float $lon): bool
+    {
+        [$latMin, $latMax, $lonMin, $lonMax] = self::IZMIR_BBOX;
+        return $lat >= $latMin && $lat <= $latMax && $lon >= $lonMin && $lon <= $lonMax;
+    }
 
     /** Türkçe karakter sadeleştirici (karşılaştırma için). */
     private function fold(string $s): string
