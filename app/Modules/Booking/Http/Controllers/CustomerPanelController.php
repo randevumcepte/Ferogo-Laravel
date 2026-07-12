@@ -9,12 +9,10 @@ use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Booking\Services\CustomerTrustService;
 use App\Modules\Booking\Services\FavoriteDriverService;
-use App\Modules\Driver\Models\Driver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class CustomerPanelController extends Controller
@@ -392,108 +390,6 @@ class CustomerPanelController extends Controller
                 'last_updated' => $ride->driver->last_location_updated_at?->toIso8601String(),
             ],
         ]);
-    }
-
-    /**
-     * GET /musteri-paneli/api/pending-rating
-     * Yolculuk tamamlandı ama müşteri henüz puanlamadı — ekranda modal göster.
-     * En son tamamlanan ve driver_rating'i NULL olan yolculuğu döner.
-     * driver: {name, avatar_url, is_favorite}
-     */
-    public function pendingRating(): JsonResponse
-    {
-        $user = $this->currentCustomer();
-        if (! $user) return response()->json(['authenticated' => false], 401);
-
-        $ride = Ride::query()
-            ->with(['driver.user'])
-            ->where('customer_user_id', $user->id)
-            ->where('status', 'completed')
-            ->whereNull('driver_rating')
-            ->where('completed_at', '>=', now()->subDays(1)) // 24 saat pencere
-            ->latest('completed_at')
-            ->first();
-
-        if (! $ride || ! $ride->driver || ! $ride->driver->user) {
-            return response()->json(['success' => true, 'pending' => null]);
-        }
-
-        $driverUser = $ride->driver->user;
-        $fullName = trim((string) $driverUser->name);
-        $parts = preg_split('/\s+/', $fullName);
-        $shortName = count($parts) > 1
-            ? $parts[0] . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.'
-            : ($fullName ?: 'Sürücü');
-
-        $isFavorite = $user->favoriteDrivers()
-            ->where('drivers.id', $ride->driver->id)
-            ->exists();
-
-        return response()->json([
-            'success' => true,
-            'pending' => [
-                'ride_public_id' => $ride->public_id,
-                'driver_id'      => $ride->driver->id,
-                'driver_name'    => $shortName,
-                'driver_avatar_url' => $driverUser->avatar ? Storage::url($driverUser->avatar) : null,
-                'is_favorite'    => $isFavorite,
-                'pickup_address'  => $ride->pickup_address,
-                'dropoff_address' => $ride->dropoff_address,
-                'agreed_fare'     => $ride->agreed_fare ? (float) $ride->agreed_fare : null,
-            ],
-        ]);
-    }
-
-    /**
-     * POST /musteri-paneli/api/ride/{publicId}/rate
-     * Müşteri sürücüyü puanlar (1–5), yorum bırakır, opsiyonel favori.
-     */
-    public function submitRating(Request $request, string $publicId): JsonResponse
-    {
-        $user = $this->currentCustomer();
-        if (! $user) return response()->json(['ok' => false], 401);
-
-        $validated = $request->validate([
-            'rating'   => ['required', 'integer', 'min:1', 'max:5'],
-            'review'   => ['nullable', 'string', 'max:500'],
-            'favorite' => ['nullable', 'boolean'],
-        ]);
-
-        $ride = Ride::query()
-            ->where('public_id', $publicId)
-            ->where('customer_user_id', $user->id)
-            ->where('status', 'completed')
-            ->firstOrFail();
-
-        // İki kez puanlamayı engelle
-        if ($ride->driver_rating !== null) {
-            return response()->json(['ok' => false, 'message' => 'Bu yolculuk zaten puanlandı.'], 422);
-        }
-
-        $ride->update([
-            'driver_rating' => $validated['rating'],
-            'driver_review' => $validated['review'] ?? null,
-        ]);
-
-        // Sürücünün ortalama puanını güncelle
-        if ($ride->driver_id) {
-            $driver = Driver::find($ride->driver_id);
-            if ($driver) {
-                $avg = Ride::where('driver_id', $driver->id)
-                    ->whereNotNull('driver_rating')
-                    ->avg('driver_rating');
-                if ($avg !== null) {
-                    $driver->update(['rating' => round((float) $avg, 2)]);
-                }
-
-                // Opsiyonel: favorileme
-                if (! empty($validated['favorite'])) {
-                    $this->favoriteService->add($user, $driver->id);
-                }
-            }
-        }
-
-        return response()->json(['ok' => true]);
     }
 
     private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
