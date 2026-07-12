@@ -277,8 +277,21 @@ class CustomerRideController extends Controller
                 $vehicle->pet_friendly     ? ['key' => 'pet_friendly', 'label' => 'Evcil hayvan']  : null,
             ]));
 
-            $photos    = is_array($vehicle->photos) ? array_values(array_filter($vehicle->photos)) : [];
-            $photoUrls = array_map(fn ($p) => str_starts_with($p, 'http') ? $p : asset('storage/' . ltrim($p, '/')), $photos);
+            // Görsel doğrulama: önce gerçek 6 açılı onboarding fotoğrafları (photo_angles),
+            // yoksa eski galeri (photos). Sıra: ön/sol/sağ/arka/iç-ön/iç-arka (web ile aynı).
+            $rawPhotos = [];
+            if (is_array($vehicle->photo_angles) && count($vehicle->photo_angles) > 0) {
+                foreach (['front', 'left', 'right', 'back', 'interior_front', 'interior_back'] as $angle) {
+                    if (! empty($vehicle->photo_angles[$angle])) $rawPhotos[] = $vehicle->photo_angles[$angle];
+                }
+                foreach ($vehicle->photo_angles as $p) {
+                    if ($p && ! in_array($p, $rawPhotos, true)) $rawPhotos[] = $p;
+                }
+            }
+            if (empty($rawPhotos)) {
+                $rawPhotos = is_array($vehicle->photos) ? array_values(array_filter($vehicle->photos)) : [];
+            }
+            $photoUrls = array_map(fn ($p) => str_starts_with($p, 'http') ? $p : asset('storage/' . ltrim($p, '/')), $rawPhotos);
 
             $vehiclePayload = [
                 'brand'             => $vehicle->brand,
