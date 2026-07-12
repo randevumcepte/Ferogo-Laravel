@@ -72,6 +72,8 @@ Route::middleware(['auth:sanctum', 'device', 'role:customer', 'ability:customer:
         Route::post('ride-requests/{publicId}/accept-price',                               [CustomerRideController::class, 'acceptPrice']);
         Route::get('ride-requests/{publicId}/messages',                                    [CustomerRideController::class, 'messages']);
         Route::middleware('throttle:30,1')->post('ride-requests/{publicId}/messages',      [CustomerRideController::class, 'sendMessage']);
+        // Faz 6 — görsel doğrulama (yolculuk başladıktan sonra araç/sürücü eşleşme onayı)
+        Route::post('ride-requests/{publicId}/visual-verify',                              [CustomerRideController::class, 'visualVerify']);
 
         // Geçmiş
         Route::get('history', [CustomerRideController::class, 'history']);
