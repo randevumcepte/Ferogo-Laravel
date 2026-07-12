@@ -271,6 +271,8 @@ class DriverApplicationsTable
                                         'capacity'                 => $a->vehicle_capacity,
                                         'status'                   => 'active',
                                         'photos'                   => $photos ?: $existing->photos,
+                                        // Açı-anahtarlı foto (front/left/right/...) — görsel doğrulama modalı bunu kullanır
+                                        'photo_angles'             => $a->vehicle_photos ?: $existing->photo_angles,
                                         'registration_file_path'   => $a->registration_file_path ?: $existing->registration_file_path,
                                         'registration_approved_at' => now(),
                                     ]);
@@ -288,6 +290,8 @@ class DriverApplicationsTable
                                         'plate'              => $a->vehicle_plate,
                                         'status'             => 'active',
                                         'photos'             => $photos,
+                                        // Açı-anahtarlı foto (front/left/right/...) — görsel doğrulama modalı bunu kullanır
+                                        'photo_angles'       => $a->vehicle_photos ?: null,
                                         'registration_file_path'   => $a->registration_file_path,
                                         'registration_approved_at' => now(),
                                     ]);
