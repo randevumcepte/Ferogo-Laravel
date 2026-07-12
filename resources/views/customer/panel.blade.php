@@ -960,5 +960,191 @@
 </script>
 @endif
 
+{{-- ============ YOLCULUK TAMAMLANDI · Puanlama Modal'ı ============ --}}
+<div id="rating-modal" class="hidden fixed inset-0 z-[80] bg-black/90 backdrop-blur-md items-center justify-center p-4" style="display: none;">
+    <div class="w-full max-w-md bg-zinc-950 rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+        <div class="p-6 border-b border-white/5 text-center">
+            <div class="text-[11px] uppercase tracking-[0.3em] text-emerald-400 font-bold mb-2">✓ Yolculuk Tamamlandı</div>
+            <div id="rating-driver-avatar" class="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-brand to-amber-700 text-black font-bold text-3xl flex items-center justify-center overflow-hidden ring-4 ring-brand/20 mb-3">
+                <span id="rating-driver-initial">—</span>
+            </div>
+            <div class="text-xl font-bold text-white" id="rating-driver-name">—</div>
+            <div id="rating-fare" class="mt-1 text-sm text-zinc-400">—</div>
+        </div>
+        <div class="p-6 space-y-5">
+            <div>
+                <div class="text-xs uppercase tracking-wider text-zinc-500 text-center mb-3">Sürücüyü Puanla</div>
+                <div id="rating-stars" class="flex items-center justify-center gap-2" role="radiogroup" aria-label="Puan">
+                    @foreach(range(1,5) as $i)
+                    <button type="button" class="rating-star text-5xl transition transform hover:scale-110" data-value="{{ $i }}" aria-label="{{ $i }} yıldız">
+                        <span class="star-icon text-zinc-700">★</span>
+                    </button>
+                    @endforeach
+                </div>
+                <div id="rating-hint" class="text-center text-xs text-zinc-500 mt-2 min-h-[16px]">—</div>
+            </div>
+            <div>
+                <label for="rating-review" class="block text-xs uppercase tracking-wider text-zinc-500 mb-1.5">Yorum (opsiyonel)</label>
+                <textarea id="rating-review" rows="3" maxlength="500"
+                          class="w-full bg-white/[0.03] border border-white/10 focus:border-brand/40 rounded-xl px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none resize-none"
+                          placeholder="Deneyimin nasıldı? (min 5 karakter)"></textarea>
+            </div>
+            <label class="flex items-center gap-3 cursor-pointer select-none group">
+                <input type="checkbox" id="rating-favorite" class="peer sr-only">
+                <div class="w-6 h-6 rounded-full border-2 border-white/20 peer-checked:border-brand peer-checked:bg-brand transition flex items-center justify-center text-black text-sm font-bold">
+                    <span class="peer-checked:opacity-100 opacity-0">✓</span>
+                </div>
+                <span class="text-sm text-zinc-300 group-hover:text-white transition">
+                    ♥ <span id="rating-favorite-label">Bu sürücüyü favorilerime ekle</span>
+                </span>
+            </label>
+            <button type="button" id="rating-submit" disabled
+                    class="w-full py-3 rounded-2xl bg-brand hover:bg-brand-600 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-black font-bold uppercase tracking-wide transition text-sm">
+                Puanı Gönder
+            </button>
+            <button type="button" id="rating-skip" class="w-full text-xs text-zinc-500 hover:text-zinc-300 transition">
+                Sonra puanlayacağım
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    const modal = document.getElementById('rating-modal');
+    if (!modal) return;
+
+    const PENDING_URL = '{{ route('customer.api.pending_rating') }}';
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    let currentPending = null;
+    let selectedRating = 0;
+    let dismissedForRideId = null; // "sonra" seçildiyse tekrar açma
+
+    const hints = { 1: 'Kötü', 2: 'İdare eder', 3: 'Fena değil', 4: 'İyi', 5: 'Harika!' };
+
+    function openModal(p) {
+        currentPending = p;
+        selectedRating = 0;
+        // Sürücü bilgileri
+        document.getElementById('rating-driver-name').textContent = p.driver_name || 'Sürücü';
+        const avatarBox = document.getElementById('rating-driver-avatar');
+        if (p.driver_avatar_url) {
+            avatarBox.innerHTML = '<img src="' + p.driver_avatar_url + '" alt="" class="w-full h-full object-cover">';
+        } else {
+            const initial = (p.driver_name || 'S').trim().charAt(0).toUpperCase();
+            avatarBox.innerHTML = '<span>' + initial + '</span>';
+        }
+        // Ücret
+        const fareEl = document.getElementById('rating-fare');
+        if (p.agreed_fare) {
+            fareEl.textContent = 'Anlaşılan ücret: ' + Number(p.agreed_fare).toFixed(2) + ' ₺';
+        } else {
+            fareEl.textContent = '';
+        }
+        // Reset
+        document.getElementById('rating-review').value = '';
+        document.getElementById('rating-favorite').checked = !!p.is_favorite;
+        document.getElementById('rating-favorite-label').textContent = p.is_favorite
+            ? 'Zaten favorilerinde ♥'
+            : 'Bu sürücüyü favorilerime ekle';
+        document.getElementById('rating-hint').textContent = '—';
+        // Yıldızları sıfırla
+        modal.querySelectorAll('.rating-star .star-icon').forEach(s => {
+            s.className = 'star-icon text-zinc-700';
+        });
+        document.getElementById('rating-submit').disabled = true;
+        // Aç
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        currentPending = null;
+    }
+
+    function paintStars(n) {
+        modal.querySelectorAll('.rating-star').forEach(btn => {
+            const v = parseInt(btn.dataset.value, 10);
+            const icon = btn.querySelector('.star-icon');
+            icon.className = 'star-icon ' + (v <= n ? 'text-brand drop-shadow-[0_0_8px_rgba(240,192,64,0.5)]' : 'text-zinc-700');
+        });
+        document.getElementById('rating-hint').textContent = hints[n] || '—';
+        document.getElementById('rating-submit').disabled = (n < 1);
+    }
+
+    // Yıldız etkileşimi (hover + click)
+    modal.querySelectorAll('.rating-star').forEach(btn => {
+        const v = parseInt(btn.dataset.value, 10);
+        btn.addEventListener('mouseenter', () => paintStars(v));
+        btn.addEventListener('mouseleave', () => paintStars(selectedRating));
+        btn.addEventListener('click', () => { selectedRating = v; paintStars(v); });
+    });
+
+    document.getElementById('rating-skip').addEventListener('click', () => {
+        if (currentPending) dismissedForRideId = currentPending.ride_public_id;
+        closeModal();
+    });
+
+    document.getElementById('rating-submit').addEventListener('click', async () => {
+        if (!currentPending || selectedRating < 1) return;
+        const btn = document.getElementById('rating-submit');
+        btn.disabled = true;
+        btn.textContent = 'Gönderiliyor…';
+        try {
+            const res = await fetch('/musteri-paneli/api/ride/' + encodeURIComponent(currentPending.ride_public_id) + '/rate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    rating: selectedRating,
+                    review: document.getElementById('rating-review').value.trim() || null,
+                    favorite: document.getElementById('rating-favorite').checked,
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) {
+                closeModal();
+                // Sayfayı yenile — favori ekleme + geçmiş güncellensin
+                setTimeout(() => window.location.reload(), 300);
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Puanı Gönder';
+                alert(data.message || 'Puan gönderilemedi. Tekrar dene.');
+            }
+        } catch (err) {
+            btn.disabled = false;
+            btn.textContent = 'Puanı Gönder';
+            alert('Bağlantı hatası. Tekrar dene.');
+        }
+    });
+
+    async function pollPendingRating() {
+        try {
+            const res = await fetch(PENDING_URL, { headers: { 'Accept': 'application/json' } });
+            if (res.status === 401) return;
+            const data = await res.json();
+            if (!data.success || !data.pending) return;
+            if (currentPending) return; // zaten açık
+            if (dismissedForRideId === data.pending.ride_public_id) return; // kullanıcı "sonra" dedi
+            openModal(data.pending);
+        } catch (_) {}
+    }
+
+    // İlk yüklemede + her 8 sn'de bir kontrol
+    pollPendingRating();
+    setInterval(pollPendingRating, 8000);
+})();
+</script>
+
 </body>
 </html>

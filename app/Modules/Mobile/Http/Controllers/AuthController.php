@@ -4,6 +4,7 @@ namespace App\Modules\Mobile\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Services\CustomerTrustService;
 use App\Modules\Booking\Services\PhoneVerificationService;
 use App\Modules\Driver\Models\Driver;
@@ -197,6 +198,7 @@ class AuthController extends Controller
             'name'  => $user->name,
             'phone' => $user->phone,
             'type'  => $user->type,
+            'rating' => $this->userRating($user),
             'avatar' => $user->avatar
                 ? (str_starts_with($user->avatar, 'http') ? $user->avatar : asset('storage/' . ltrim($user->avatar, '/')))
                 : null,
@@ -207,6 +209,7 @@ class AuthController extends Controller
                 ->with('currentVehicle.vehicleClass')
                 ->first();
             if ($driver) {
+                $payload['rating'] = round((float) $driver->rating, 2);
                 $payload['driver'] = [
                     'id'                  => $driver->id,
                     'availability_status' => $driver->availability_status,
@@ -308,13 +311,34 @@ class AuthController extends Controller
                 'token'      => $plain,
                 'expires_at' => $expiresAt->toIso8601String(),
                 'user'       => [
-                    'id'    => $user->id,
-                    'name'  => $user->name,
-                    'phone' => $user->phone,
-                    'type'  => $user->type,
+                    'id'     => $user->id,
+                    'name'   => $user->name,
+                    'phone'  => $user->phone,
+                    'type'   => $user->type,
+                    'rating' => $this->userRating($user),
                 ],
             ], $extra));
         });
+    }
+
+    /**
+     * Header'da gösterilen yıldız puanı.
+     * Sürücü: drivers.rating (stored ortalama).
+     * Müşteri: aldığı ride puanlarının ortalaması (rides.customer_rating).
+     * Henüz puan yoksa yeni kullanıcı için 5.0 döner (Martı gibi).
+     */
+    private function userRating(User $user): float
+    {
+        if ($user->type === 'driver') {
+            $rating = Driver::where('user_id', $user->id)->value('rating');
+            return $rating !== null ? round((float) $rating, 2) : 5.0;
+        }
+
+        $avg = Ride::where('customer_user_id', $user->id)
+            ->whereNotNull('customer_rating')
+            ->avg('customer_rating');
+
+        return $avg !== null ? round((float) $avg, 2) : 5.0;
     }
 
     private function fail(string $message, int $status, array $extra = []): JsonResponse
