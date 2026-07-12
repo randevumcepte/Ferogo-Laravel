@@ -1959,8 +1959,33 @@
         io.observe(mapEl);
     }
 
-    function fallbackToIzmir() {
+    // Konum alınamadı uyarısı — İzmir fallback'inde kullanıcı, haritanın kendi
+    // konumu OLMADIĞINI bilsin (yoksa İzmir merkezini kendi konumu sanır → yanlış
+    // mesafe/fiyat). Bloklamaz; kapatılabilir şerit + "tekrar dene" (sayfa yenile).
+    let locWarnShown = false;
+    function showLocationWarning() {
+        if (locWarnShown) return;
+        locWarnShown = true;
+        const el = document.createElement('div');
+        el.setAttribute('role', 'alert');
+        el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:99990;max-width:92vw;width:440px;background:rgba(20,20,20,0.97);border:1px solid rgba(240,192,64,0.45);color:#fafafa;border-radius:14px;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,0.6);font-size:13px;line-height:1.45;display:flex;gap:10px;align-items:flex-start;';
+        el.innerHTML =
+            '<span style="font-size:18px;line-height:1.2;">📍</span>' +
+            '<div style="flex:1;">' +
+              '<div style="font-weight:700;margin-bottom:2px;">Konumunuz alınamadı</div>' +
+              '<div style="color:#a1a1aa;">Harita İzmir merkezinde açıldı. Doğru mesafe/fiyat için konum servisini aç, sonra <b style="color:#F0C040;cursor:pointer;" id="loc-warn-retry">tekrar dene</b>.</div>' +
+            '</div>' +
+            '<button type="button" aria-label="Kapat" style="background:none;border:none;color:#71717a;font-size:20px;line-height:1;cursor:pointer;padding:0 2px;">×</button>';
+        const retry = el.querySelector('#loc-warn-retry');
+        if (retry) retry.addEventListener('click', () => window.location.reload());
+        el.querySelector('button[aria-label="Kapat"]').addEventListener('click', () => el.remove());
+        document.body.appendChild(el);
+        setTimeout(() => { if (el.isConnected) el.remove(); }, 14000);
+    }
+
+    function fallbackToIzmir(warn = true) {
         startSimulation(DEFAULT_CENTER);
+        if (warn) showLocationWarning();
     }
 
     // ===== QUICK SELECT MODAL =====
