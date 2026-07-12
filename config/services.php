@@ -33,6 +33,19 @@ return [
         'key' => env('RESEND_API_KEY'),
     ],
 
+    /*
+     * Firebase Cloud Messaging — HTTP v1 API ile mobil push.
+     * credentials: service account JSON'ın yolu (storage/app altı, git'e girmez).
+     * enabled=false → PushService no-op çalışır (dev/QA; token kaydedilir ama gönderilmez).
+     * Kurulum: Firebase Console → ferxgo → Project settings → Service accounts
+     *          → Generate new private key → dosyayı FCM_CREDENTIALS_PATH'e koy.
+     */
+    'fcm' => [
+        'enabled'     => (bool) env('FCM_HTTP_V1_ENABLED', false),
+        'project_id'  => env('FCM_PROJECT_ID'),
+        'credentials' => env('FCM_CREDENTIALS_PATH', 'storage/app/firebase-service-account.json'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

@@ -27,3 +27,6 @@ Homestead.yaml
 Thumbs.db
 .claude/
 .env.bak*
+
+# Firebase FCM service account (SECRET — asla commit etme)
+/storage/app/firebase-service-account.json
