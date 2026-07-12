@@ -48,6 +48,7 @@ Route::middleware(['auth:sanctum', 'device', 'role:customer', 'ability:customer:
         // Referans + arama + fiyat
         Route::get('bootstrap',          [CustomerRideController::class, 'bootstrap']);
         Route::get('places/search',      [CustomerRideController::class, 'searchPlaces']);
+        Route::get('places/resolve',     [CustomerRideController::class, 'resolvePlace']);
         Route::post('fare/calculate',    [CustomerRideController::class, 'calculateFare']);
 
         // Sürücüler
