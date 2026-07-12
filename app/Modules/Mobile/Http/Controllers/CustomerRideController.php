@@ -98,7 +98,7 @@ class CustomerRideController extends Controller
         }
         RateLimiter::hit($rl, 60);
 
-        $cacheKey = 'places:tr-izmir:v5:' . sha1($q);
+        $cacheKey = 'places:tr-izmir:v6:' . sha1($q);
         $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
             // Önce Photon (OSM autocomplete — İzmir bias, zengin POI/işletme), boşsa Nominatim
             $r = $this->photonSearch($q);
@@ -155,10 +155,10 @@ class CustomerRideController extends Controller
                 $cc = (string) ($p['countrycode'] ?? '');
                 if ($cc !== '' && $cc !== 'TR') continue;
 
-                // İzmir kutusu dışını ele (Muğla/başka il sonuçları gitsin)
+                // İzmir İLİ kutusu (metro değil): Aliağa/Bergama/Dikili/Çeşme/Ödemiş dahil
                 $lat = (float) $coords[1];
                 $lon = (float) $coords[0];
-                if ($lat < 37.9 || $lat > 38.8 || $lon < 26.3 || $lon > 27.7) continue;
+                if ($lat < 37.7 || $lat > 39.3 || $lon < 26.0 || $lon > 28.5) continue;
 
                 // Başlık: isim > cadde(+no) > mahalle/ilçe/şehir
                 $title = trim((string) ($p['name'] ?? ''));

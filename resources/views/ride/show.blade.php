@@ -1808,8 +1808,35 @@
 
     // === Adres arama — sunucu proxy + iptal + in-memory cache ===
     const PLACES_URL = '{{ route('reservation.search-places') }}';
+    const RESOLVE_URL = '{{ route('reservation.resolve-place') }}';
     const placesCache = new Map(); // q -> results[] (session-içi)
     let placesAbort = null;
+
+    // Öneri seçilince koordinatı getir. Photon/Nominatim önerileri koordinatı
+    // içinde taşır (r.lat/r.lon) → direkt kullan. Yandex önerileri koordinatsız
+    // (r.uri dolu) → sunucudan Geocoder ile çöz.
+    async function resolvePlaceCoords(r) {
+        const lat = parseFloat(r.lat);
+        const lon = parseFloat(r.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            return { lat, lng: lon, display_name: r.display_name };
+        }
+        try {
+            const params = new URLSearchParams();
+            if (r.uri) params.set('uri', r.uri);
+            params.set('text', r.display_name || '');
+            const res = await fetch(`${RESOLVE_URL}?${params.toString()}`, {
+                headers: { 'Accept': 'application/json' },
+            });
+            if (!res.ok) return null;
+            const d = await res.json();
+            if (!d.success) return null;
+            return { lat: parseFloat(d.lat), lng: parseFloat(d.lon), display_name: d.display_name || r.display_name };
+        } catch (err) {
+            console.warn('[FerXGo] resolvePlace failed', err);
+            return null;
+        }
+    }
 
     async function searchPlaces(query) {
         const q = query.trim().toLowerCase();
@@ -2430,11 +2457,18 @@
                 </button>`).join('');
             qmDropoffSuggestions.classList.remove('hidden');
             qmDropoffSuggestions.querySelectorAll('.qm-suggestion').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     const r = results[parseInt(btn.dataset.idx, 10)];
-                    selectedDropoff = { lat: parseFloat(r.lat), lng: parseFloat(r.lon), display_name: r.display_name };
                     qmDropoffInput.value = r.display_name.split(',').slice(0, 2).join(',');
                     qmDropoffSuggestions.classList.add('hidden');
+                    // Koordinatı çöz (Yandex önerisi ise sunucudan Geocoder ile)
+                    const coords = await resolvePlaceCoords(r);
+                    if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) {
+                        selectedDropoff = null;
+                        updateFarePreview();
+                        return;
+                    }
+                    selectedDropoff = coords;
                     updateFarePreview();
                 });
             });

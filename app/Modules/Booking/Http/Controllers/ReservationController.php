@@ -11,11 +11,10 @@ use App\Modules\Pricing\Models\Extra;
 use App\Modules\Pricing\Services\FareCalculator;
 use App\Modules\Shared\Models\City;
 use App\Modules\Vehicle\Models\VehicleClass;
+use App\Services\Geo\GeoService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 
 class ReservationController extends Controller
@@ -25,6 +24,7 @@ class ReservationController extends Controller
         private ReservationDispatcherService $dispatcher,
         private FareCalculator $calculator,
         private LegalConsentService $consents,
+        private GeoService $geo,
     ) {}
 
     public function index()
@@ -319,11 +319,13 @@ class ReservationController extends Controller
     }
 
     /**
-     * AJAX endpoint: yer arama proxy'si.
-     * - Nominatim'i sunucudan çağırır (browser CORS/yavaşlık yok)
-     * - İzmir viewbox + bounded=1 ile sonuçları bölgeye odaklar (5-10x hız)
-     * - Aynı sorguyu 60 dk cache'ler — tekrarda 0 ms
-     * - Kısa timeout (3 sn) — kullanıcı askıda kalmaz
+     * AJAX endpoint: yer arama (autocomplete) proxy'si.
+     * Tüm sağlayıcı mantığı GeoService'te: Yandex Geosuggest (anahtar varsa) →
+     * Photon (OSM) → Nominatim. 60 dk cache servis içinde.
+     *
+     * Dönen öğe: { display_name, lat|null, lon|null, uri|null, provider }.
+     * Yandex önerileri koordinatsız gelir (uri dolu) → frontend seçince
+     * /api/resolve-place ile koordinat alır.
      */
     public function searchPlaces(Request $request): JsonResponse
     {
@@ -331,150 +333,39 @@ class ReservationController extends Controller
             'q' => ['required', 'string', 'min:2', 'max:120'],
         ]);
 
-        $q = mb_strtolower(trim(preg_replace('/\s+/u', ' ', $validated['q'])));
-        if (mb_strlen($q) < 2) {
-            return response()->json(['success' => true, 'results' => []]);
-        }
-
-        // v2: Photon (zengin POI/işletme) devreye alındı; eski Nominatim-only cache'i geçersiz kıl.
-        $cacheKey = 'places:tr-izmir:v2:' . sha1($q);
-
-        $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
-            // Önce Photon (OSM autocomplete — İzmir bias, zengin POI/işletme), boşsa Nominatim
-            $r = $this->photonSearch($q);
-            if (empty($r)) {
-                $r = $this->nominatimSearch($q);
-            }
-            return $r;
-        });
-
         return response()->json([
             'success' => true,
-            'results' => $results,
+            'results' => $this->geo->suggest($validated['q']),
         ]);
     }
 
     /**
-     * Photon (OSM autocomplete) — İzmir merkez bias + zengin POI/işletme.
-     * Not: Faz 0 hızlı kazanımı; Faz 1'de merkezi GeoService'e taşınacak (mobil ile ortak).
+     * AJAX endpoint: seçilen önerinin koordinatı.
+     * Yandex önerisi için uri, düz metin için text gönderilir.
+     * Dönen: { success, lat, lon, display_name } veya 404.
      */
-    private function photonSearch(string $q): array
+    public function resolvePlace(Request $request): JsonResponse
     {
-        try {
-            $response = Http::withHeaders([
-                'User-Agent' => 'FerXGo/1.0 (+https://ferxgo.com.tr)',
-            ])->timeout(3)->get('https://photon.komoot.io/api/', [
-                'q'     => $q,
-                'lang'  => 'default',
-                'lat'   => 38.4237,   // İzmir merkez bias
-                'lon'   => 27.1428,
-                'limit' => 30,
-            ]);
-            if (! $response->ok()) return [];
-            $features = $response->json('features');
-            if (! is_array($features)) return [];
+        $validated = $request->validate([
+            'uri'  => ['nullable', 'string', 'max:2000'],
+            'text' => ['nullable', 'string', 'max:250'],
+        ]);
 
-            $fold = static function (string $s): string {
-                $s = strtr($s, ['İ' => 'i', 'I' => 'i', 'Ş' => 's', 'Ç' => 'c', 'Ğ' => 'g', 'Ü' => 'u', 'Ö' => 'o']);
-                $s = mb_strtolower($s, 'UTF-8');
-                return strtr($s, ['ş' => 's', 'ç' => 'c', 'ı' => 'i', 'ğ' => 'g', 'ü' => 'u', 'ö' => 'o', 'â' => 'a', 'î' => 'i', 'û' => 'u']);
-            };
-
-            // >=3 harfli sorgu kelimeleri; sonuç en az birini içermeli
-            $anchors = [];
-            foreach (preg_split('/\s+/', $fold($q)) as $tok) {
-                if (mb_strlen($tok) >= 3) $anchors[] = $tok;
-            }
-
-            $out = [];
-            $seen = [];
-            foreach ($features as $f) {
-                $p = $f['properties'] ?? [];
-                $coords = $f['geometry']['coordinates'] ?? null;
-                if (! is_array($coords) || count($coords) < 2) continue;
-
-                // countrycode boş POI'leri eleme; bbox İzmir/TR'yi garanti ediyor
-                $cc = (string) ($p['countrycode'] ?? '');
-                if ($cc !== '' && $cc !== 'TR') continue;
-
-                $lat = (float) $coords[1];
-                $lon = (float) $coords[0];
-                if ($lat < 37.9 || $lat > 38.8 || $lon < 26.3 || $lon > 27.7) continue;
-
-                $title = trim((string) ($p['name'] ?? ''));
-                if ($title === '') {
-                    $title = trim(((string) ($p['street'] ?? '')) . ' ' . ((string) ($p['housenumber'] ?? '')));
-                }
-                if ($title === '') {
-                    $title = trim((string) ($p['district'] ?? $p['city'] ?? $p['locality'] ?? ''));
-                }
-                if ($title === '') continue;
-
-                $parts = [];
-                foreach ([$p['street'] ?? null, $p['district'] ?? null, $p['city'] ?? null, $p['state'] ?? null] as $seg) {
-                    $seg = trim((string) ($seg ?? ''));
-                    if ($seg !== '' && $seg !== $title && ! in_array($seg, $parts, true)) {
-                        $parts[] = $seg;
-                    }
-                }
-                $secondary = implode(', ', array_slice($parts, 0, 3));
-                $display = $secondary !== '' ? ($title . ', ' . $secondary) : $title;
-
-                if (! empty($anchors)) {
-                    $hay = $fold($title . ' ' . $secondary);
-                    $hit = false;
-                    foreach ($anchors as $a) {
-                        if (str_contains($hay, $a)) { $hit = true; break; }
-                    }
-                    if (! $hit) continue;
-                }
-
-                $key = mb_strtolower($display);
-                if (isset($seen[$key])) continue;
-                $seen[$key] = true;
-
-                $out[] = [
-                    'lat'          => $lat,
-                    'lon'          => $lon,
-                    'display_name' => $display,
-                ];
-                if (count($out) >= 15) break;
-            }
-            return $out;
-        } catch (\Throwable $e) {
-            report($e);
-            return [];
+        if (empty($validated['uri']) && empty($validated['text'])) {
+            return response()->json(['success' => false, 'message' => 'uri veya text gerekli'], 422);
         }
-    }
 
-    /** Nominatim yedeği — Photon boş/erişilemezse. */
-    private function nominatimSearch(string $q): array
-    {
-        try {
-            $response = Http::withHeaders([
-                'User-Agent' => 'FerXGo/1.0 (+https://ferxgo.com.tr)',
-                'Accept-Language' => 'tr,en',
-            ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
-                'q' => $q,
-                'format' => 'json',
-                'addressdetails' => 0,
-                'limit' => 10,
-                'countrycodes' => 'tr',
-                'viewbox' => '26.7,38.6,27.5,38.2',
-                'bounded' => 0,
-            ]);
-            if (! $response->ok()) return [];
-            $rows = $response->json();
-            if (! is_array($rows)) return [];
-            return array_map(static fn ($r) => [
-                'lat' => (float) ($r['lat'] ?? 0),
-                'lon' => (float) ($r['lon'] ?? 0),
-                'display_name' => (string) ($r['display_name'] ?? ''),
-            ], array_slice($rows, 0, 10));
-        } catch (\Throwable $e) {
-            report($e);
-            return [];
+        $res = $this->geo->resolve($validated['uri'] ?? null, $validated['text'] ?? null);
+        if ($res === null) {
+            return response()->json(['success' => false, 'message' => 'Konum çözümlenemedi'], 404);
         }
+
+        return response()->json([
+            'success'      => true,
+            'lat'          => $res['lat'],
+            'lon'          => $res['lon'],
+            'display_name' => $res['display_name'],
+        ]);
     }
 
     /**

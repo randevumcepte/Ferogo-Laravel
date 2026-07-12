@@ -62,6 +62,24 @@ return [
     'google_maps_key' => env('GOOGLE_MAPS_API_KEY'),
 
     /*
+     * Yandex Maps — adres/işletme arama (Geosuggest) + koordinat (Geocoder).
+     * İKİ AYRI ürün, İKİ AYRI anahtar (Yandex Developer Dashboard'da ayrı oluşturulur):
+     *   - suggest_key  → "Geosuggest API"  (yaz→öner; koordinat DÖNMEZ, uri döner)
+     *   - geocoder_key → "Geocoder (HTTP)" (seçilen uri/metin → lat/lon)
+     * Kart zorunlu değil; Basic ücretsiz kota ile başlar. Anahtar boşsa GeoService
+     * otomatik Photon'a (OSM) düşer — uygulama her hâlükârda çalışır.
+     *
+     * ll/spn: öneri bias (İzmir merkez). ll = "boylam,enlem" (lon,lat!).
+     */
+    'yandex' => [
+        'suggest_key'  => env('YANDEX_SUGGEST_KEY'),
+        'geocoder_key' => env('YANDEX_GEOCODER_KEY'),
+        'lang'         => env('YANDEX_LANG', 'tr_TR'),
+        'll'           => env('YANDEX_LL', '27.1428,38.4237'), // İzmir merkez (lon,lat)
+        'spn'          => env('YANDEX_SPN', '0.6,0.5'),         // kapsam kutusu
+    ],
+
+    /*
      * SEO — site geneli meta / Schema.org / Search Console.
      * site_url: kanonik ve sitemap URL'lerinin tabanı (APP_URL fallback).
      * verification: Google Search Console "HTML etiketi" doğrulama kodu.

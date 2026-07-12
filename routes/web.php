@@ -138,9 +138,13 @@ Route::post('/api/calculate-fare', [ReservationController::class, 'calculateFare
 Route::post('/api/quick-request', [ReservationController::class, 'quickRequest'])
     ->name('reservation.quick-request');
 
-// AJAX: Yer arama proxy (Nominatim + 60 dk cache + İzmir viewbox)
+// AJAX: Yer arama proxy (Yandex Geosuggest → Photon → Nominatim, 60 dk cache)
 Route::get('/api/search-places', [ReservationController::class, 'searchPlaces'])
     ->name('reservation.search-places');
+
+// AJAX: Seçilen önerinin koordinatı (Yandex Geocoder; uri/text)
+Route::get('/api/resolve-place', [ReservationController::class, 'resolvePlace'])
+    ->name('reservation.resolve-place');
 
 // Sürücü başvuru sayfası
 Route::get('/surucu-olun', [DriverApplicationController::class, 'show'])
