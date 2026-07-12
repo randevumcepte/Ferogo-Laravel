@@ -130,7 +130,9 @@ class DispatcherService
      */
     private function fallbackToNearbyPool(RideRequest $req): bool
     {
-        return DB::transaction(function () use ($req) {
+        $poolDriverIds = [];
+
+        $result = DB::transaction(function () use ($req, &$poolDriverIds) {
             $req = $req->fresh();
             if ($req->status !== 'pool_expanded' || $req->is_favorite_wave !== true || $req->accepted_driver_id) {
                 return false;
@@ -183,6 +185,8 @@ class DispatcherService
                 return false;
             }
 
+            $poolDriverIds = $candidates;
+
             RideMessage::create([
                 'ride_request_id' => $req->id,
                 'sender'          => 'system',
@@ -191,6 +195,12 @@ class DispatcherService
 
             return true;
         });
+
+        if ($result && ! empty($poolDriverIds)) {
+            $this->notifyPoolDrivers($poolDriverIds, $req->fresh());
+        }
+
+        return $result;
     }
 
     /**
@@ -221,7 +231,9 @@ class DispatcherService
      */
     public function expandToPool(RideRequest $req): bool
     {
-        return DB::transaction(function () use ($req) {
+        $poolDriverIds = [];
+
+        $result = DB::transaction(function () use ($req, &$poolDriverIds) {
             // Atomik claim
             $claimed = RideRequest::where('id', $req->id)
                 ->where('status', 'pending')
@@ -275,6 +287,8 @@ class DispatcherService
                     'updated_at'                => now(),
                 ]);
 
+            $poolDriverIds = $candidates;
+
             // Sistem mesajı
             RideMessage::create([
                 'ride_request_id' => $req->id,
@@ -284,6 +298,32 @@ class DispatcherService
 
             return true;
         });
+
+        if ($result && ! empty($poolDriverIds)) {
+            $this->notifyPoolDrivers($poolDriverIds, $req->fresh());
+        }
+
+        return $result;
+    }
+
+    /**
+     * Havuza yeni eklenen sürücülere "yeni teklif" push'u (best-effort).
+     * RideRequestService::notifyNewOffer ile aynı desen — bildirim hatası
+     * dispatch akışını ASLA bozmaz.
+     *
+     * @param  int[]  $driverIds
+     */
+    private function notifyPoolDrivers(array $driverIds, RideRequest $req): void
+    {
+        try {
+            $driverIds = array_values(array_filter(array_map('intval', $driverIds)));
+            if (! empty($driverIds)) {
+                app(\App\Modules\Notification\Services\NotificationService::class)
+                    ->rideOfferToDrivers($driverIds, $req);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[DispatcherService] pool offer push', ['err' => $e->getMessage()]);
+        }
     }
 
     /**

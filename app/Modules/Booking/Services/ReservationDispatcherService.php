@@ -500,7 +500,7 @@ class ReservationDispatcherService
     }
 
     // ────────────────────────────────────────────────────────────────────
-    //  NOTIFICATIONS  — şimdilik log. FCM/SMS bağlandığında burası swap.
+    //  NOTIFICATIONS  — inbox + FCM push (NotificationService), best-effort.
     //  Privacy: müşteri/sürücü ham PII (telefon, plaka) push body'sine konmaz.
     // ────────────────────────────────────────────────────────────────────
 
@@ -514,6 +514,17 @@ class ReservationDispatcherService
             'dropoff' => $ride->dropoff_address,
             'fare' => (float) $ride->total_fare,
         ]);
+
+        $when = $ride->scheduled_at?->format('d.m H:i');
+        $fare = $ride->total_fare ? number_format((float) $ride->total_fare, 0, ',', '.') . ' ₺' : null;
+        $body = trim(($when ? $when . ' · ' : '') . (string) $ride->pickup_address . ($fare ? ' · ' . $fare : ''));
+
+        $this->pushReservation($this->driverUserIds($drivers->pluck('id')->all()), $ride, [
+            'type'      => 'reservation_offer',
+            'title'     => 'Yeni rezervasyon 📅',
+            'body'      => $body,
+            'deep_link' => '/driver/reservation/' . $ride->public_id,
+        ]);
     }
 
     protected function notifyCustomerDriverAssigned(Ride $ride): void
@@ -524,6 +535,13 @@ class ReservationDispatcherService
             'driver_id' => $ride->driver_id,
             'status' => $ride->status,
         ]);
+
+        $this->pushReservation([(int) $ride->customer_user_id], $ride, [
+            'type'      => 'reservation_assigned',
+            'title'     => 'Rezervasyonuna sürücü atandı 🚗',
+            'body'      => 'Planlı yolculuğun için bir üye sürücü atandı.',
+            'deep_link' => '/reservation/' . $ride->public_id,
+        ]);
     }
 
     protected function notifyDriverReconfirmAsked(Ride $ride): void
@@ -533,6 +551,14 @@ class ReservationDispatcherService
             'driver_id' => $ride->driver_id,
             'deadline' => $ride->reconfirm_deadline_at?->toIso8601String(),
         ]);
+
+        $when = $ride->scheduled_at?->format('d.m H:i');
+        $this->pushReservation($this->driverUserIds([$ride->driver_id]), $ride, [
+            'type'      => 'reservation_reconfirm',
+            'title'     => 'Rezervasyonu onayla ⏳',
+            'body'      => ($when ? $when . ' · ' : '') . 'Yaklaşan rezervasyonu teyit etmen gerekiyor.',
+            'deep_link' => '/driver/reservation/' . $ride->public_id,
+        ]);
     }
 
     protected function notifyCustomerReconfirmPending(Ride $ride): void
@@ -540,6 +566,13 @@ class ReservationDispatcherService
         Log::info('notify.customer.reconfirm_pending', [
             'ride_id' => $ride->id,
             'customer_user_id' => $ride->customer_user_id,
+        ]);
+
+        $this->pushReservation([(int) $ride->customer_user_id], $ride, [
+            'type'      => 'reservation_reconfirm_pending',
+            'title'     => 'Sürücü onayı bekleniyor ⏳',
+            'body'      => 'Sürücünün rezervasyonunu teyit etmesi bekleniyor.',
+            'deep_link' => '/reservation/' . $ride->public_id,
         ]);
     }
 
@@ -550,6 +583,14 @@ class ReservationDispatcherService
             'customer_user_id' => $ride->customer_user_id,
             'driver_id' => $ride->driver_id,
         ]);
+
+        $when = $ride->scheduled_at?->format('d.m H:i');
+        $this->pushReservation([(int) $ride->customer_user_id], $ride, [
+            'type'      => 'reservation_confirmed',
+            'title'     => 'Sürücün rezervasyonu onayladı ✅',
+            'body'      => ($when ? $when . ' · ' : '') . 'Sürücün planlı yolculuğunu teyit etti.',
+            'deep_link' => '/reservation/' . $ride->public_id,
+        ]);
     }
 
     protected function notifyCustomerDriverDropped(Ride $ride): void
@@ -557,6 +598,13 @@ class ReservationDispatcherService
         Log::info('notify.customer.driver_dropped', [
             'ride_id' => $ride->id,
             'customer_user_id' => $ride->customer_user_id,
+        ]);
+
+        $this->pushReservation([(int) $ride->customer_user_id], $ride, [
+            'type'      => 'reservation_driver_dropped',
+            'title'     => 'Yeni sürücü aranıyor 🔄',
+            'body'      => 'Atanan sürücü ayrıldı; rezervasyonun için yeni sürücü aranıyor.',
+            'deep_link' => '/reservation/' . $ride->public_id,
         ]);
     }
 
@@ -568,6 +616,23 @@ class ReservationDispatcherService
             'customer_user_id' => $ride->customer_user_id,
             'scheduled_at' => $ride->scheduled_at?->toIso8601String(),
         ]);
+
+        $when = $ride->scheduled_at?->format('d.m H:i');
+        $body = trim(($when ? $when . ' · ' : '') . (string) $ride->pickup_address);
+
+        // Yaklaşan yolculuk → hem müşteriye hem sürücüye
+        $this->pushReservation([(int) $ride->customer_user_id], $ride, [
+            'type'      => 'reservation_imminent',
+            'title'     => 'Yolculuğun yaklaşıyor ⏰',
+            'body'      => $body,
+            'deep_link' => '/reservation/' . $ride->public_id,
+        ]);
+        $this->pushReservation($this->driverUserIds([$ride->driver_id]), $ride, [
+            'type'      => 'reservation_imminent',
+            'title'     => 'Rezervasyon yolculuğu yaklaşıyor ⏰',
+            'body'      => $body,
+            'deep_link' => '/driver/reservation/' . $ride->public_id,
+        ]);
     }
 
     protected function notifyCustomerUnmatched(Ride $ride): void
@@ -575,6 +640,13 @@ class ReservationDispatcherService
         Log::info('notify.customer.unmatched', [
             'ride_id' => $ride->id,
             'customer_user_id' => $ride->customer_user_id,
+        ]);
+
+        $this->pushReservation([(int) $ride->customer_user_id], $ride, [
+            'type'      => 'reservation_unmatched',
+            'title'     => 'Rezervasyona sürücü bulunamadı 😔',
+            'body'      => 'Planlı yolculuğun için uygun sürücü bulunamadı. Lütfen tekrar dene.',
+            'deep_link' => '/reservation/' . $ride->public_id,
         ]);
     }
 
@@ -584,5 +656,57 @@ class ReservationDispatcherService
             'ride_id' => $ride->id,
             'driver_id' => $ride->driver_id,
         ]);
+
+        $this->pushReservation($this->driverUserIds([$ride->driver_id]), $ride, [
+            'type'      => 'reservation_cancelled',
+            'title'     => 'Rezervasyon iptal edildi',
+            'body'      => 'Müşteri planlı yolculuğu iptal etti.',
+            'deep_link' => '/driver/reservation/' . $ride->public_id,
+        ]);
+    }
+
+    /**
+     * Rezervasyon bildirimi gönder — inbox + FCM push (best-effort).
+     * NotificationService::deliver kullanır; bildirim hatası dispatch akışını
+     * ASLA bozmaz. data payload'ı app'in deep-link kurması için type+public_id taşır.
+     *
+     * @param  int[]  $userIds
+     * @param  array<string,mixed>  $payload  type,title,body,deep_link
+     */
+    private function pushReservation(array $userIds, Ride $ride, array $payload): void
+    {
+        try {
+            $userIds = array_values(array_unique(array_filter(array_map('intval', $userIds))));
+            if (empty($userIds)) {
+                return;
+            }
+            $payload['data'] = [
+                'type'      => $payload['type'] ?? 'reservation',
+                'public_id' => (string) $ride->public_id,
+            ];
+            app(\App\Modules\Notification\Services\NotificationService::class)
+                ->deliver($userIds, $payload);
+        } catch (\Throwable $e) {
+            Log::warning('[ReservationDispatcher] push başarısız', ['err' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Sürücü id'lerini bildirim için user id'lerine çevirir.
+     *
+     * @param  array<int|null>  $driverIds
+     * @return int[]
+     */
+    private function driverUserIds(array $driverIds): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $driverIds)));
+        if (empty($ids)) {
+            return [];
+        }
+        return Driver::whereIn('id', $ids)
+            ->whereNotNull('user_id')
+            ->pluck('user_id')
+            ->map(fn ($v) => (int) $v)
+            ->all();
     }
 }
