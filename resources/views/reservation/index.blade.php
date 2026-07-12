@@ -638,11 +638,12 @@
             }
             setLocLoading(true);
 
-            // OpenStreetMap Nominatim ile reverse geocoding (anahtar gerektirmez)
+            // Ters geocode — SUNUCU proxy (Yandex→Nominatim). Tarayıcı doğrudan
+            // nominatim.org'a gitmez (yavaş/rate-limit).
             const nominatimReverse = async (lat, lng) => {
-                const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=tr&zoom=18&addressdetails=1`;
+                const url = `{{ route('reservation.reverse-geocode') }}?lat=${lat}&lng=${lng}`;
                 const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                if (!res.ok) throw new Error('Nominatim HTTP ' + res.status);
+                if (!res.ok) throw new Error('reverse HTTP ' + res.status);
                 const data = await res.json();
                 return data && data.display_name ? data.display_name : null;
             };

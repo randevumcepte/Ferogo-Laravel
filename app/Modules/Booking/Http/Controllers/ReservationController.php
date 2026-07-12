@@ -369,6 +369,26 @@ class ReservationController extends Controller
     }
 
     /**
+     * AJAX endpoint: ters geocode (koordinat → adres).
+     * Tarayıcı doğrudan nominatim.org'a gitmesin diye sunucu proxy'si (Yandex → Nominatim).
+     * Dönen: { success, display_name } veya null.
+     */
+    public function reverseGeocode(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lng' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $name = $this->geo->reverseGeocode((float) $validated['lat'], (float) $validated['lng']);
+
+        return response()->json([
+            'success'      => $name !== null,
+            'display_name' => $name,
+        ]);
+    }
+
+    /**
      * AJAX endpoint: form değiştikçe canlı fiyat hesabı.
      */
     public function calculateFare(Request $request): JsonResponse

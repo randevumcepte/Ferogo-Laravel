@@ -116,9 +116,86 @@ class GeoService
         });
     }
 
+    /**
+     * Ters geocode: koordinat → adres metni. (Alış noktası etiketi için.)
+     * Sunucudan çağrılır — tarayıcı doğrudan nominatim.org'a gitmez (yavaş/rate-limit).
+     * Yandex Geocoder → boşsa Nominatim. 24 saat cache (koordinat ~5 haneye yuvarlanır).
+     */
+    public function reverseGeocode(float $lat, float $lon): ?string
+    {
+        if ($lat < -90 || $lat > 90 || $lon < -180 || $lon > 180) {
+            return null;
+        }
+
+        $rlat = round($lat, 5);
+        $rlon = round($lon, 5);
+        $cacheKey = 'geo:reverse:v1:' . $rlat . ',' . $rlon;
+
+        return Cache::remember($cacheKey, now()->addMinutes(1440), function () use ($rlat, $rlon) {
+            if ($this->geocoderEnabled()) {
+                $r = $this->yandexReverse($rlat, $rlon);
+                if ($r !== null && $r !== '') {
+                    return $r;
+                }
+            }
+            return $this->nominatimReverse($rlat, $rlon);
+        });
+    }
+
     // ------------------------------------------------------------------
     // Yandex
     // ------------------------------------------------------------------
+
+    /** Yandex ters geocode — geocode="boylam,enlem". */
+    private function yandexReverse(float $lat, float $lon): ?string
+    {
+        try {
+            $response = Http::timeout(4)->get('https://geocode-maps.yandex.ru/1.x/', [
+                'apikey'  => config('services.yandex.geocoder_key'),
+                'format'  => 'json',
+                'lang'    => config('services.yandex.lang', 'tr_TR'),
+                'results' => 1,
+                'geocode' => $lon . ',' . $lat, // Yandex: lon,lat
+            ]);
+            if (! $response->ok()) {
+                return null;
+            }
+            $members = $response->json('response.GeoObjectCollection.featureMember');
+            if (! is_array($members) || empty($members)) {
+                return null;
+            }
+            $geo = $members[0]['GeoObject'] ?? [];
+            $text = trim((string) ($geo['metaDataProperty']['GeocoderMetaData']['text'] ?? ''));
+            return $text !== '' ? $text : null;
+        } catch (\Throwable $e) {
+            report($e);
+            return null;
+        }
+    }
+
+    /** Nominatim ters geocode yedeği (sunucudan). */
+    private function nominatimReverse(float $lat, float $lon): ?string
+    {
+        try {
+            $response = Http::withHeaders([
+                'User-Agent'      => 'FerXGo/1.0 (+https://ferxgo.com.tr)',
+                'Accept-Language' => 'tr,en',
+            ])->timeout(3)->get('https://nominatim.openstreetmap.org/reverse', [
+                'format' => 'json',
+                'lat'    => $lat,
+                'lon'    => $lon,
+                'zoom'   => 18,
+            ]);
+            if (! $response->ok()) {
+                return null;
+            }
+            $text = trim((string) $response->json('display_name'));
+            return $text !== '' ? $text : null;
+        } catch (\Throwable $e) {
+            report($e);
+            return null;
+        }
+    }
 
     /** Yandex Geosuggest — https://suggest-maps.yandex.ru/v1/suggest */
     private function yandexSuggest(string $q): array

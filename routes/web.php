@@ -146,6 +146,10 @@ Route::get('/api/search-places', [ReservationController::class, 'searchPlaces'])
 Route::get('/api/resolve-place', [ReservationController::class, 'resolvePlace'])
     ->name('reservation.resolve-place');
 
+// AJAX: Ters geocode — koordinat → adres (sunucu proxy; tarayıcı nominatim'e gitmez)
+Route::get('/api/reverse-geocode', [ReservationController::class, 'reverseGeocode'])
+    ->name('reservation.reverse-geocode');
+
 // Sürücü başvuru sayfası
 Route::get('/surucu-olun', [DriverApplicationController::class, 'show'])
     ->name('driver.apply');

@@ -1793,10 +1793,14 @@
         renderRail(userCenter);
     }
 
+    // Ters geocode — SUNUCU proxy (Yandex→Nominatim). Tarayıcı doğrudan
+    // nominatim.org'a gitmez: o çağrı yavaş/rate-limit'e takılıp giriş ekranını
+    // "Konumun hazırlanıyor…"da askıya alıyordu.
+    const REVERSE_URL = '{{ route('reservation.reverse-geocode') }}';
     async function reverseGeocode(lat, lng) {
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=tr&zoom=18`, {
-                headers: { 'Accept': 'application/json' }
+            const res = await fetch(`${REVERSE_URL}?lat=${lat}&lng=${lng}`, {
+                headers: { 'Accept': 'application/json' },
             });
             if (!res.ok) return null;
             const data = await res.json();

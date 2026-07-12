@@ -15,11 +15,10 @@ use App\Modules\Booking\Support\NegotiationPayload;
 use App\Modules\Driver\Models\Driver;
 use App\Modules\Pricing\Services\FareCalculator;
 use App\Modules\Vehicle\Models\VehicleClass;
+use App\Services\Geo\GeoService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
@@ -43,6 +42,7 @@ class CustomerRideController extends Controller
         private FareCalculator $calculator,
         private FavoriteDriverService $favoriteService,
         private DispatcherService $dispatcher,
+        private GeoService $geo,
     ) {}
 
     // ─────────────────────────────────────────────────────────────
@@ -74,7 +74,12 @@ class CustomerRideController extends Controller
 
     /**
      * GET /api/v1/customer/places/search?q=...
-     * Nominatim proxy (web'deki ile aynı cache + İzmir viewbox).
+     * Yer arama (autocomplete). Tüm sağlayıcı mantığı GeoService'te:
+     * Yandex Geosuggest (anahtar varsa) → Photon (OSM) → Nominatim. 60 dk cache servis içinde.
+     *
+     * Dönen öğe: { display_name, lat|null, lon|null, uri|null, provider }.
+     * Yandex önerileri koordinatsız gelir (uri dolu) → uygulama seçince
+     * /customer/places/resolve ile koordinat alır.
      */
     public function searchPlaces(Request $request): JsonResponse
     {
@@ -82,162 +87,50 @@ class CustomerRideController extends Controller
             'q' => ['required', 'string', 'min:2', 'max:120'],
         ]);
 
-        $q = mb_strtolower(trim(preg_replace('/\s+/u', ' ', $validated['q'])));
-        if (mb_strlen($q) < 2) {
-            return response()->json(['ok' => true, 'results' => []]);
-        }
-
         // Per-user rate limit: 1 dakikada 30 arama
         $rl = 'places_search:' . $request->user()->id;
         if (RateLimiter::tooManyAttempts($rl, 30)) {
             return response()->json([
-                'ok'      => false,
-                'message' => 'Çok hızlı arıyorsun, bir saniye bekle.',
+                'ok'          => false,
+                'message'     => 'Çok hızlı arıyorsun, bir saniye bekle.',
                 'retry_after' => RateLimiter::availableIn($rl),
             ], 429);
         }
         RateLimiter::hit($rl, 60);
 
-        $cacheKey = 'places:tr-izmir:v6:' . sha1($q);
-        $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
-            // Önce Photon (OSM autocomplete — İzmir bias, zengin POI/işletme), boşsa Nominatim
-            $r = $this->photonSearch($q);
-            if (empty($r)) {
-                $r = $this->nominatimSearch($q);
-            }
-            return $r;
-        });
-
-        return response()->json(['ok' => true, 'results' => $results]);
+        return response()->json([
+            'ok'      => true,
+            'results' => $this->geo->suggest($validated['q']),
+        ]);
     }
 
-    /** Photon (OSM autocomplete) — İzmir merkez bias + TR filtresi + zengin POI/işletme. */
-    private function photonSearch(string $q): array
+    /**
+     * GET /api/v1/customer/places/resolve?uri=...&text=...
+     * Seçilen önerinin koordinatı. Yandex önerisi için uri, düz metin için text gönderilir.
+     * Dönen: { ok, lat, lon, display_name } veya 404.
+     */
+    public function resolvePlace(Request $request): JsonResponse
     {
-        try {
-            $response = Http::withHeaders([
-                'User-Agent' => 'FerXGo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
-            ])->timeout(3)->get('https://photon.komoot.io/api/', [
-                'q'     => $q,
-                'lang'  => 'default', // 'tr' desteklenmiyor; default = yerel (Türkçe) isimler
-                'lat'   => 38.4237,   // İzmir merkez bias (sonuçlar koordinatla ayrıca filtreleniyor)
-                'lon'   => 27.1428,
-                'limit' => 30,
-            ]);
-            if (! $response->ok()) return [];
-            $features = $response->json('features');
-            if (! is_array($features)) return [];
+        $validated = $request->validate([
+            'uri'  => ['nullable', 'string', 'max:2000'],
+            'text' => ['nullable', 'string', 'max:250'],
+        ]);
 
-            // Türkçe karakterleri sadeleştir (karşılaştırma için): ç->c, ş->s, ı->i ...
-            $fold = static function (string $s): string {
-                $s = strtr($s, ['İ' => 'i', 'I' => 'i', 'Ş' => 's', 'Ç' => 'c', 'Ğ' => 'g', 'Ü' => 'u', 'Ö' => 'o']);
-                $s = mb_strtolower($s, 'UTF-8');
-                return strtr($s, ['ş' => 's', 'ç' => 'c', 'ı' => 'i', 'ğ' => 'g', 'ü' => 'u', 'ö' => 'o', 'â' => 'a', 'î' => 'i', 'û' => 'u']);
-            };
-
-            // Alaka çıpaları: sorgudaki >=3 harfli kelimeler. Sonuç bunlardan EN AZ
-            // BİRİNİ içermeli (tek "en uzun kelime" zorunlu değil → çok daha az eleme;
-            // "karşıyaka vapur iskelesi" aramasında "İskele Meydanı" gibi sonuçlar da kalır).
-            $anchors = [];
-            foreach (preg_split('/\s+/', $fold($q)) as $tok) {
-                if (mb_strlen($tok) >= 3) $anchors[] = $tok;
-            }
-
-            $out = [];
-            $seen = [];
-            foreach ($features as $f) {
-                $p = $f['properties'] ?? [];
-                $coords = $f['geometry']['coordinates'] ?? null;
-                if (! is_array($coords) || count($coords) < 2) continue;
-                // countrycode varsa ve TR değilse ele. Photon POI'lerinde (iskele, meydan,
-                // durak vb.) countrycode ÇOĞU KEZ BOŞ döner — bbox zaten İzmir/TR'yi garanti
-                // ettiği için boş olanları eleme (asıl "vapur iskelesi çıkmıyor" sebebi buydu).
-                $cc = (string) ($p['countrycode'] ?? '');
-                if ($cc !== '' && $cc !== 'TR') continue;
-
-                // İzmir İLİ kutusu (metro değil): Aliağa/Bergama/Dikili/Çeşme/Ödemiş dahil
-                $lat = (float) $coords[1];
-                $lon = (float) $coords[0];
-                if ($lat < 37.7 || $lat > 39.3 || $lon < 26.0 || $lon > 28.5) continue;
-
-                // Başlık: isim > cadde(+no) > mahalle/ilçe/şehir
-                $title = trim((string) ($p['name'] ?? ''));
-                if ($title === '') {
-                    $title = trim(((string) ($p['street'] ?? '')) . ' ' . ((string) ($p['housenumber'] ?? '')));
-                }
-                if ($title === '') {
-                    $title = trim((string) ($p['district'] ?? $p['city'] ?? $p['locality'] ?? ''));
-                }
-                if ($title === '') continue;
-
-                // İkincil satır: cadde/mahalle/ilçe/şehir (başlığı tekrar etme, tekilleştir)
-                $parts = [];
-                foreach ([$p['street'] ?? null, $p['district'] ?? null, $p['city'] ?? null, $p['state'] ?? null] as $seg) {
-                    $seg = trim((string) ($seg ?? ''));
-                    if ($seg !== '' && $seg !== $title && ! in_array($seg, $parts, true)) {
-                        $parts[] = $seg;
-                    }
-                }
-                $secondary = implode(', ', array_slice($parts, 0, 3));
-                $display = $secondary !== '' ? ($title . ', ' . $secondary) : $title;
-
-                // Alaka filtresi: sorgu kelimelerinden HİÇBİRİ sonuç metninde yoksa ele
-                if (! empty($anchors)) {
-                    $hay = $fold($title . ' ' . $secondary);
-                    $hit = false;
-                    foreach ($anchors as $a) {
-                        if (str_contains($hay, $a)) { $hit = true; break; }
-                    }
-                    if (! $hit) continue;
-                }
-
-                // Tekrarlari ele (ayni isimli 13 "Karsiyaka" gibi)
-                $key = mb_strtolower($display);
-                if (isset($seen[$key])) continue;
-                $seen[$key] = true;
-
-                $out[] = [
-                    'lat'          => $lat,
-                    'lon'          => $lon,
-                    'display_name' => $display,
-                ];
-                if (count($out) >= 15) break;
-            }
-            return $out;
-        } catch (\Throwable $e) {
-            report($e);
-            return [];
+        if (empty($validated['uri']) && empty($validated['text'])) {
+            return response()->json(['ok' => false, 'message' => 'uri veya text gerekli'], 422);
         }
-    }
 
-    /** Nominatim yedeği — Photon boş/erişilemezse. */
-    private function nominatimSearch(string $q): array
-    {
-        try {
-            $response = Http::withHeaders([
-                'User-Agent'      => 'FerXGo-Mobile/1.0 (+https://appnew.randevumcepte.com.tr)',
-                'Accept-Language' => 'tr,en',
-            ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
-                'q'              => $q,
-                'format'         => 'json',
-                'addressdetails' => 0,
-                'limit'          => 10,
-                'countrycodes'   => 'tr',
-                'viewbox'        => '26.7,38.6,27.5,38.2',
-                'bounded'        => 0,
-            ]);
-            if (! $response->ok()) return [];
-            $rows = $response->json();
-            if (! is_array($rows)) return [];
-            return array_map(static fn ($r) => [
-                'lat'         => (float) ($r['lat'] ?? 0),
-                'lon'         => (float) ($r['lon'] ?? 0),
-                'display_name'=> (string) ($r['display_name'] ?? ''),
-            ], array_slice($rows, 0, 10));
-        } catch (\Throwable $e) {
-            report($e);
-            return [];
+        $res = $this->geo->resolve($validated['uri'] ?? null, $validated['text'] ?? null);
+        if ($res === null) {
+            return response()->json(['ok' => false, 'message' => 'Konum çözümlenemedi'], 404);
         }
+
+        return response()->json([
+            'ok'           => true,
+            'lat'          => $res['lat'],
+            'lon'          => $res['lon'],
+            'display_name' => $res['display_name'],
+        ]);
     }
 
     /**
