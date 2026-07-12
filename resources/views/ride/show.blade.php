@@ -3327,50 +3327,65 @@
             fallbackToIzmir();
             return;
         }
-        // Show fallback button after 4s in case user ignores prompt
+
+        // Masaüstünde GPS YOK — konum Wi-Fi ile çözülür ve macOS'ta konum servisi
+        // açık olsa bile sık sık kCLErrorLocationUnknown döner. Kullanıcıyı 50 sn'lik
+        // "merdiven"le bekletmek yerine masaüstünde SABIRSIZ davran: kısa timeout dene,
+        // konum gelmezse/hata olursa HEMEN İzmir haritasını aç (kullanıcı alış noktasını
+        // elle yazar). Mobilde sabırlı akış korunur — orada gerçek GPS değerli.
+        const ua = navigator.userAgent || '';
+        const isMobile = /iPad|iPhone|iPod|Android/i.test(ua) && !window.MSStream;
+
+        let settled = false;
+        const done = (fn) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(fallbackTimer);
+            clearTimeout(desktopAutoFb);
+            fn();
+        };
+
+        // İzin istemi geç onaylanırsa "konumsuz devam" butonunu göster
         const fallbackTimer = setTimeout(() => {
             if (fallbackBtn) fallbackBtn.classList.remove('hidden');
             if (loadingText) loadingText.innerHTML = 'Konum izni bekleniyor…<br><span class="text-xs text-zinc-500">Tarayıcının üst kısmındaki istemi onayla.</span>';
-        }, 4000);
+        }, isMobile ? 4000 : 2500);
+
+        // Masaüstü backstop: 7 sn içinde konum gelmezse otomatik İzmir'e düş (askıda kalma yok)
+        const desktopAutoFb = isMobile ? null : setTimeout(() => done(() => fallbackToIzmir()), 7000);
 
         if (fallbackBtn) {
-            fallbackBtn.addEventListener('click', () => {
-                clearTimeout(fallbackTimer);
-                fallbackToIzmir();
-            });
+            fallbackBtn.addEventListener('click', () => done(() => fallbackToIzmir()));
         }
 
         navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                clearTimeout(fallbackTimer);
+            (pos) => done(() => {
                 startSimulation([pos.coords.latitude, pos.coords.longitude]);
                 refineUserLocation(); // arka planda daha keskin GPS fix'i bekle → pin'i düzelt
-            },
+            }),
             () => {
-                clearTimeout(fallbackTimer);
-                // Kullanıcı izin vermedi → zorunlu popup göster.
-                // Konum lazım çünkü mesafe/süre hesabı + yakındaki sürücü listesi
-                // konuma bağlı. Kullanıcı izin verdiğinde otomatik startSimulation çağrılır.
-                if (window.GeolocationGate) {
-                    window.GeolocationGate.require({
+                if (settled) return;
+                if (isMobile && window.GeolocationGate) {
+                    // Mobil: sabırlı modal + merdiven (gerçek GPS'i kovala). Konum
+                    // verilince startSimulation çağrılır; verilmezse İzmir fallback.
+                    done(() => window.GeolocationGate.require({
                         onGranted: (coords) => {
                             startSimulation([coords.lat, coords.lng]);
                             refineUserLocation();
                         },
-                        // Konum alınamazsa kullanıcı takılıp kalmasın — haritayı İzmir
-                        // merkezinden aç, en azından sürücüleri görsün. (Sürücü tarafında bu YOK.)
                         skipLabel: 'Şimdilik konumsuz devam et (İzmir merkezi)',
                         onSkip: () => fallbackToIzmir(),
-                    });
+                    }));
                 } else {
-                    fallbackToIzmir();
+                    // Masaüstü: GPS yok, merdiven boşuna → hemen İzmir haritası
+                    done(() => fallbackToIzmir());
                 }
             },
-            // GPS-öncelikli (enableHighAccuracy:true): düşük doğruluk IP/baz-istasyonuna
-            // düşüp İzmir/Karabağlar gösteriyordu. maximumAge:300000 → son 5 dk'daki gerçek
-            // GPS fix'i anında dönsün (izin açıkken bile TIMEOUT olmasın). Hata olursa zaten
-            // modal (GeolocationGate) daha sabırlı merdivenle tekrar dener.
-            { timeout: 15000, maximumAge: 300000, enableHighAccuracy: true }
+            // Mobil: GPS-öncelikli + son 5 dk fix'i anında dönsün. Masaüstü: kısa timeout,
+            // düşük doğruluk (nasılsa Wi-Fi konumu) — 7 sn backstop zaten devrede.
+            isMobile
+                ? { timeout: 15000, maximumAge: 300000, enableHighAccuracy: true }
+                : { timeout: 6000,  maximumAge: 300000, enableHighAccuracy: false }
         );
     }
 
