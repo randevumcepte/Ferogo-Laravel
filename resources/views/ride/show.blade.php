@@ -3179,7 +3179,7 @@
         const photosWrap = document.getElementById('vv-vehicle-photos');
         photosWrap.innerHTML = '';
         const photos = drv.vehicle_photos || (drv.vehicle_photo_url ? [drv.vehicle_photo_url] : []);
-        photos.slice(0, 6).forEach(url => {
+        photos.slice(0, 3).forEach(url => {
             const img = document.createElement('img');
             img.src = url;
             img.alt = 'Araç';
