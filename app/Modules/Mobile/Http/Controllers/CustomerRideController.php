@@ -98,7 +98,7 @@ class CustomerRideController extends Controller
         }
         RateLimiter::hit($rl, 60);
 
-        $cacheKey = 'places:tr-izmir:v4:' . sha1($q);
+        $cacheKey = 'places:tr-izmir:v5:' . sha1($q);
         $results = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
             // Önce Photon (OSM autocomplete — İzmir bias, zengin POI/işletme), boşsa Nominatim
             $r = $this->photonSearch($q);
@@ -122,7 +122,7 @@ class CustomerRideController extends Controller
                 'lang'  => 'default', // 'tr' desteklenmiyor; default = yerel (Türkçe) isimler
                 'lat'   => 38.4237,   // İzmir merkez bias (sonuçlar koordinatla ayrıca filtreleniyor)
                 'lon'   => 27.1428,
-                'limit' => 25,
+                'limit' => 30,
             ]);
             if (! $response->ok()) return [];
             $features = $response->json('features');
@@ -135,12 +135,12 @@ class CustomerRideController extends Controller
                 return strtr($s, ['ş' => 's', 'ç' => 'c', 'ı' => 'i', 'ğ' => 'g', 'ü' => 'u', 'ö' => 'o', 'â' => 'a', 'î' => 'i', 'û' => 'u']);
             };
 
-            // Alaka çıpası: sorgunun en uzun kelimesi (>=3 harf) sonuç metninde geçmeli
-            $anchor = '';
+            // Alaka çıpaları: sorgudaki >=3 harfli kelimeler. Sonuç bunlardan EN AZ
+            // BİRİNİ içermeli (tek "en uzun kelime" zorunlu değil → çok daha az eleme;
+            // "karşıyaka vapur iskelesi" aramasında "İskele Meydanı" gibi sonuçlar da kalır).
+            $anchors = [];
             foreach (preg_split('/\s+/', $fold($q)) as $tok) {
-                if (mb_strlen($tok) >= 3 && mb_strlen($tok) > mb_strlen($anchor)) {
-                    $anchor = $tok;
-                }
+                if (mb_strlen($tok) >= 3) $anchors[] = $tok;
             }
 
             $out = [];
@@ -149,7 +149,11 @@ class CustomerRideController extends Controller
                 $p = $f['properties'] ?? [];
                 $coords = $f['geometry']['coordinates'] ?? null;
                 if (! is_array($coords) || count($coords) < 2) continue;
-                if (($p['countrycode'] ?? '') !== 'TR') continue;
+                // countrycode varsa ve TR değilse ele. Photon POI'lerinde (iskele, meydan,
+                // durak vb.) countrycode ÇOĞU KEZ BOŞ döner — bbox zaten İzmir/TR'yi garanti
+                // ettiği için boş olanları eleme (asıl "vapur iskelesi çıkmıyor" sebebi buydu).
+                $cc = (string) ($p['countrycode'] ?? '');
+                if ($cc !== '' && $cc !== 'TR') continue;
 
                 // İzmir kutusu dışını ele (Muğla/başka il sonuçları gitsin)
                 $lat = (float) $coords[1];
@@ -177,9 +181,14 @@ class CustomerRideController extends Controller
                 $secondary = implode(', ', array_slice($parts, 0, 3));
                 $display = $secondary !== '' ? ($title . ', ' . $secondary) : $title;
 
-                // Alaka filtresi: sorgu kelimesi sonuç metninde geçmiyorsa ele (saçma eşleşmeleri at)
-                if ($anchor !== '' && ! str_contains($fold($title . ' ' . $secondary), $anchor)) {
-                    continue;
+                // Alaka filtresi: sorgu kelimelerinden HİÇBİRİ sonuç metninde yoksa ele
+                if (! empty($anchors)) {
+                    $hay = $fold($title . ' ' . $secondary);
+                    $hit = false;
+                    foreach ($anchors as $a) {
+                        if (str_contains($hay, $a)) { $hit = true; break; }
+                    }
+                    if (! $hit) continue;
                 }
 
                 // Tekrarlari ele (ayni isimli 13 "Karsiyaka" gibi)
@@ -192,7 +201,7 @@ class CustomerRideController extends Controller
                     'lon'          => $lon,
                     'display_name' => $display,
                 ];
-                if (count($out) >= 10) break;
+                if (count($out) >= 15) break;
             }
             return $out;
         } catch (\Throwable $e) {
