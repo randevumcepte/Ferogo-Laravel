@@ -97,6 +97,7 @@ Route::middleware(['auth:sanctum', 'device', 'role:driver', 'ability:driver:*'])
 
         // Aktif yolculuk
         Route::post('active/arrived',  [DriverController::class, 'markArrived']);
+        Route::post('active/start-code', [DriverController::class, 'startWithCode']);
         Route::post('active/no-show',  [DriverController::class, 'reportNoShow']);
         Route::post('active/complete', [DriverController::class, 'completeRide']);
         Route::middleware('throttle:30,1')->post('active/message', [DriverController::class, 'sendMessage']);

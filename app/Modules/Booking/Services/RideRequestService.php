@@ -329,7 +329,11 @@ class RideRequestService
             // Driver busy
             $acceptingDriver->update(['availability_status' => 'busy']);
 
-            $req->update(['ride_id' => $ride->id]);
+            // Eşleşme kodu — buluşmada sürücü girer, yolculuk başlar (yalnız yolcuya gösterilir)
+            $req->update([
+                'ride_id'    => $ride->id,
+                'match_code' => str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT),
+            ]);
 
             // Sistem mesajı (chat'in başına düşsün) — anlaşılan ücreti de yaz
             $etaBody = 'Üye sürücü yola çıktı. Tahmini varış: ' . max(1, (int) round((float) $req->distance_km * 2.4)) . ' dk.';

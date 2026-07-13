@@ -303,6 +303,55 @@ class DriverController extends Controller
     }
 
     /**
+     * POST /api/v1/driver/active/start-code
+     * Body: { code: "1234" }
+     * Sürücü buluşmada yolcunun gösterdiği 4 haneli eşleşme kodunu girer.
+     * Doğruysa yolculuk başlar (started_at + ride.status=in_progress).
+     */
+    public function startWithCode(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver($request);
+        if (! $driver) return response()->json(['ok' => false], 404);
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'size:4'],
+        ]);
+
+        $req = $this->activeRequestFor($driver);
+        if (! $req) return response()->json(['ok' => false, 'message' => 'Aktif yolculuk yok.'], 404);
+
+        // Zaten başladıysa idempotent
+        if ($req->started_at !== null) {
+            return response()->json(['ok' => true, 'started' => true]);
+        }
+
+        // Rate limit: 5 yanlış deneme / dk (brute-force koruması)
+        $rl = 'driver_startcode:' . $driver->id;
+        if (RateLimiter::tooManyAttempts($rl, 5)) {
+            return response()->json(['ok' => false, 'message' => 'Çok fazla hatalı deneme. Biraz bekle.'], 429);
+        }
+
+        if ($req->match_code === null || ! hash_equals((string) $req->match_code, (string) $validated['code'])) {
+            RateLimiter::hit($rl, 60);
+            return response()->json(['ok' => false, 'message' => 'Eşleşme kodu hatalı. Yolcudan kodu tekrar iste.'], 422);
+        }
+
+        $now = now();
+        $req->update(['started_at' => $now, 'driver_arrived_at' => $req->driver_arrived_at ?? $now]);
+        if ($req->ride) {
+            $req->ride->update(['status' => 'in_progress']);
+        }
+
+        RideMessage::create([
+            'ride_request_id' => $req->id,
+            'sender'          => 'system',
+            'body'            => 'Eşleşme kodu doğrulandı. Yolculuk başladı.',
+        ]);
+
+        return response()->json(['ok' => true, 'started' => true]);
+    }
+
+    /**
      * POST /api/v1/driver/active/no-show
      * Body: { lat?, lng?, note? }
      */
@@ -481,6 +530,9 @@ class DriverController extends Controller
             'no_show_button_ready'     => $noShowReady,
             'no_show_countdown_sec'    => $noShowCountdown,
             'ride_status'              => $req->ride?->status,
+            // Eşleşme kodu akışı — kod YOLCUDA; sürücü girerek yolculuğu başlatır.
+            'needs_start_code'         => $req->started_at === null,
+            'started_at'               => $req->started_at?->toIso8601String(),
         ];
     }
 }

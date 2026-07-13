@@ -912,6 +912,11 @@ class CustomerRideController extends Controller
             'arrived_at'            => $req->driver_arrived_at?->toIso8601String(),
             'customer_confirmed_at' => $req->customer_confirmed_at?->toIso8601String(),
             'no_show_at'            => $req->no_show_at?->toIso8601String(),
+            // Eşleşme kodu — yolcuya gösterilir; yolculuk başlayınca gizlenir
+            'match_code'            => ($req->status === 'accepted' && $req->started_at === null)
+                ? $req->match_code
+                : null,
+            'started_at'            => $req->started_at?->toIso8601String(),
             // Fiyat pazarlığı bloğu (inDrive tarzı)
             'negotiation'           => $this->negotiationPayload($req),
         ];

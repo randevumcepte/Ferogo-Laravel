@@ -38,6 +38,7 @@ class RideRequest extends Model
         'customer_offer_fare',
         'driver_counter_fare',
         'agreed_fare',
+        'match_code',
         'negotiation_state',
         'negotiation_round',
         'status',
