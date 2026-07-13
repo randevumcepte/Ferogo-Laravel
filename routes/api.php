@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Mobile\Http\Controllers\AuthController;
+use App\Modules\Mobile\Http\Controllers\CallController;
 use App\Modules\Mobile\Http\Controllers\CustomerRideController;
 use App\Modules\Mobile\Http\Controllers\DeviceController;
 use App\Modules\Mobile\Http\Controllers\DriverController;
@@ -44,6 +45,16 @@ Route::middleware(['auth:sanctum', 'device'])->group(function () {
     // Acil yardım (panik) — her iki rol, yolculuk sırasında
     Route::post('panic',                        [PanicAlertController::class, 'mobileTrigger']);
     Route::post('panic/{publicId}/location',    [PanicAlertController::class, 'updateLocation']);
+
+    // WebRTC sesli görüşme — her iki rol (rol controller'da Sanctum'dan çözülür)
+    Route::prefix('calls/{publicId}')->group(function () {
+        Route::post('start',   [CallController::class, 'start']);
+        Route::post('accept',  [CallController::class, 'accept']);
+        Route::post('end',     [CallController::class, 'end']);
+        Route::get('state',    [CallController::class, 'state']);
+        Route::middleware('throttle:120,1')->post('signal',  [CallController::class, 'pushSignal']);
+        Route::get('signals',  [CallController::class, 'pullSignals']);
+    });
 });
 
 // ─── AUTHED — CUSTOMER ─────────────────────────────────────────
