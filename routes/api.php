@@ -5,6 +5,7 @@ use App\Modules\Mobile\Http\Controllers\CustomerRideController;
 use App\Modules\Mobile\Http\Controllers\DeviceController;
 use App\Modules\Mobile\Http\Controllers\DriverController;
 use App\Modules\Mobile\Http\Controllers\NotificationController;
+use App\Modules\Security\Http\Controllers\PanicAlertController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,6 +40,10 @@ Route::middleware(['auth:sanctum', 'device'])->group(function () {
     Route::get('notifications/unread-count',    [NotificationController::class, 'unreadCount']);
     Route::post('notifications/read-all',       [NotificationController::class, 'markAllRead']);
     Route::post('notifications/{id}/read',      [NotificationController::class, 'markRead'])->whereNumber('id');
+
+    // Acil yardım (panik) — her iki rol, yolculuk sırasında
+    Route::post('panic',                        [PanicAlertController::class, 'mobileTrigger']);
+    Route::post('panic/{publicId}/location',    [PanicAlertController::class, 'updateLocation']);
 });
 
 // ─── AUTHED — CUSTOMER ─────────────────────────────────────────
@@ -65,6 +70,7 @@ Route::middleware(['auth:sanctum', 'device', 'role:customer', 'ability:customer:
         Route::get('ride-requests/{publicId}',                                             [CustomerRideController::class, 'showRequest']);
         Route::post('ride-requests/{publicId}/cancel',                                     [CustomerRideController::class, 'cancelRequest']);
         Route::post('ride-requests/{publicId}/confirm',                                    [CustomerRideController::class, 'confirmRequest']);
+        Route::post('ride-requests/{publicId}/visual-verify',                              [CustomerRideController::class, 'visualVerify']);
         // Auto/havuz akışı ("Hadi Gidelim"): eşleşen üye sürücüyü onayla/reddet
         Route::post('ride-requests/{publicId}/reconfirm',                                  [CustomerRideController::class, 'reconfirm']);
         // Fiyat pazarlığı: müşteri karşı teklif / kabul

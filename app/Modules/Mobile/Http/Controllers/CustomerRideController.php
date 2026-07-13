@@ -669,6 +669,50 @@ class CustomerRideController extends Controller
     }
 
     /**
+     * POST /api/v1/customer/ride-requests/{publicId}/visual-verify
+     * Body: { match: bool, note?: string }
+     * Yolculuk başladıktan sonra yolcu "bindiğim araç/sürücü doğru mu?" cevabı verir.
+     * match=true → doğrulandı; match=false → güvenlik uyarısı.
+     */
+    public function visualVerify(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'match' => ['required', 'boolean'],
+            'note'  => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $req = $this->ownedRequest($publicId);
+
+        if ($req->started_at === null) {
+            return response()->json(['ok' => false, 'message' => 'Yolculuk henüz başlamadı.'], 422);
+        }
+        // Zaten cevaplandıysa idempotent (tekrar modal açılmasın)
+        if ($req->visual_verified_at !== null || $req->visual_verify_failed_at !== null) {
+            return response()->json(['ok' => true, 'already' => true, 'status' => $this->statusPayload($req)]);
+        }
+
+        if ((bool) $validated['match']) {
+            $req->update(['visual_verified_at' => now()]);
+            $message = 'Teşekkürler, iyi yolculuklar!';
+        } else {
+            $req->update(['visual_verify_failed_at' => now()]);
+            RideMessage::create([
+                'ride_request_id' => $req->id,
+                'sender'          => 'system',
+                'body'            => 'Yolcu araç/sürücü eşleşmediğini bildirdi. Güvenlik uyarısı oluşturuldu.',
+            ]);
+            $message = 'Bildirimin alındı. Güvenliğin için çağrı merkezimiz seninle iletişime geçebilir.';
+        }
+
+        return response()->json([
+            'ok'       => true,
+            'verified' => (bool) $validated['match'],
+            'message'  => $message,
+            'status'   => $this->statusPayload($req->fresh()),
+        ]);
+    }
+
+    /**
      * POST /api/v1/customer/ride-requests/{publicId}/counter
      * Body: { amount } — müşteri sürücünün karşı teklifine yeni fiyat verir.
      */
@@ -920,6 +964,9 @@ class CustomerRideController extends Controller
                 ? $req->match_code
                 : null,
             'started_at'            => $req->started_at?->toIso8601String(),
+            // Görsel doğrulama (araç/sürücü doğru mu?) — yolculuk başladıktan sonra
+            'visual_verified_at'      => $req->visual_verified_at?->toIso8601String(),
+            'visual_verify_failed_at' => $req->visual_verify_failed_at?->toIso8601String(),
             // Fiyat pazarlığı bloğu (inDrive tarzı)
             'negotiation'           => $this->negotiationPayload($req),
         ];
@@ -978,11 +1025,24 @@ class CustomerRideController extends Controller
             'vehicle_color'      => $v?->color,
             'max_passengers'     => (int) ($vClass?->max_passengers ?? 4),
             'plate'              => $v?->plate,
+            // Görsel doğrulama için gerçek araç fotoğrafları (yolculuk başlayınca kullanılır)
+            'vehicle_photos'     => $this->vehiclePhotoUrls($v),
             // NOT: 'phone' bilerek burada YOK — gizlilik. Yalnızca accepted_driver'a eklenir.
             // Mobil harita marker'ı için sürücünün canlı GPS konumu
             'current_lat'        => $d->current_lat !== null ? (float) $d->current_lat : null,
             'current_lng'        => $d->current_lng !== null ? (float) $d->current_lng : null,
         ];
+    }
+
+    /** Araç fotoğraflarını tam URL listesine çevirir (public disk). */
+    private function vehiclePhotoUrls($vehicle): array
+    {
+        if (! $vehicle || ! is_array($vehicle->photos)) return [];
+        $photos = array_values(array_filter($vehicle->photos));
+        return array_map(
+            fn ($p) => str_starts_with($p, 'http') ? $p : asset('storage/' . ltrim($p, '/')),
+            $photos,
+        );
     }
 
     private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float

@@ -109,6 +109,72 @@ class PanicAlertController extends Controller
     }
 
     /**
+     * POST /api/v1/panic  (mobil — Sanctum bearer)
+     * Body: { ride_request_public_id?, lat?, lng?, location_accuracy_m? }
+     * Web trigger()'ın mobil karşılığı: guard yerine $request->user() (bearer) kullanır,
+     * rolü user->type'tan çıkarır. Aynı PanicAlert + operatör bildirimi + oto-arama.
+     */
+    public function mobileTrigger(Request $request): JsonResponse
+    {
+        $rateKey = 'panic:' . $request->ip();
+        if (RateLimiter::tooManyAttempts($rateKey, 5)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Çok fazla istek. Lütfen 1 dakika bekleyin.',
+            ], 429);
+        }
+        RateLimiter::hit($rateKey, 60);
+
+        $validated = $request->validate([
+            'ride_request_public_id' => ['nullable', 'string', 'max:64'],
+            'lat'                    => ['nullable', 'numeric', 'between:-90,90'],
+            'lng'                    => ['nullable', 'numeric', 'between:-180,180'],
+            'location_accuracy_m'    => ['nullable', 'numeric'],
+        ]);
+
+        $user = $request->user();
+        $type = ($user->type ?? null) === 'driver'
+            ? PanicAlert::TRIGGER_DRIVER
+            : PanicAlert::TRIGGER_CUSTOMER;
+
+        $rideRequest = null;
+        if (! empty($validated['ride_request_public_id'])) {
+            $rideRequest = RideRequest::where('public_id', $validated['ride_request_public_id'])->first();
+        }
+
+        $driverId = null;
+        if ($type === PanicAlert::TRIGGER_DRIVER) {
+            $driverId = Driver::where('user_id', $user->id)->value('id');
+        }
+
+        $alert = PanicAlert::create([
+            'ride_request_id'      => $rideRequest?->id,
+            'ride_id'              => $rideRequest?->ride_id,
+            'triggered_by_type'    => $type,
+            'triggered_by_user_id' => $user->id,
+            'driver_id'            => $driverId,
+            'triggered_by_phone'   => $user->phone ?? $rideRequest?->customer_phone,
+            'lat'                  => $validated['lat'] ?? null,
+            'lng'                  => $validated['lng'] ?? null,
+            'location_accuracy_m'  => $validated['location_accuracy_m'] ?? null,
+            'ip_address'           => $request->ip(),
+            'user_agent'           => mb_substr((string) $request->userAgent(), 0, 1000),
+        ]);
+
+        dispatch(function () use ($alert) {
+            $this->notifyOperators($alert);
+            $this->autoCall($alert);
+        })->afterResponse();
+
+        return response()->json([
+            'success'  => true,
+            'alert_id' => $alert->public_id,
+            'message'  => 'Acil yardım talebiniz alındı. Çağrı merkezi sizinle anında iletişime geçecek.',
+            'call'     => '+908503403039',
+        ]);
+    }
+
+    /**
      * POST /api/panic/{publicId}/location
      * Panik gönderildikten sonra cihaz CANLI konumu gönderir (watchPosition).
      * public_id (ULID) ile yetkilendirilir; kapalı/çözülmüş alarmın konumu güncellenmez.
