@@ -100,9 +100,25 @@ class DriverPanelController extends Controller
             return redirect()->route('driver.onboarding');
         }
 
+        // Self-heal: 'busy' ama gerçek aktif yolculuk yoksa (iptal/çökme sonrası
+        // takılmış) sürücüyü tekrar 'online' yap → sayfa yenileyince kilit açılır.
+        if ($driver->availability_status === 'busy' && ! $this->hasActiveRide($driver)) {
+            $driver->update(['availability_status' => 'online']);
+        }
+
         return view('driver.panel', [
             'driver' => $driver->loadMissing('user', 'currentVehicle.vehicleClass'),
         ]);
+    }
+
+    /** Sürücünün gerçekten süren (tamamlanmamış/iptalsiz) bir yolculuğu var mı? */
+    private function hasActiveRide(Driver $driver): bool
+    {
+        return RideRequest::query()
+            ->where('accepted_driver_id', $driver->id)
+            ->where('status', 'accepted')
+            ->whereHas('ride', fn ($q) => $q->whereNotIn('status', ['completed', 'cancelled']))
+            ->exists();
     }
 
     // ────────────────────────────────────────────────────────────
@@ -510,10 +526,16 @@ class DriverPanelController extends Controller
             ], 422);
         }
 
-        // 'busy' zaten aktif yolculuktan otomatik kuruluyor — sürücü el ile değiştiremez
-        if ($driver->availability_status !== 'busy') {
-            $driver->update(['availability_status' => $validated['status']]);
+        // 'busy' aktif yolculuktan otomatik kurulur. GERÇEK aktif yolculuk varken
+        // el ile değiştirilemez; ama aktif yoksa (takılmış) kilidi açıp devam eder.
+        if ($driver->availability_status === 'busy' && $this->hasActiveRide($driver)) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Aktif yolculuk varken durum değiştirilemez.',
+                'status'  => 'busy',
+            ], 409);
         }
+        $driver->update(['availability_status' => $validated['status']]);
 
         return response()->json(['ok' => true, 'status' => $driver->fresh()->availability_status]);
     }
