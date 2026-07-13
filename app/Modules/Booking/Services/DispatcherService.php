@@ -29,8 +29,11 @@ class DispatcherService
     /** Havuza alınacak maksimum sürücü sayısı */
     public const POOL_MAX_SIZE = 8;
 
-    /** Havuz yarıçapı (km) */
+    /** Havuz yarıçapı (km) — sürücünün kendi çapı yoksa (null) kullanılan varsayılan */
     public const POOL_MAX_KM = 5.0;
+
+    /** Sürücünün ayarlayabileceği en geniş görünürlük çapı (km) — sistem tavanı */
+    public const SERVICE_RADIUS_MAX_KM = 20.0;
 
     /** Müşteriye reconfirm için verilen süre (sn) */
     public const RECONFIRM_TTL_SECONDS = 60;
@@ -533,13 +536,18 @@ class DispatcherService
             });
         }
 
-        $drivers = $query->limit(200)->get(['id', 'current_lat', 'current_lng']);
+        $drivers = $query->limit(200)->get(['id', 'current_lat', 'current_lng', 'service_radius_km']);
 
-        $scored = $drivers->map(function ($d) use ($lat, $lng) {
+        $scored = $drivers->map(function ($d) use ($lat, $lng, $maxKm) {
             $km = $this->haversineKm($lat, $lng, (float) $d->current_lat, (float) $d->current_lng);
-            return ['id' => (int) $d->id, 'km' => $km];
+            // Sürücünün kendi çapı; yoksa çağıranın verdiği varsayılan. Sistem tavanı ile sınırlı.
+            $radius = min(
+                (float) ($d->service_radius_km ?? $maxKm),
+                self::SERVICE_RADIUS_MAX_KM,
+            );
+            return ['id' => (int) $d->id, 'km' => $km, 'radius' => $radius];
         })
-            ->filter(fn ($x) => $x['km'] <= $maxKm)
+            ->filter(fn ($x) => $x['km'] <= $x['radius'])
             ->sortBy('km')
             ->take($limit)
             ->pluck('id')

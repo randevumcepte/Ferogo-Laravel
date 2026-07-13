@@ -85,6 +85,7 @@ class DriverController extends Controller
                 'total_rides'         => (int) $driver->total_rides,
                 'is_female'           => $driver->user->gender === 'female',
                 'women_only'          => (bool) $driver->women_passengers_only,
+                'service_radius_km'   => (float) ($driver->service_radius_km ?? 5.0),
             ],
             'offer'    => $offer ? $this->offerPayload($offer) : null,
             'active'   => $activeRequest ? $this->activeRequestPayload($activeRequest) : null,
@@ -151,6 +152,31 @@ class DriverController extends Controller
         $driver->update(['women_passengers_only' => $validated['enabled']]);
 
         return response()->json(['ok' => true, 'women_only' => (bool) $driver->fresh()->women_passengers_only]);
+    }
+
+    /**
+     * POST /api/v1/driver/service-radius
+     * Body: { radius_km: 2..20 }
+     * Sürücünün görünürlük/hizmet çapı — yalnızca bu mesafedeki alış noktaları
+     * için aday gösterilir/eşleşir ve yolcu radarında görünür.
+     */
+    public function setServiceRadius(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver($request);
+        if (! $driver) return response()->json(['ok' => false], 404);
+
+        $validated = $request->validate([
+            'radius_km' => ['required', 'numeric', 'min:2', 'max:20'],
+        ]);
+
+        // 0.5 km adımlarına yuvarla (slider ile uyumlu, temiz değer).
+        $radius = round(((float) $validated['radius_km']) * 2) / 2;
+        $driver->update(['service_radius_km' => $radius]);
+
+        return response()->json([
+            'ok'                => true,
+            'service_radius_km' => (float) $driver->fresh()->service_radius_km,
+        ]);
     }
 
     /**
