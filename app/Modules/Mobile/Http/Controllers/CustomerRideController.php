@@ -879,21 +879,31 @@ class CustomerRideController extends Controller
             ->limit($limit)
             ->get();
 
+        // Devam eden yolculuğa geri dönebilmek için ride_request public_id'lerini
+        // toplu çek (takip ekranı ride_request public_id ile açılır).
+        $reqByRideId = RideRequest::whereIn('ride_id', $rides->pluck('id')->all())
+            ->pluck('public_id', 'ride_id');
+
+        // Terminal olmayan (süren) statüler → geri dönülüp takip edilebilir
+        $terminal = ['completed', 'cancelled', 'no_show'];
+
         return response()->json([
             'ok'    => true,
             'rides' => $rides->map(fn (Ride $r) => [
-                'public_id'        => $r->public_id,
-                'status'           => $r->status,
-                'pickup_address'   => $r->pickup_address,
-                'dropoff_address'  => $r->dropoff_address,
-                'distance_km'      => (float) $r->distance_km,
-                'duration_minutes' => (int) $r->duration_minutes,
-                'total_fare'       => $r->total_fare ? (float) $r->total_fare : null,
-                'currency'         => $r->currency,
-                'driver_name'      => $r->driver?->user?->name,
-                'vehicle_class'    => $r->vehicleClass?->name,
-                'completed_at'     => $r->completed_at?->toIso8601String(),
-                'created_at'       => $r->created_at->toIso8601String(),
+                'public_id'         => $r->public_id,
+                'request_public_id' => $reqByRideId[$r->id] ?? null,
+                'is_active'         => ! in_array($r->status, $terminal, true),
+                'status'            => $r->status,
+                'pickup_address'    => $r->pickup_address,
+                'dropoff_address'   => $r->dropoff_address,
+                'distance_km'       => (float) $r->distance_km,
+                'duration_minutes'  => (int) $r->duration_minutes,
+                'total_fare'        => $r->total_fare ? (float) $r->total_fare : null,
+                'currency'          => $r->currency,
+                'driver_name'       => $r->driver?->user?->name,
+                'vehicle_class'     => $r->vehicleClass?->name,
+                'completed_at'      => $r->completed_at?->toIso8601String(),
+                'created_at'        => $r->created_at->toIso8601String(),
             ])->values(),
         ]);
     }
@@ -953,6 +963,11 @@ class CustomerRideController extends Controller
             'pickup_lat'            => $req->pickup_lat !== null ? (float) $req->pickup_lat : null,
             'pickup_lng'            => $req->pickup_lng !== null ? (float) $req->pickup_lng : null,
             'pickup_address'        => $req->pickup_address,
+            // Varış noktası — yolculuk ilerleme takibi (araç→hedef + rota çizgisi)
+            'dropoff_lat'           => $req->dropoff_lat !== null ? (float) $req->dropoff_lat : null,
+            'dropoff_lng'           => $req->dropoff_lng !== null ? (float) $req->dropoff_lng : null,
+            'dropoff_address'       => $req->dropoff_address,
+            'trip_distance_km'      => $req->distance_km !== null ? (float) $req->distance_km : null,
             'arrived_at'            => $req->driver_arrived_at?->toIso8601String(),
             'customer_confirmed_at' => $req->customer_confirmed_at?->toIso8601String(),
             'no_show_at'            => $req->no_show_at?->toIso8601String(),
