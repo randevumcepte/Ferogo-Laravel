@@ -839,10 +839,14 @@ class DriverPanelController extends Controller
      *   - ride.status = 'in_progress', started_at set
      *   - Müşteri tarafına push: görsel doğrulama modal'ı açılır (Faz 6)
      */
-    public function startRide(): JsonResponse
+    public function startRide(Request $request): JsonResponse
     {
         $driver = $this->currentDriver();
         if (! $driver) return response()->json(['ok' => false], 401);
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'size:4'],
+        ]);
 
         $req = RideRequest::query()
             ->with('ride')
@@ -851,18 +855,26 @@ class DriverPanelController extends Controller
             ->latest('accepted_at')
             ->firstOrFail();
 
-        if (! $req->boarding_confirmed_at) {
-            return response()->json(['ok' => false, 'message' => 'Önce müşterinin araca bindiğini onayla.'], 422);
-        }
-
         if ($req->started_at) {
             return response()->json(['ok' => true, 'already_started' => true]);
         }
 
-        $req->update([
-            'started_at' => now(),
-            'visual_verify_prompted_at' => now(), // müşteri tarafına Faz 6 modal'ı tetiklenir
-        ]);
+        if (! $req->driver_arrived_at) {
+            return response()->json(['ok' => false, 'message' => 'Önce buluşma noktasına vardığını bildir.'], 422);
+        }
+
+        // Brute-force koruması: 5 hatalı deneme / dk
+        $rl = 'web_startcode:' . $driver->id;
+        if (RateLimiter::tooManyAttempts($rl, 5)) {
+            return response()->json(['ok' => false, 'message' => 'Çok fazla hatalı deneme. Biraz bekle.'], 429);
+        }
+
+        if ($req->match_code === null || ! hash_equals((string) $req->match_code, (string) $validated['code'])) {
+            RateLimiter::hit($rl, 60);
+            return response()->json(['ok' => false, 'message' => 'Eşleşme kodu hatalı. Yolcudan kodu tekrar iste.'], 422);
+        }
+
+        $req->update(['started_at' => now()]);
 
         if ($req->ride) {
             $req->ride->update([
@@ -874,7 +886,7 @@ class DriverPanelController extends Controller
         RideMessage::create([
             'ride_request_id' => $req->id,
             'sender'          => 'system',
-            'body'            => '🚗 Yolculuk başladı. İyi yolculuklar!',
+            'body'            => 'Eşleşme kodu doğrulandı. Yolculuk başladı.',
         ]);
 
         return response()->json([
