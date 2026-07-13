@@ -100,5 +100,6 @@ Route::middleware(['auth:sanctum', 'device', 'role:driver', 'ability:driver:*'])
         Route::post('active/start-code', [DriverController::class, 'startWithCode']);
         Route::post('active/no-show',  [DriverController::class, 'reportNoShow']);
         Route::post('active/complete', [DriverController::class, 'completeRide']);
+        Route::post('active/cancel',   [DriverController::class, 'cancelActive']);
         Route::middleware('throttle:30,1')->post('active/message', [DriverController::class, 'sendMessage']);
     });

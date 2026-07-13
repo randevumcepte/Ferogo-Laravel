@@ -378,6 +378,17 @@ class RideRequestService
             ]);
             $this->trustService->recordCustomerCancellation($req->customer_phone, late: true);
 
+            // Sürücüyü SERBEST BIRAK (busy → online) + ride'ı iptal et.
+            // Aksi halde sürücü "Yolculukta"da kilitli kalır.
+            if ($req->accepted_driver_id) {
+                Driver::where('id', $req->accepted_driver_id)
+                    ->where('availability_status', 'busy')
+                    ->update(['availability_status' => 'online']);
+            }
+            if ($req->ride) {
+                $req->ride->update(['status' => 'cancelled']);
+            }
+
             // Sürücü buluşmaya gidiyor olabilir → iptal push'u (best-effort).
             try {
                 app(\App\Modules\Notification\Services\NotificationService::class)

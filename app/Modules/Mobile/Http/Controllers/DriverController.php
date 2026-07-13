@@ -108,13 +108,19 @@ class DriverController extends Controller
             'lng'    => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
-        // busy aktif yolculuktan otomatik — sürücü el ile değiştiremez
+        // busy aktif yolculuktan otomatik — GERÇEK aktif yolculuk varsa el ile
+        // değiştirilemez. Ama aktif talep yoksa (iptal/çökme sonrası kilitli
+        // kalmış) sürücü "Çevrimiçi ol" ile kendini kurtarabilir (self-heal).
         if ($driver->availability_status === 'busy') {
-            return response()->json([
-                'ok'      => false,
-                'message' => 'Aktif yolculuk varken durum değiştirilemez.',
-                'status'  => 'busy',
-            ], 409);
+            $hasActive = $this->activeRequestFor($driver) !== null;
+            if ($hasActive) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => 'Aktif yolculuk varken durum değiştirilemez.',
+                    'status'  => 'busy',
+                ], 409);
+            }
+            // Kilitli busy → devam et, istenen duruma geç (kilidi aç).
         }
 
         $update = ['availability_status' => $validated['status']];
@@ -408,6 +414,35 @@ class DriverController extends Controller
             'sender'          => 'system',
             'body'            => 'Yolculuk tamamlandı.',
         ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * POST /api/v1/driver/active/cancel
+     * Sürücü aktif yolculuğu iptal eder / takılan durumu kapatır.
+     * Talep + ride 'cancelled', sürücü tekrar 'online'.
+     */
+    public function cancelActive(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver($request);
+        if (! $driver) return response()->json(['ok' => false], 404);
+
+        $req = $this->activeRequestFor($driver);
+        if ($req) {
+            $req->update(['status' => 'cancelled']);
+            if ($req->ride) {
+                $req->ride->update(['status' => 'cancelled']);
+            }
+            RideMessage::create([
+                'ride_request_id' => $req->id,
+                'sender'          => 'system',
+                'body'            => 'Sürücü yolculuğu iptal etti.',
+            ]);
+        }
+
+        // Sürücüyü her hâlükârda serbest bırak (busy kilidini aç).
+        $driver->update(['availability_status' => 'online']);
 
         return response()->json(['ok' => true]);
     }
