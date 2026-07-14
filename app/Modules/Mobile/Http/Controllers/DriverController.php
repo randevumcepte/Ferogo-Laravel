@@ -556,6 +556,8 @@ class DriverController extends Controller
             'pickup_lat'               => (float) $req->pickup_lat,
             'pickup_lng'               => (float) $req->pickup_lng,
             'dropoff_address'          => $req->dropoff_address,
+            'dropoff_lat'              => $req->dropoff_lat !== null ? (float) $req->dropoff_lat : null,
+            'dropoff_lng'              => $req->dropoff_lng !== null ? (float) $req->dropoff_lng : null,
             'distance_km'              => (float) $req->distance_km,
             'duration_minutes'         => (int) $req->duration_minutes,
             'estimated_fare'           => $req->estimated_fare ? (float) $req->estimated_fare : null,
