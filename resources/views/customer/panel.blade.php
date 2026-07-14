@@ -125,17 +125,6 @@
         @endif
     </section>
 
-    {{-- ===== Ana çağrı: Araç Çağır (birincil aksiyon) ===== --}}
-    <button type="button" id="call-car-btn"
-            class="w-full text-left rounded-3xl bg-gradient-to-br from-brand to-brand-600 text-black p-6 flex items-center gap-4 shadow-lg shadow-brand/20 hover:scale-[1.01] active:scale-[0.99] transition">
-        <span class="w-14 h-14 rounded-2xl bg-black/10 flex items-center justify-center text-3xl shrink-0">🚗</span>
-        <span class="min-w-0 flex-1">
-            <span class="block text-2xl font-extrabold leading-tight">Araç Çağır</span>
-            <span class="block text-sm font-medium text-black/70 mt-0.5">Nereye gitmek istiyorsun? Favori, havuz ya da kadın sürücü — sen seç.</span>
-        </span>
-        <span class="text-2xl font-black shrink-0">→</span>
-    </button>
-
     {{-- ===== Aktif Yolculuk — zengin kart ===== --}}
     @if ($activeRequest || $activeRide)
         @php
@@ -406,6 +395,17 @@
 
     {{-- Reklam alanı: Yolculuk Takip (Platin · esir dikkat) --}}
     @include('partials.ad-slot', ['placement' => 'ride_tracking'])
+
+    {{-- ===== Ana çağrı: Araç Çağır (birincil aksiyon) — reklamın altında ===== --}}
+    <button type="button" id="call-car-btn"
+            class="w-full text-left rounded-3xl bg-gradient-to-br from-brand to-brand-600 text-black p-6 flex items-center gap-4 shadow-lg shadow-brand/20 hover:scale-[1.01] active:scale-[0.99] transition">
+        <span class="w-14 h-14 rounded-2xl bg-black/10 flex items-center justify-center text-3xl shrink-0">🚗</span>
+        <span class="min-w-0 flex-1">
+            <span class="block text-2xl font-extrabold leading-tight">Araç Çağır</span>
+            <span class="block text-sm font-medium text-black/70 mt-0.5">Nereye gitmek istiyorsun? Favori, havuz ya da kadın sürücü — sen seç.</span>
+        </span>
+        <span class="text-2xl font-black shrink-0">→</span>
+    </button>
 
     {{-- ===== Canlı Radar (yolculuk-yapin sayfasının embed versiyonu) ===== --}}
     <section class="rounded-3xl border border-white/10 bg-zinc-950 overflow-hidden">
