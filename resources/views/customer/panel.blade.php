@@ -394,11 +394,11 @@
                 </div>
             </div>
 
-            {{-- Yolculuğu iptal et — yalnızca ride_request (rezervasyon değil) için --}}
-            @if ($activeRequest && $activeRequest->public_id)
+            {{-- Yolculuğu iptal et — aktif talep hangi kaynaktan gelirse gelsin --}}
+            @if (! empty($activeCancelPid))
                 <div class="px-6 pb-5 -mt-1">
                     <button type="button" id="active-cancel-btn"
-                            data-pid="{{ $activeRequest->public_id }}"
+                            data-pid="{{ $activeCancelPid }}"
                             class="text-xs font-semibold text-red-300/80 hover:text-red-200 border border-red-500/30 hover:border-red-500/50 bg-red-500/5 hover:bg-red-500/10 rounded-xl px-3 py-2 transition">
                         Yolculuğu iptal et
                     </button>

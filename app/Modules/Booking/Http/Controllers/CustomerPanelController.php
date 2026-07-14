@@ -87,6 +87,18 @@ class CustomerPanelController extends Controller
             ->latest('id')
             ->first();
 
+        // İptal edilebilir aktif talebin public_id'si — kart hangi kaynaktan
+        // gelirse gelsin (activeRequest ya da activeRide'ın bağlı olduğu talep)
+        // buradan çözülür ki "Yolculuğu iptal et" butonu her durumda çıksın.
+        $activeCancelPid = $activeRequest?->public_id;
+        if (! $activeCancelPid && $activeRide) {
+            $activeCancelPid = RideRequest::query()
+                ->where('ride_id', $activeRide->id)
+                ->whereNotIn('status', ['cancelled', 'expired', 'exhausted'])
+                ->latest('id')
+                ->value('public_id');
+        }
+
         // Son 10 yolculuk
         $recentRides = Ride::query()
             ->with(['driver.user', 'vehicleClass'])
@@ -104,6 +116,7 @@ class CustomerPanelController extends Controller
             'trust'          => $trust,
             'activeRide'     => $activeRide,
             'activeRequest'  => $activeRequest,
+            'activeCancelPid'=> $activeCancelPid,
             'recentRides'    => $recentRides,
             'favoriteDrivers'=> $favoriteDrivers,
             'favoriteIds'    => $favoriteIds,
