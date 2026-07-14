@@ -779,17 +779,55 @@
                 {{-- Error --}}
                 <div id="qm-error" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300"></div>
 
-                {{-- Gönder — AUTO (favori-öncelikli) birincil, manuel ikincil --}}
-                <button type="button" id="qm-auto-submit" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-bold transition shadow-xl shadow-brand/30">
-                    <span id="qm-auto-submit-text">🔥 Hadi Gidelim</span>
-                    <svg id="qm-auto-submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-                </button>
-                <p class="text-[10px] text-zinc-500 text-center leading-relaxed -mt-1">Talebin önce <span class="text-brand/80">favori sürücülerine</span>, onlar uygun değilse yakındaki üye sürücülere gider.</p>
+                {{-- ── Kaynak sekmeleri (mobil app paritesi): Tümü / Favorilerim / Havuz / Kadın ── --}}
+                <div id="qm-tabs" class="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/10">
+                    <button type="button" data-tab="all" class="qm-tab px-2 py-2 rounded-xl text-[12px] font-bold transition bg-brand text-black shadow-md shadow-brand/30">Tümü</button>
+                    <button type="button" data-tab="favorites" class="qm-tab px-2 py-2 rounded-xl text-[12px] font-bold transition text-zinc-300 hover:text-white hover:bg-white/5">Favorilerim</button>
+                    <button type="button" data-tab="pool" class="qm-tab px-2 py-2 rounded-xl text-[12px] font-bold transition text-zinc-300 hover:text-white hover:bg-white/5">Havuz</button>
+                    <button type="button" data-tab="women" class="qm-tab px-2 py-2 rounded-xl text-[12px] font-bold transition text-zinc-300 hover:text-white hover:bg-white/5">Kadın</button>
+                </div>
 
-                {{-- Manuel: sadece açtığın sürücüye gönder --}}
-                <button type="submit" id="qm-submit" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-50 text-zinc-200 text-sm font-semibold transition">
+                {{-- ── Sekme içeriği ── --}}
+                {{-- Tümü --}}
+                <div id="qm-tab-pane-all" class="qm-tab-pane space-y-3">
+                    <p class="text-[11px] text-zinc-400 leading-relaxed text-center px-1">Teklifin tüm müsait sürücülere aynı anda gider; ilk kabul eden alır.</p>
+                    <button type="button" id="qm-tab-submit-all" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-bold transition shadow-xl shadow-brand/30">
+                        <span>Tümüne gönder</span>
+                        <svg class="qm-tab-spinner hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                    </button>
+                </div>
+
+                {{-- Favorilerim / Havuz / Kadın — driver liste panelleri (tek şablon, JS doldurur) --}}
+                @foreach (['favorites' => 'favorilerim', 'pool' => 'havuz', 'women' => 'kadın'] as $paneKey => $_label)
+                <div id="qm-tab-pane-{{ $paneKey }}" class="qm-tab-pane hidden space-y-2.5">
+                    {{-- Hepsini seç (yalnız >1 online sürücü varken görünür) --}}
+                    <label class="qm-selectall-wrap hidden items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10 cursor-pointer">
+                        <span class="text-[11px] font-semibold text-zinc-200">Hepsini seç</span>
+                        <input type="checkbox" class="qm-selectall w-4 h-4 rounded bg-white/5 border-white/20 text-brand focus:ring-brand/40 focus:ring-offset-0">
+                    </label>
+                    {{-- Sürücü listesi (radio satırlar) — JS doldurur --}}
+                    <div class="qm-driver-list space-y-1.5 max-h-56 overflow-y-auto"></div>
+                    {{-- Boş durum / yardımcı metin --}}
+                    <p class="qm-empty-text hidden text-[11px] text-zinc-500 text-center px-1 leading-relaxed"></p>
+                    {{-- Gönder --}}
+                    <button type="button" class="qm-tab-submit w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-brand hover:bg-brand-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-bold transition shadow-xl shadow-brand/30" disabled>
+                        <span class="qm-tab-submit-text">Önce bir sürücü seç</span>
+                        <svg class="qm-tab-spinner hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                    </button>
+                    <p class="qm-tab-helper text-[10px] text-zinc-500 text-center leading-relaxed -mt-1">Seçtiğin sürücüyle birebir pazarlık</p>
+                </div>
+                @endforeach
+
+                {{-- Legacy butonlar — YENİ sekmeler bunların yerini aldı; DOM'da gizli tutulur
+                     çünkü submitRideRequest/requestOtp/showQmRateLimit spinner+disable için
+                     bu id'lere referans veriyor. Görünmez ama işlevsel referanslar korunur. --}}
+                <button type="button" id="qm-auto-submit" class="hidden">
+                    <span id="qm-auto-submit-text">🔥 Hadi Gidelim</span>
+                    <svg id="qm-auto-submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/></svg>
+                </button>
+                <button type="submit" id="qm-submit" class="hidden">
                     <span id="qm-submit-text">Sadece bu sürücüye gönder</span>
-                    <svg id="qm-submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                    <svg id="qm-submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/></svg>
                 </button>
             </form>
 
@@ -1462,6 +1500,8 @@
             // Harita marker'larını gerçek GPS'e göre senkronla + listeyi tazele
             syncRealMarkers();
             if (userCenterGlobal) renderRail(userCenterGlobal);
+            // Modal açıksa aktif kaynak sekmesi panelini de tazele (fav/havuz/kadın listesi)
+            if (typeof window.qmRefreshActiveTabPane === 'function') window.qmRefreshActiveTabPane();
         } catch (err) {
             console.error('[radar] nearby fetch failed:', err);
         }
@@ -2384,6 +2424,8 @@
 
         // Reset form
         modalForm.reset();
+        // Kaynak sekmelerini sıfırla → varsayılan "Tümü", seçimler temiz
+        if (typeof qmResetTabs === 'function') qmResetTabs();
         // ÖNCE detaylı sürücü/araç profili — API'den zengin veri (bio + sertifikalar + fotoğraflar)
         showStage('driver-profile');
         if (real && real.id) {
@@ -2725,6 +2767,322 @@
         const cached = storedTokenFor(pendingPayload.customer_phone);
         if (cached) { await submitRideRequest(cached); return; }
         await requestOtp(pendingPayload.customer_phone);
+    });
+
+    // ===================================================================
+    // ===== KAYNAK SEKMELERİ (Tümü / Favorilerim / Havuz / Kadın) =======
+    // ===================================================================
+    // Mobil app paritesi: her sekme farklı bir dispatch modu sürer.
+    //  - Tümü      → dispatch_mode='auto' (favori-öncelikli, tüm müsait sürücüler)
+    //  - Fav/Havuz/Kadın tek seçim → preferred_driver_id (manuel/birebir)
+    //  - Fav/Havuz/Kadın "Hepsini seç" → dispatch_mode='pool' + driver_ids[]
+    // realDrivers zaten SADECE online sürücüleri içerir (nearby endpoint),
+    // dolayısıyla listedeki her sürücü seçilebilir/sayılır kabul edilir.
+
+    let qmActiveTab = 'all';                 // aktif sekme
+    const qmSelectedDriverIds = {            // her sekmede tek-seçili sürücü id'si
+        favorites: null, pool: null, women: null,
+    };
+
+    const QM_TAB_META = {
+        favorites: {
+            filter: (d) => d.is_favorite === true,
+            empty:  'Favori sürücün yok ya da şu an müsait değil.',
+        },
+        pool: {
+            filter: (d) => d.is_favorite !== true,
+            empty:  'Yakında şu an müsait sürücü yok.',
+        },
+        women: {
+            filter: (d) => d.is_female === true,
+            empty:  'Yakında müsait kadın sürücü yok.',
+        },
+    };
+
+    // Bir sekmenin online (=seçilebilir) sürücü listesini döner.
+    function qmDriversForTab(tab) {
+        const meta = QM_TAB_META[tab];
+        if (!meta) return [];
+        return (Array.isArray(realDrivers) ? realDrivers : []).filter(meta.filter);
+    }
+
+    // Tek sekme panelini (liste + buton + hepsini-seç) güncelle.
+    function qmRenderTabPane(tab) {
+        const pane = document.getElementById('qm-tab-pane-' + tab);
+        if (!pane) return;
+        const drivers   = qmDriversForTab(tab);
+        const listEl    = pane.querySelector('.qm-driver-list');
+        const emptyEl   = pane.querySelector('.qm-empty-text');
+        const selAllWrap= pane.querySelector('.qm-selectall-wrap');
+        const selAllChk = pane.querySelector('.qm-selectall');
+        const submitBtn = pane.querySelector('.qm-tab-submit');
+        const submitTxt = pane.querySelector('.qm-tab-submit-text');
+        const helperEl  = pane.querySelector('.qm-tab-helper');
+
+        // Boş durum → liste gizli, uyarı + disabled buton
+        if (!drivers.length) {
+            listEl.innerHTML = '';
+            emptyEl.textContent = QM_TAB_META[tab].empty;
+            emptyEl.classList.remove('hidden');
+            selAllWrap.classList.add('hidden');
+            selAllWrap.classList.remove('flex');
+            submitBtn.disabled = true;
+            submitTxt.textContent = 'Önce bir sürücü seç';
+            helperEl.textContent = 'Seçtiğin sürücüyle birebir pazarlık';
+            return;
+        }
+        emptyEl.classList.add('hidden');
+
+        // "Hepsini seç" yalnız >1 online sürücü varken
+        const multi = drivers.length > 1;
+        selAllWrap.classList.toggle('hidden', !multi);
+        selAllWrap.classList.toggle('flex', multi);
+        if (!multi && selAllChk) selAllChk.checked = false;
+
+        // Seçili id hâlâ listede mi? değilse temizle
+        if (qmSelectedDriverIds[tab] != null && !drivers.some(d => d.id === qmSelectedDriverIds[tab])) {
+            qmSelectedDriverIds[tab] = null;
+        }
+
+        const selectAllOn = multi && selAllChk && selAllChk.checked;
+
+        // Radio satırları
+        listEl.innerHTML = drivers.map(d => {
+            const checked = (!selectAllOn && qmSelectedDriverIds[tab] === d.id) ? 'checked' : '';
+            const rating  = Number(d.rating || 0).toFixed(2);
+            const vlabel  = d.vehicle_label || d.vehicle_class || '';
+            const dis     = selectAllOn ? 'opacity-60 pointer-events-none' : '';
+            return `
+                <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-brand/40 cursor-pointer transition ${dis}">
+                    <input type="radio" name="qm-tab-driver-${tab}" value="${d.id}" ${checked}
+                           class="qm-driver-radio w-4 h-4 text-brand bg-white/5 border-white/20 focus:ring-brand/40 focus:ring-offset-0" ${selectAllOn ? 'disabled' : ''}>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-semibold text-white truncate max-w-[150px]">${(d.name || 'Sürücü')}</span>
+                            <span class="text-[11px] text-brand shrink-0">⭐ ${rating}</span>
+                        </div>
+                        ${vlabel ? `<div class="text-[10px] text-zinc-500 truncate">${vlabel}</div>` : ''}
+                    </div>
+                </label>`;
+        }).join('');
+
+        // Radio seçim olayları
+        listEl.querySelectorAll('.qm-driver-radio').forEach(r => {
+            r.addEventListener('change', () => {
+                qmSelectedDriverIds[tab] = parseInt(r.value, 10);
+                qmUpdateTabButton(tab);
+            });
+        });
+
+        qmUpdateTabButton(tab);
+    }
+
+    // Buton etiketi + helper metni + disabled durumunu güncelle.
+    function qmUpdateTabButton(tab) {
+        const pane = document.getElementById('qm-tab-pane-' + tab);
+        if (!pane) return;
+        const drivers   = qmDriversForTab(tab);
+        const selAllChk = pane.querySelector('.qm-selectall');
+        const submitBtn = pane.querySelector('.qm-tab-submit');
+        const submitTxt = pane.querySelector('.qm-tab-submit-text');
+        const helperEl  = pane.querySelector('.qm-tab-helper');
+        if (!drivers.length) return;
+
+        const multi = drivers.length > 1;
+        const selectAllOn = multi && selAllChk && selAllChk.checked;
+
+        if (selectAllOn) {
+            submitBtn.disabled = false;
+            submitTxt.textContent = `Hepsine gönder (${drivers.length})`;
+            helperEl.textContent = 'Seçilenlere aynı anda gider, ilk kabul eden alır.';
+        } else if (qmSelectedDriverIds[tab] != null) {
+            submitBtn.disabled = false;
+            submitTxt.textContent = 'Teklifi gönder';
+            helperEl.textContent = 'Seçtiğin sürücüyle birebir pazarlık';
+        } else {
+            submitBtn.disabled = true;
+            submitTxt.textContent = 'Önce bir sürücü seç';
+            helperEl.textContent = 'Seçtiğin sürücüyle birebir pazarlık';
+        }
+    }
+
+    // Aktif sekmeyi değiştir (buton stilleri + pane görünürlüğü).
+    function qmSwitchTab(tab) {
+        qmActiveTab = tab;
+        document.querySelectorAll('#qm-tabs .qm-tab').forEach(btn => {
+            const on = btn.dataset.tab === tab;
+            btn.classList.toggle('bg-brand', on);
+            btn.classList.toggle('text-black', on);
+            btn.classList.toggle('shadow-md', on);
+            btn.classList.toggle('shadow-brand/30', on);
+            btn.classList.toggle('text-zinc-300', !on);
+            btn.classList.toggle('hover:text-white', !on);
+            btn.classList.toggle('hover:bg-white/5', !on);
+        });
+        ['all', 'favorites', 'pool', 'women'].forEach(t => {
+            const p = document.getElementById('qm-tab-pane-' + t);
+            if (p) p.classList.toggle('hidden', t !== tab);
+        });
+        if (tab !== 'all') qmRenderTabPane(tab);
+    }
+
+    // realDrivers her tazelendiğinde açık sekme panelini yenile (radar polling).
+    function qmRefreshActiveTabPane() {
+        if (qmActiveTab && qmActiveTab !== 'all') qmRenderTabPane(qmActiveTab);
+    }
+    window.qmRefreshActiveTabPane = qmRefreshActiveTabPane;
+
+    // Modal açılışında sekmeleri varsayılana (Tümü) sıfırla + seçimleri temizle.
+    function qmResetTabs() {
+        qmSelectedDriverIds.favorites = null;
+        qmSelectedDriverIds.pool = null;
+        qmSelectedDriverIds.women = null;
+        ['favorites', 'pool', 'women'].forEach(tab => {
+            const pane = document.getElementById('qm-tab-pane-' + tab);
+            if (!pane) return;
+            const chk = pane.querySelector('.qm-selectall');
+            if (chk) chk.checked = false;
+        });
+        qmSwitchTab('all');
+    }
+
+    // Sekme butonları
+    document.querySelectorAll('#qm-tabs .qm-tab').forEach(btn => {
+        btn.addEventListener('click', () => qmSwitchTab(btn.dataset.tab));
+    });
+
+    // "Hepsini seç" toggle'ları
+    ['favorites', 'pool', 'women'].forEach(tab => {
+        const pane = document.getElementById('qm-tab-pane-' + tab);
+        if (!pane) return;
+        const chk = pane.querySelector('.qm-selectall');
+        if (chk) chk.addEventListener('change', () => qmRenderTabPane(tab));
+    });
+
+    // Tek sürücü seçimli / hepsini-seç payload'ı (favorites/pool/women sekmeleri).
+    // buildPayloadFromForm() manuel şablonunu temel alır; dispatch alanlarını modu göre kurar.
+    function buildTabPayload(mode, driverIds, preferredId) {
+        const fd = new FormData(modalForm);
+        const straight = distanceKm(userCenterGlobal, [selectedDropoff.lat, selectedDropoff.lng]);
+        const km = straight * 1.2;
+        const mins = Math.max(5, Math.round(km * 2.2 + 3));
+        // Fiyat için sınıf: seçili sürücünün sınıfı, yoksa listedekinin, yoksa easy.
+        let slug = 'easy';
+        if (preferredId != null) {
+            const pd = (realDrivers || []).find(d => d.id === preferredId);
+            if (pd && pd.vehicle_class_slug) slug = pd.vehicle_class_slug;
+        } else if (driverIds && driverIds.length) {
+            const pd = (realDrivers || []).find(d => d.id === driverIds[0]);
+            if (pd && pd.vehicle_class_slug) slug = pd.vehicle_class_slug;
+        } else if (selectedRealDriver && selectedRealDriver.vehicle_class_slug) {
+            slug = selectedRealDriver.vehicle_class_slug;
+        }
+        const rates = {
+            easy:     { base: 50,  perKm: 22, min: 150 },
+            platinum: { base: 100, perKm: 35, min: 250 },
+            vip:      { base: 200, perKm: 55, min: 500 },
+        };
+        const r = rates[slug] || rates.easy;
+        const estFare = Math.max(r.min, r.base + km * r.perKm);
+
+        const payload = {
+            vehicle_class_slug:  slug,
+            pickup_address:      qmPickupInput.value.trim() || `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`,
+            pickup_lat:          userCenterGlobal[0],
+            pickup_lng:          userCenterGlobal[1],
+            dropoff_address:     selectedDropoff.display_name,
+            dropoff_lat:         selectedDropoff.lat,
+            dropoff_lng:         selectedDropoff.lng,
+            customer_name:       fd.get('customer_name'),
+            customer_phone:      fd.get('customer_phone'),
+            distance_km:         parseFloat(km.toFixed(2)),
+            duration_minutes:    mins,
+            estimated_fare:      Math.round(estFare),
+            suggested_fare:      Math.round(suggestedFare || estFare),
+            customer_offer_fare: Math.round(customerOffer == null ? (suggestedFare || estFare) : customerOffer),
+            fingerprint:         deviceFingerprint,
+            kvkk_consent:        fd.get('kvkk_consent') ? 1 : 0,
+        };
+
+        if (mode === 'pool') {
+            payload.dispatch_mode = 'pool';
+            payload.driver_ids = driverIds;
+        } else {
+            // Tek seçim → birebir/manuel: preferred + diğer online adaylar fallback.
+            // Backend fallback_driver_ids max:5 → aynı sekmedeki ilk 5 diğer sürücü.
+            payload.preferred_driver_id = preferredId;
+            payload.fallback_driver_ids = qmDriversForTab(qmActiveTab)
+                .filter(d => d.id !== preferredId)
+                .map(d => d.id)
+                .slice(0, 5);
+        }
+        return payload;
+    }
+
+    // Ortak submit ön-kontrol + pipeline çağrısı (auto/tab hepsi bunu kullanır).
+    async function qmDispatch(payload) {
+        qmError.classList.add('hidden');
+        if (!userCenterGlobal) {
+            qmError.textContent = 'Konum bilgisi eksik. Konum izni ver veya sayfayı yenile.';
+            qmError.classList.remove('hidden'); return;
+        }
+        if (!selectedDropoff) {
+            qmError.textContent = 'Lütfen önerilerden bir bırakış noktası seç.';
+            qmError.classList.remove('hidden'); return;
+        }
+        const kvkkEl = modalForm.querySelector('[name="kvkk_consent"]');
+        if (kvkkEl && !kvkkEl.checked) {
+            qmError.textContent = 'Devam etmek için KVKK onayını işaretle.';
+            qmError.classList.remove('hidden'); return;
+        }
+        if (!payload.customer_name || !payload.customer_phone) {
+            qmError.textContent = 'Ad ve telefon gerekli.';
+            qmError.classList.remove('hidden'); return;
+        }
+        pendingPayload = payload;
+        if (FEROGO_AUTH) { await submitRideRequest(null); return; }
+        const cached = storedTokenFor(payload.customer_phone);
+        if (cached) { await submitRideRequest(cached); return; }
+        await requestOtp(payload.customer_phone);
+    }
+
+    // Tümü → dispatch_mode='auto'
+    const qmTabSubmitAll = document.getElementById('qm-tab-submit-all');
+    if (qmTabSubmitAll) qmTabSubmitAll.addEventListener('click', async () => {
+        if (!userCenterGlobal || !selectedDropoff) {
+            qmError.textContent = !userCenterGlobal
+                ? 'Konum bilgisi eksik. Konum izni ver veya sayfayı yenile.'
+                : 'Lütfen önerilerden bir bırakış noktası seç.';
+            qmError.classList.remove('hidden'); return;
+        }
+        await qmDispatch(buildAutoPayload());
+    });
+
+    // Fav / Havuz / Kadın → tek seçim (manuel) ya da hepsini-seç (pool)
+    ['favorites', 'pool', 'women'].forEach(tab => {
+        const pane = document.getElementById('qm-tab-pane-' + tab);
+        if (!pane) return;
+        const btn = pane.querySelector('.qm-tab-submit');
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            if (btn.disabled) return;
+            const drivers = qmDriversForTab(tab);
+            const selAllChk = pane.querySelector('.qm-selectall');
+            const selectAllOn = drivers.length > 1 && selAllChk && selAllChk.checked;
+
+            let payload;
+            if (selectAllOn) {
+                payload = buildTabPayload('pool', drivers.map(d => d.id), null);
+            } else {
+                const pid = qmSelectedDriverIds[tab];
+                if (pid == null) {
+                    qmError.textContent = 'Önce bir sürücü seç.';
+                    qmError.classList.remove('hidden'); return;
+                }
+                payload = buildTabPayload('manual', null, pid);
+            }
+            await qmDispatch(payload);
+        });
     });
 
     // Rate-limit hatasi: qmError'da canli geri sayim + submit butonu disable

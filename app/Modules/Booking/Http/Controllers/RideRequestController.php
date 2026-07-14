@@ -83,12 +83,19 @@ class RideRequestController extends Controller
             ->limit(50)
             ->get();
 
-        $scored = $candidates->map(function (Driver $d) use ($lat, $lng) {
+        // Giriş yapmış müşterinin favori sürücü id'leri — modal "Favorilerim" sekmesi
+        // sürücüleri buna göre ayırır. Misafirde boş set (tek sorgu, N+1 yok).
+        $customer = Auth::guard('customer')->user();
+        $favoriteIds = array_flip($this->favoriteService->favoriteIds($customer));
+
+        $scored = $candidates->map(function (Driver $d) use ($lat, $lng, $favoriteIds) {
             $km = $this->haversineKm($lat, $lng, (float) $d->current_lat, (float) $d->current_lng);
             $payload = $this->driverPayload($d);
             return array_merge($payload ?? [], [
                 'distance_km' => round($km, 2),
                 'eta_minutes' => max(1, (int) round($km * 2.4 + 0.8)),
+                // Giriş yapmış müşteri bu sürücüyü favoriledi mi? (misafirde her zaman false)
+                'is_favorite' => isset($favoriteIds[$d->id]),
                 // Radar haritasında gerçek konumdan marker çizmek için canlı GPS
                 'current_lat' => $d->current_lat !== null ? (float) $d->current_lat : null,
                 'current_lng' => $d->current_lng !== null ? (float) $d->current_lng : null,
