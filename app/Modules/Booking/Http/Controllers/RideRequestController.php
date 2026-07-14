@@ -309,9 +309,16 @@ class RideRequestController extends Controller
         $authed = $customerAuthed;
         $isAuthedCustomer = $authed && $authed->type === 'customer';
 
-        // Dağıtım modu: 'auto' → favori-öncelikli dalga (yolcu sürücü seçmez);
-        // 'manual' (varsayılan) → yolcu radardan sürücü seçer (preferred_driver_id).
-        $isAuto = $request->input('dispatch_mode') === 'auto';
+        // Dağıtım modu (mobil paritesi):
+        //  'auto'   → favori-öncelikli dalga; favori yoksa yakın havuz (Tümü)
+        //  'nearby' → favorileri atla, doğrudan yakın havuz
+        //  'pool'   → yolcunun seçtiği sürücü listesi (favori/havuz/kadın "hepsi")
+        //  'manual' / null → yolcu tek sürücü seçer (preferred_driver_id, 1:1)
+        $dispatchMode = $request->input('dispatch_mode');
+        $isAuto   = $dispatchMode === 'auto';
+        $isNearby = $dispatchMode === 'nearby';
+        $isList   = $dispatchMode === 'pool';
+        $isPool   = $isAuto || $isNearby || $isList;
 
         // Authed customer'a phone_verified_at null geldiyse, transparan olarak şimdi işaretle
         if ($isAuthedCustomer && ! $authed->phone_verified_at) {
@@ -337,10 +344,12 @@ class RideRequestController extends Controller
                 'estimated_fare'        => ['nullable', 'numeric', 'min:0'],
                 'suggested_fare'        => ['nullable', 'numeric', 'min:0'],
                 'customer_offer_fare'   => ['nullable', 'numeric', 'min:0'],
-                'dispatch_mode'         => ['nullable', Rule::in(['auto', 'manual'])],
-                'preferred_driver_id'   => [$isAuto ? 'nullable' : 'required', 'integer', 'exists:drivers,id'],
+                'dispatch_mode'         => ['nullable', Rule::in(['auto', 'nearby', 'pool', 'manual'])],
+                'preferred_driver_id'   => [$isPool ? 'nullable' : 'required', 'integer', 'exists:drivers,id'],
                 'fallback_driver_ids'   => ['nullable', 'array', 'max:5'],
                 'fallback_driver_ids.*' => ['integer', 'exists:drivers,id'],
+                'driver_ids'            => [$isList ? 'required' : 'nullable', 'array', 'min:1', 'max:30'],
+                'driver_ids.*'          => ['integer', 'exists:drivers,id'],
                 'kvkk_consent'          => ['required', 'accepted'],
             ], [
                 'kvkk_consent.accepted'       => 'KVKK onayını işaretlemen gerekiyor.',
@@ -434,26 +443,54 @@ class RideRequestController extends Controller
         // Yolcu sürücü seçmez; talep ÖNCE online favori sürücülere (mesafe sınırsız)
         // aynı anda gider. Favori yoksa/uygun değilse doğrudan yakındaki havuza.
         // Favori dalgası dönmezse cron (tickFavoriteWaves) yakına düşürür.
-        if ($isAuto) {
+        if ($isPool) {
             $customerIsFemale = $authed && $authed->gender === 'female';
 
-            // Auto mod SINIF-BAĞIMSIZ: favoriler yolcunun tanıdığı sürücüler olduğu için
-            // sınıf fark etmeksizin hepsine gider; yakın havuz da sınıf filtresiz — yolcu
-            // bir tutar belirledi, ona razı olan en yakın/favori sürücü alır. (class = null)
-            $favoriteIds = $this->favoriteService->dispatchableFavoriteIds(
+            // Online favoriler (sınıf-bağımsız; erkek yolcuya kadın-only gizli)
+            $onlineFavoriteIds = $this->favoriteService->dispatchableFavoriteIds(
                 $isAuthedCustomer ? $authed : null,
                 null,
                 $customerIsFemale,
             );
-            $isFavoriteWave = ! empty($favoriteIds);
 
-            $poolIds = $isFavoriteWave
-                ? $favoriteIds
-                : $this->dispatcher->nearestDispatchableDriverIds(
+            if ($isAuto) {
+                // Tümü → favori-öncelikli: online favorilere; favori yoksa yakın havuz
+                $isFavoriteWave = ! empty($onlineFavoriteIds);
+                $poolIds = $isFavoriteWave
+                    ? $onlineFavoriteIds
+                    : $this->dispatcher->nearestDispatchableDriverIds(
+                        (float) $validated['pickup_lat'],
+                        (float) $validated['pickup_lng'],
+                        null,
+                    );
+            } elseif ($isNearby) {
+                // Havuz → favorileri hariç tut, favori OLMAYAN yakın sürücüler
+                $isFavoriteWave = false;
+                $poolIds = $this->dispatcher->nearestDispatchableDriverIds(
                     (float) $validated['pickup_lat'],
                     (float) $validated['pickup_lng'],
                     null,
+                    $onlineFavoriteIds,
                 );
+            } else {
+                // pool → yolcunun seçtiği liste (favori/havuz/kadın "hepsi"):
+                // yalnızca online+onaylı+paketli; erkek yolcuya kadın-only gizli
+                $isFavoriteWave = ! empty(array_intersect(
+                    array_map('intval', $validated['driver_ids']),
+                    $onlineFavoriteIds,
+                ));
+                $poolIds = Driver::query()
+                    ->whereIn('id', array_map('intval', $validated['driver_ids']))
+                    ->where('approval_status', 'approved')
+                    ->where('availability_status', 'online')
+                    ->when(config('services.driver.enforce_packages', true), fn ($q) => $q
+                        ->whereNotNull('package_active_until')
+                        ->where('package_active_until', '>', now()))
+                    ->when(! $customerIsFemale, fn ($q) => $q->where('women_passengers_only', false))
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+            }
 
             if (empty($poolIds)) {
                 return response()->json([
