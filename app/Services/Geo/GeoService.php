@@ -122,6 +122,55 @@ class GeoService
     }
 
     /**
+     * İki nokta arası SÜRÜŞ rotası (OSRM) — yol çizgisi + gerçek mesafe/süre.
+     * Düz çizgi yerine gerçek yolu döner. 45 sn cache (canlı takip için taze).
+     *
+     * @return array{points: array<int, array{0: float, 1: float}>, distance_km: float, duration_min: int}|null
+     *         points: [[lat, lon], ...]
+     */
+    public function route(float $fromLat, float $fromLon, float $toLat, float $toLon): ?array
+    {
+        $key = 'geo:route:v1:' . implode(',', [
+            round($fromLat, 4), round($fromLon, 4), round($toLat, 4), round($toLon, 4),
+        ]);
+
+        return Cache::remember($key, now()->addSeconds(45), function () use ($fromLat, $fromLon, $toLat, $toLon) {
+            try {
+                $url = sprintf(
+                    'https://router.project-osrm.org/route/v1/driving/%F,%F;%F,%F',
+                    $fromLon, $fromLat, $toLon, $toLat,
+                );
+                $resp = Http::timeout(5)->get($url, [
+                    'overview'    => 'full',
+                    'geometries'  => 'geojson',
+                ]);
+                if (! $resp->ok()) {
+                    return null;
+                }
+                $route = $resp->json('routes.0');
+                if (! is_array($route)) {
+                    return null;
+                }
+                $coords = $route['geometry']['coordinates'] ?? null;
+                if (! is_array($coords) || empty($coords)) {
+                    return null;
+                }
+                // OSRM [lon, lat] → bizde [lat, lon]
+                $points = array_map(fn ($c) => [(float) $c[1], (float) $c[0]], $coords);
+
+                return [
+                    'points'       => $points,
+                    'distance_km'  => round(((float) ($route['distance'] ?? 0)) / 1000, 2),
+                    'duration_min' => (int) ceil(((float) ($route['duration'] ?? 0)) / 60),
+                ];
+            } catch (\Throwable $e) {
+                report($e);
+                return null;
+            }
+        });
+    }
+
+    /**
      * Ters geocode: koordinat → adres metni. (Alış noktası etiketi için.)
      * Sunucudan çağrılır — tarayıcı doğrudan nominatim.org'a gitmez (yavaş/rate-limit).
      * Yandex Geocoder → boşsa Nominatim. 24 saat cache (koordinat ~5 haneye yuvarlanır).

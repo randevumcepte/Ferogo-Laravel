@@ -65,6 +65,7 @@ Route::middleware(['auth:sanctum', 'device', 'role:customer', 'ability:customer:
         Route::get('bootstrap',          [CustomerRideController::class, 'bootstrap']);
         Route::get('places/search',      [CustomerRideController::class, 'searchPlaces']);
         Route::get('places/resolve',     [CustomerRideController::class, 'resolvePlace']);
+        Route::get('route',              [CustomerRideController::class, 'route']);
         Route::post('fare/calculate',    [CustomerRideController::class, 'calculateFare']);
 
         // Sürücüler

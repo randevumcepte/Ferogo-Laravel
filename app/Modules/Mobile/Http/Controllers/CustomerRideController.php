@@ -175,6 +175,31 @@ class CustomerRideController extends Controller
         return response()->json(['ok' => true, 'fare' => $fare]);
     }
 
+    /**
+     * GET /api/v1/customer/route?from_lat=&from_lng=&to_lat=&to_lng=
+     * İki nokta arası gerçek sürüş rotası (yol çizgisi + mesafe/süre). OSRM proxy.
+     */
+    public function route(Request $request): JsonResponse
+    {
+        $v = $request->validate([
+            'from_lat' => ['required', 'numeric', 'between:-90,90'],
+            'from_lng' => ['required', 'numeric', 'between:-180,180'],
+            'to_lat'   => ['required', 'numeric', 'between:-90,90'],
+            'to_lng'   => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $res = $this->geo->route(
+            (float) $v['from_lat'], (float) $v['from_lng'],
+            (float) $v['to_lat'],   (float) $v['to_lng'],
+        );
+
+        if ($res === null) {
+            return response()->json(['ok' => false, 'message' => 'Rota bulunamadı'], 404);
+        }
+
+        return response()->json(array_merge(['ok' => true], $res));
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  YAKINDAKİ SÜRÜCÜLER + PROFİL
     // ─────────────────────────────────────────────────────────────
