@@ -125,6 +125,17 @@
         @endif
     </section>
 
+    {{-- ===== Ana çağrı: Araç Çağır (birincil aksiyon) ===== --}}
+    <button type="button" id="call-car-btn"
+            class="w-full text-left rounded-3xl bg-gradient-to-br from-brand to-brand-600 text-black p-6 flex items-center gap-4 shadow-lg shadow-brand/20 hover:scale-[1.01] active:scale-[0.99] transition">
+        <span class="w-14 h-14 rounded-2xl bg-black/10 flex items-center justify-center text-3xl shrink-0">🚗</span>
+        <span class="min-w-0 flex-1">
+            <span class="block text-2xl font-extrabold leading-tight">Araç Çağır</span>
+            <span class="block text-sm font-medium text-black/70 mt-0.5">Nereye gitmek istiyorsun? Favori, havuz ya da kadın sürücü — sen seç.</span>
+        </span>
+        <span class="text-2xl font-black shrink-0">→</span>
+    </button>
+
     {{-- ===== Aktif Yolculuk — zengin kart ===== --}}
     @if ($activeRequest || $activeRide)
         @php
@@ -382,6 +393,17 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Yolculuğu iptal et — yalnızca ride_request (rezervasyon değil) için --}}
+            @if ($activeRequest && $activeRequest->public_id)
+                <div class="px-6 pb-5 -mt-1">
+                    <button type="button" id="active-cancel-btn"
+                            data-pid="{{ $activeRequest->public_id }}"
+                            class="text-xs font-semibold text-red-300/80 hover:text-red-200 border border-red-500/30 hover:border-red-500/50 bg-red-500/5 hover:bg-red-500/10 rounded-xl px-3 py-2 transition">
+                        Yolculuğu iptal et
+                    </button>
+                </div>
+            @endif
         </section>
     @endif
 
@@ -959,6 +981,53 @@
 })();
 </script>
 @endif
+
+{{-- ===== Araç Çağır CTA + Aktif yolculuğu iptal ===== --}}
+<script>
+(function () {
+    'use strict';
+
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    // "Araç Çağır" → radar iframe içindeki Hızlı Seç modalını aç.
+    const callBtn = document.getElementById('call-car-btn');
+    if (callBtn) {
+        callBtn.addEventListener('click', () => {
+            const ifr = document.getElementById('radar-iframe');
+            if (ifr && ifr.contentWindow) {
+                ifr.contentWindow.postMessage({ type: 'ferogo:open-booking' }, '*');
+                ifr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
+
+    // "Yolculuğu iptal et" → aktif ride_request'i iptal et, sonra sayfayı yenile.
+    const cancelBtn = document.getElementById('active-cancel-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', async () => {
+            const pid = cancelBtn.dataset.pid;
+            if (!pid) return;
+            if (!confirm('Yolculuğu iptal etmek istediğine emin misin?')) return;
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = 'İptal ediliyor…';
+            try {
+                const res = await fetch(`{{ url('/api/ride-requests') }}/${encodeURIComponent(pid)}/cancel`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                });
+                if (res.ok) {
+                    location.reload();
+                    return;
+                }
+            } catch (_) {}
+            // Hata: butonu geri aç
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = 'Yolculuğu iptal et';
+            alert('İptal edilemedi. Lütfen tekrar dene.');
+        });
+    }
+})();
+</script>
 
 </body>
 </html>

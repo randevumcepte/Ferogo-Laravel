@@ -3858,6 +3858,13 @@
                 } else {
                     setInterval(sendHeight, 2000);
                 }
+
+                // Embed: parent panel "Araç Çağır" butonuna basınca Hızlı Seç modalını aç.
+                // Sadece bu tam mesaj tipine tepki ver, başka mesajlara karışma.
+                window.addEventListener('message', (e) => {
+                    if (!e.data || e.data.type !== 'ferogo:open-booking') return;
+                    if (typeof openQuickModal === 'function') openQuickModal({});
+                });
             }
         } catch (_) {}
     })();
