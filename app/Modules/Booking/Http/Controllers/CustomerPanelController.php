@@ -9,6 +9,7 @@ use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Booking\Services\CustomerTrustService;
 use App\Modules\Booking\Services\FavoriteDriverService;
+use App\Modules\Driver\Models\Driver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -121,6 +122,65 @@ class CustomerPanelController extends Controller
             'favoriteDrivers'=> $favoriteDrivers,
             'favoriteIds'    => $favoriteIds,
         ]);
+    }
+
+    /**
+     * POST /musteri-paneli/api/active/cancel — müşterinin AKTİF yolculuğunu iptal eder.
+     * Takılan/süren yolculuğu her durumda temizler: bağlı talebi + ride'ı 'cancelled'
+     * yapar ve sürücüyü serbest (busy→online) bırakır. Talep durumundan bağımsız çalışır.
+     */
+    public function cancelActiveRide(): JsonResponse
+    {
+        $user = $this->currentCustomer();
+        if (! $user) {
+            return response()->json(['ok' => false, 'message' => 'Oturum bulunamadı.'], 401);
+        }
+
+        $activeStatuses = ['pending', 'searching', 'assigned', 'driver_arriving', 'in_progress'];
+
+        // Aktif ride (bitmemiş)
+        $ride = Ride::query()
+            ->where('customer_user_id', $user->id)
+            ->whereIn('status', $activeStatuses)
+            ->latest('id')
+            ->first();
+
+        // Bu müşterinin bitmemiş talepleri (accepted/pending vs.) — ride üzerinden ya da
+        // doğrudan customer_phone ile bağlı olabilir. İkisini de kapatıyoruz.
+        $requests = RideRequest::query()
+            ->where(function ($q) use ($user, $ride) {
+                $q->where('customer_phone', $user->phone);
+                if ($ride) {
+                    $q->orWhere('ride_id', $ride->id);
+                }
+            })
+            ->whereNotIn('status', ['cancelled', 'expired', 'exhausted', 'completed'])
+            ->get();
+
+        $driverIds = [];
+        foreach ($requests as $req) {
+            if ($req->accepted_driver_id) {
+                $driverIds[] = (int) $req->accepted_driver_id;
+            }
+            $req->update(['status' => 'cancelled']);
+        }
+
+        if ($ride) {
+            if ($ride->driver_id) {
+                $driverIds[] = (int) $ride->driver_id;
+            }
+            $ride->update(['status' => 'cancelled']);
+        }
+
+        // Sürücü(leri) serbest bırak (yalnızca busy olanı → online)
+        if (! empty($driverIds)) {
+            Driver::query()
+                ->whereIn('id', array_unique($driverIds))
+                ->where('availability_status', 'busy')
+                ->update(['availability_status' => 'online']);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     /**

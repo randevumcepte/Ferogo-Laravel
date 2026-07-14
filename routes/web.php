@@ -223,6 +223,7 @@ Route::get('/musteri-giris',         [CustomerPanelController::class, 'showLogin
 Route::get('/musteri-paneli',        [CustomerPanelController::class, 'panel'])->name('customer.panel');
 Route::get('/musteri-paneli/api/state', [CustomerPanelController::class, 'state'])->name('customer.api.state');
 Route::get('/musteri-paneli/api/active-tracking', [CustomerPanelController::class, 'activeTracking'])->name('customer.api.tracking');
+Route::post('/musteri-paneli/api/active/cancel', [CustomerPanelController::class, 'cancelActiveRide'])->name('customer.api.active_cancel');
 Route::post('/musteri-paneli/favori/{driverId}', [CustomerPanelController::class, 'toggleFavorite'])
     ->whereNumber('driverId')->name('customer.favorite.toggle');
 Route::get('/musteri-paneli/profil',  [CustomerPanelController::class, 'showProfile'])->name('customer.profile');

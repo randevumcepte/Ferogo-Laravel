@@ -394,16 +394,13 @@
                 </div>
             </div>
 
-            {{-- Yolculuğu iptal et — aktif talep hangi kaynaktan gelirse gelsin --}}
-            @if (! empty($activeCancelPid))
-                <div class="px-6 pb-5 -mt-1">
-                    <button type="button" id="active-cancel-btn"
-                            data-pid="{{ $activeCancelPid }}"
-                            class="text-xs font-semibold text-red-300/80 hover:text-red-200 border border-red-500/30 hover:border-red-500/50 bg-red-500/5 hover:bg-red-500/10 rounded-xl px-3 py-2 transition">
-                        Yolculuğu iptal et
-                    </button>
-                </div>
-            @endif
+            {{-- Yolculuğu iptal et — aktif kart göründüğü her durumda (Ride ya da talep) --}}
+            <div class="px-6 pb-5 -mt-1">
+                <button type="button" id="active-cancel-btn"
+                        class="text-xs font-semibold text-red-300/80 hover:text-red-200 border border-red-500/30 hover:border-red-500/50 bg-red-500/5 hover:bg-red-500/10 rounded-xl px-3 py-2 transition">
+                    Yolculuğu iptal et
+                </button>
+            </div>
         </section>
     @endif
 
@@ -1005,13 +1002,11 @@
     const cancelBtn = document.getElementById('active-cancel-btn');
     if (cancelBtn) {
         cancelBtn.addEventListener('click', async () => {
-            const pid = cancelBtn.dataset.pid;
-            if (!pid) return;
             if (!confirm('Yolculuğu iptal etmek istediğine emin misin?')) return;
             cancelBtn.disabled = true;
             cancelBtn.textContent = 'İptal ediliyor…';
             try {
-                const res = await fetch(`{{ url('/api/ride-requests') }}/${encodeURIComponent(pid)}/cancel`, {
+                const res = await fetch('{{ route('customer.api.active_cancel') }}', {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                 });
