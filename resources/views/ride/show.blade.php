@@ -2384,7 +2384,7 @@
         }
     }
 
-    function openQuickModal(driver) {
+    function openQuickModal(driver, general = false) {
         // Anonim ziyaretçiler için: önce kayıt/giriş zorunlu (sabotaj koruması).
         if (!FEROGO_AUTH) {
             resetActiveRequest();
@@ -2398,6 +2398,43 @@
             modalEl.classList.remove('hidden');
             modalEl.classList.add('flex');
             document.body.style.overflow = 'hidden';
+            return;
+        }
+
+        // GENEL "Araç Çağır" modu: belirli sürücü YOK. Direkt forma geç; yolcu
+        // aşağıdaki sekmelerden (Tümü/Favorilerim/Havuz/Kadın) kendisi seçer.
+        if (general) {
+            selectedRealDriver = null;
+            selectedDriver = null;
+            selectedDropoff = null;
+            resetActiveRequest();
+            // Jenerik başlık — belirli sürücü gösterme
+            document.getElementById('qm-driver-icon').textContent = '🚗';
+            document.getElementById('qm-driver-name').textContent = 'Sürücünü seç';
+            document.getElementById('qm-driver-rating').textContent = '';
+            document.getElementById('qm-driver-badge').innerHTML = '';
+            document.getElementById('qm-driver-meta').textContent = 'Favori, havuz ya da kadın sürücü — aşağıdan sen seç';
+            modalForm.reset();
+            if (typeof qmResetTabs === 'function') qmResetTabs();
+            qmError.classList.add('hidden');
+            qmDropoffSuggestions.classList.add('hidden');
+            qmFareDistance.textContent = '—';
+            qmFareDuration.textContent = '—';
+            qmFareTotal.textContent = '—';
+            if (userAddressGlobal) {
+                qmPickupInput.value = userAddressGlobal;
+            } else {
+                qmPickupInput.value = '';
+                qmPickupInput.placeholder = 'Konum adresini gir';
+            }
+            if (userCenterGlobal) {
+                qmPickupCoords.textContent = `${userCenterGlobal[0].toFixed(5)}, ${userCenterGlobal[1].toFixed(5)}`;
+            }
+            showStage('form'); // profil aşamasını atla → direkt Hızlı Seç formu
+            modalEl.classList.remove('hidden');
+            modalEl.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => qmDropoffInput.focus(), 100);
             return;
         }
 
@@ -3863,7 +3900,8 @@
                 // Sadece bu tam mesaj tipine tepki ver, başka mesajlara karışma.
                 window.addEventListener('message', (e) => {
                     if (!e.data || e.data.type !== 'ferogo:open-booking') return;
-                    if (typeof openQuickModal === 'function') openQuickModal({});
+                    // general=true → profil aşamasını atla, direkt forma; sürücü seçili gelmesin
+                    if (typeof openQuickModal === 'function') openQuickModal({}, true);
                 });
             }
         } catch (_) {}
