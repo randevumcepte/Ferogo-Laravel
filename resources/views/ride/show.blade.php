@@ -2584,7 +2584,9 @@
     });
 
     function updateFarePreview() {
-        if (!selectedDriver || !userCenterGlobal || !selectedDropoff) {
+        // Genel "Araç Çağır" modunda belirli sürücü olmaz — tahmin yalnızca
+        // konum + hedef ile hesaplanır (sınıf yoksa 'easy'e düşer).
+        if (!userCenterGlobal || !selectedDropoff) {
             qmFareDistance.textContent = '—';
             qmFareDuration.textContent = '—';
             qmFareTotal.textContent = '—';
