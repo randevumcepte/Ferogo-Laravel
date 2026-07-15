@@ -912,24 +912,67 @@ class CustomerRideController extends Controller
         // Terminal olmayan (süren) statüler → geri dönülüp takip edilebilir
         $terminal = ['completed', 'cancelled', 'no_show'];
 
+        $items = $rides->map(fn (Ride $r) => [
+            'public_id'         => $r->public_id,
+            'request_public_id' => $reqByRideId[$r->id] ?? null,
+            'is_active'         => ! in_array($r->status, $terminal, true),
+            'status'            => $r->status,
+            'pickup_address'    => $r->pickup_address,
+            'dropoff_address'   => $r->dropoff_address,
+            'distance_km'       => (float) $r->distance_km,
+            'duration_minutes'  => (int) $r->duration_minutes,
+            'total_fare'        => $r->total_fare ? (float) $r->total_fare : null,
+            'currency'          => $r->currency,
+            'driver_name'       => $r->driver?->user?->name,
+            'vehicle_class'     => $r->vehicleClass?->name,
+            'completed_at'      => $r->completed_at?->toIso8601String(),
+            'created_at'        => $r->created_at->toIso8601String(),
+        ])->values()->all();
+
+        // ─── WEB→UYGULAMA DEVAM ───────────────────────────────────────
+        // Henüz Ride'a bağlanmamış AKTİF talep (web'den "araç çağır" ile
+        // oluşturulmuş, sürücü aranıyor/reconfirm) geçmişte görünmez çünkü
+        // Ride yok. Onu listenin BAŞINA ekle ki uygulamadan takibe dönülebilsin.
+        // (Kabul edilmiş talepler zaten Ride üzerinden customer_user_id ile çıkar.)
+        $user = $request->user();
+        $existingReqPids = collect($reqByRideId)->values()->all();
+        // Telefon ham/normalize saklanmış olabilir → yaygın varyantlarla indeksli eşle
+        $phoneNorm = $this->trustService->normalizePhone((string) $user->phone);
+        $phoneVariants = array_values(array_unique(array_filter([
+            $user->phone, $phoneNorm, '0' . $phoneNorm, '90' . $phoneNorm, '+90' . $phoneNorm,
+        ])));
+        $activeReq = RideRequest::query()
+            ->with('acceptedDriver.user:id,name')
+            ->whereIn('customer_phone', $phoneVariants)
+            ->whereIn('status', ['pending', 'pool_expanded', 'awaiting_customer_reconfirm'])
+            ->whereNotIn('public_id', $existingReqPids)
+            ->latest('id')
+            ->first();
+
+        if ($activeReq) {
+            array_unshift($items, [
+                'public_id'         => $activeReq->public_id,
+                'request_public_id' => $activeReq->public_id,
+                'is_active'         => true,
+                'status'            => 'searching', // "Sürücü aranıyor" etiketi
+                'pickup_address'    => $activeReq->pickup_address,
+                'dropoff_address'   => $activeReq->dropoff_address,
+                'distance_km'       => (float) $activeReq->distance_km,
+                'duration_minutes'  => (int) $activeReq->duration_minutes,
+                'total_fare'        => $activeReq->agreed_fare !== null
+                    ? (float) $activeReq->agreed_fare
+                    : ($activeReq->estimated_fare !== null ? (float) $activeReq->estimated_fare : null),
+                'currency'          => 'TRY',
+                'driver_name'       => $activeReq->acceptedDriver?->user?->name,
+                'vehicle_class'     => null,
+                'completed_at'      => null,
+                'created_at'        => $activeReq->created_at->toIso8601String(),
+            ]);
+        }
+
         return response()->json([
             'ok'    => true,
-            'rides' => $rides->map(fn (Ride $r) => [
-                'public_id'         => $r->public_id,
-                'request_public_id' => $reqByRideId[$r->id] ?? null,
-                'is_active'         => ! in_array($r->status, $terminal, true),
-                'status'            => $r->status,
-                'pickup_address'    => $r->pickup_address,
-                'dropoff_address'   => $r->dropoff_address,
-                'distance_km'       => (float) $r->distance_km,
-                'duration_minutes'  => (int) $r->duration_minutes,
-                'total_fare'        => $r->total_fare ? (float) $r->total_fare : null,
-                'currency'          => $r->currency,
-                'driver_name'       => $r->driver?->user?->name,
-                'vehicle_class'     => $r->vehicleClass?->name,
-                'completed_at'      => $r->completed_at?->toIso8601String(),
-                'created_at'        => $r->created_at->toIso8601String(),
-            ])->values(),
+            'rides' => $items,
         ]);
     }
 
