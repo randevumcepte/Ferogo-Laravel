@@ -1056,6 +1056,17 @@
                     </div>
                 </div>
 
+                {{-- Eşleşme kodu — sürücü VARDIKTAN sonra çıkar; sürücüye söyle, o girince yolculuk başlar --}}
+                <div id="qm-accepted-code-box" class="hidden px-6 py-4 border-b border-white/5">
+                    <div class="rounded-2xl border border-brand/50 bg-brand/10 p-4 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="text-[10px] uppercase tracking-[0.2em] text-brand font-extrabold">Eşleşme Kodu</div>
+                            <div class="text-xs text-zinc-400 mt-0.5">Sürücüye göster — kodu girince yolculuk başlar</div>
+                        </div>
+                        <div id="qm-accepted-code" class="flex items-center gap-1.5 shrink-0"></div>
+                    </div>
+                </div>
+
                 {{-- Chat --}}
                 <div class="px-6 pt-4 pb-2">
                     <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Sürücüyle mesajlaş</div>
@@ -3690,6 +3701,21 @@
             fareRow.classList.remove('hidden');
         } else {
             fareRow.classList.add('hidden');
+        }
+
+        // Eşleşme kodu — backend yalnızca sürücü VARDIKTAN sonra gönderir.
+        const codeBox = document.getElementById('qm-accepted-code-box');
+        const codeEl  = document.getElementById('qm-accepted-code');
+        if (codeBox && codeEl) {
+            const code = s.match_code;
+            if (code) {
+                codeEl.innerHTML = String(code).split('').map(ch =>
+                    `<span class="w-8 h-10 flex items-center justify-center rounded-lg bg-black/50 border border-brand/50 text-white text-xl font-black">${ch}</span>`
+                ).join('');
+                codeBox.classList.remove('hidden');
+            } else {
+                codeBox.classList.add('hidden');
+            }
         }
     }
 

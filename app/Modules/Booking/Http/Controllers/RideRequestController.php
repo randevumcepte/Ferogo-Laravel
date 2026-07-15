@@ -887,6 +887,13 @@ class RideRequestController extends Controller
             'boarding_question_at'  => $req->boarding_question_at?->toIso8601String(),
             'boarding_confirmed_at' => $req->boarding_confirmed_at?->toIso8601String(),
             'started_at'            => $req->started_at?->toIso8601String(),
+            // Eşleşme kodu — yalnızca sürücü VARDIKTAN sonra, yolculuk başlamadan
+            // önce yolcuya gösterilir (sürücü bu kodu girince yolculuk başlar).
+            'match_code'            => ($req->status === 'accepted'
+                    && $req->driver_arrived_at !== null
+                    && $req->started_at === null)
+                ? $req->match_code
+                : null,
             // Faz 6 — visual verification
             'visual_verify_prompted_at' => $req->visual_verify_prompted_at?->toIso8601String(),
             'visual_verified_at'    => $req->visual_verified_at?->toIso8601String(),
