@@ -363,6 +363,19 @@ class CustomerRideController extends Controller
                 'favorite_count' => (int) ($driver->favorite_count ?? 0),
                 'is_female'    => $user?->gender === 'female',
                 'women_only'   => (bool) $driver->women_passengers_only,
+                // Yolcunun sürücüyü seçmeden önce inceleyebilmesi için puan + yorumlar
+                'rating_count' => Ride::where('driver_id', $driver->id)->whereNotNull('customer_rating')->count(),
+                'reviews'      => Ride::query()
+                    ->where('driver_id', $driver->id)
+                    ->whereNotNull('customer_rating')
+                    ->orderByDesc('completed_at')
+                    ->limit(20)
+                    ->get(['customer_rating', 'customer_review', 'completed_at'])
+                    ->map(fn (Ride $r) => [
+                        'stars'        => (int) $r->customer_rating,
+                        'review'       => $r->customer_review,
+                        'completed_at' => $r->completed_at?->toIso8601String(),
+                    ]),
             ],
         ]);
     }
