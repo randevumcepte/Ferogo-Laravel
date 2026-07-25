@@ -375,7 +375,7 @@ class CustomerRideController extends Controller
                     ->map(fn (Ride $r) => [
                         'stars'         => (int) $r->customer_rating,
                         'review'        => $r->customer_review,
-                        'reviewer_name' => $this->shortName($r->customer?->name),
+                        'reviewer_name' => $this->shortName($r->customer?->name) ?? 'Yolcu',
                         'completed_at'  => $r->completed_at?->toIso8601String(),
                     ]),
             ],
@@ -983,7 +983,7 @@ class CustomerRideController extends Controller
             'duration_minutes'  => (int) $r->duration_minutes,
             'total_fare'        => $r->total_fare ? (float) $r->total_fare : null,
             'currency'          => $r->currency,
-            'driver_name'       => $r->driver?->user?->name,
+            'driver_name'       => $this->shortName($r->driver?->user?->name),
             'vehicle_class'     => $r->vehicleClass?->name,
             'completed_at'      => $r->completed_at?->toIso8601String(),
             'created_at'        => $r->created_at->toIso8601String(),
@@ -1023,7 +1023,7 @@ class CustomerRideController extends Controller
                     ? (float) $activeReq->agreed_fare
                     : ($activeReq->estimated_fare !== null ? (float) $activeReq->estimated_fare : null),
                 'currency'          => 'TRY',
-                'driver_name'       => $activeReq->acceptedDriver?->user?->name,
+                'driver_name'       => $this->shortName($activeReq->acceptedDriver?->user?->name),
                 'vehicle_class'     => null,
                 'completed_at'      => null,
                 'created_at'        => $activeReq->created_at->toIso8601String(),
@@ -1134,12 +1134,12 @@ class CustomerRideController extends Controller
         return $payload;
     }
 
-    /** Tam ad → "Ad S." (soyadı gizli, baş harf + nokta). Gizlilik için. */
-    private function shortName(?string $fullName): string
+    /** Tam ad → "Ad S." (soyadı gizli, baş harf + nokta). Boşsa null. Gizlilik için. */
+    private function shortName(?string $fullName): ?string
     {
         $fullName = trim((string) $fullName);
         if ($fullName === '') {
-            return 'Yolcu';
+            return null;
         }
         $parts = preg_split('/\s+/', $fullName);
         return count($parts) > 1
