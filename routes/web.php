@@ -23,6 +23,44 @@ use Illuminate\Support\Str;
 
 Route::get('/', [ReservationController::class, 'index'])->name('home');
 
+// ─── GEÇİCİ DEBUG: dağıtım/teklif teşhisi (test sonrası KALDIR) ───
+Route::get('/debug/ferxgo', function (Request $request) {
+    if ($request->query('k') !== 'ferxgo2026') abort(404);
+
+    $req = \App\Modules\Booking\Models\RideRequest::latest('id')->first();
+    $drivers = \App\Modules\Driver\Models\Driver::query()
+        ->get(['id', 'availability_status', 'approval_status', 'is_suspended',
+               'current_lat', 'current_lng', 'last_location_updated_at',
+               'service_radius_km', 'package_active_until']);
+
+    return response()->json([
+        'server_now'     => now()->toIso8601String(),
+        'latest_request' => $req ? [
+            'id'                        => $req->id,
+            'public_id'                 => $req->public_id,
+            'status'                    => $req->status,
+            'offered_driver_id'         => $req->offered_driver_id,
+            'accepted_driver_id'        => $req->accepted_driver_id,
+            'pool_candidate_driver_ids' => $req->pool_candidate_driver_ids,
+            'is_favorite_wave'          => $req->is_favorite_wave,
+            'offer_expires_at'          => $req->offer_expires_at?->toIso8601String(),
+            'offer_expired?'            => $req->offer_expires_at ? $req->offer_expires_at->isPast() : null,
+            'customer_phone'            => $req->customer_phone,
+            'created_at'                => $req->created_at?->toIso8601String(),
+        ] : null,
+        'drivers' => $drivers->map(fn ($d) => [
+            'id'                       => $d->id,
+            'availability_status'      => $d->availability_status,
+            'approval_status'          => $d->approval_status,
+            'is_suspended'             => (bool) $d->is_suspended,
+            'has_coords'               => $d->current_lat !== null && $d->current_lng !== null,
+            'last_location_updated_at' => $d->last_location_updated_at?->toIso8601String(),
+            'service_radius_km'        => $d->service_radius_km,
+            'package_active_until'     => $d->package_active_until?->toIso8601String(),
+        ]),
+    ], 200, [], JSON_PRETTY_PRINT);
+});
+
 // Reklam tıklama takibi: tıklamayı sayar + detaylı olay kaydı yazar, sponsorun adresine yönlendirir.
 // Opsiyonel ?la=&ln= (uygulamanın bildiği konum) ilçe kırılımı için kullanılır.
 Route::get('/reklam/{advertisement}', function (Advertisement $advertisement, Request $request) {
