@@ -233,13 +233,13 @@ class CustomerRideController extends Controller
 
         $scored = $candidates->map(function (Driver $d) use ($lat, $lng, $favoriteIds) {
             $km = $this->haversineKm($lat, $lng, (float) $d->current_lat, (float) $d->current_lng);
-            $radius = (float) ($d->service_radius_km ?? 5.0);
+            // ─── GEÇİCİ TEST: menzil sınırı kaldırıldı (uzak şehir testi) ───
+            // Sonra geri al: '_within' => $km <= (float)($d->service_radius_km ?? 5.0),
             return array_merge($this->driverShortPayload($d), [
                 'distance_km' => round($km, 2),
                 'eta_minutes' => max(1, (int) round($km * 2.4 + 0.8)),
                 'is_favorite' => in_array((int) $d->id, $favoriteIds, true),
-                // Sürücü yalnızca kendi görünürlük çapı içindeki yolculara çıkar.
-                '_within'     => $km <= $radius,
+                '_within'     => true,
             ]);
         })
             ->filter(fn ($x) => $x['_within'])

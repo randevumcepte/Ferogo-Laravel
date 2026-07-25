@@ -540,11 +540,9 @@ class DispatcherService
 
         $scored = $drivers->map(function ($d) use ($lat, $lng, $maxKm) {
             $km = $this->haversineKm($lat, $lng, (float) $d->current_lat, (float) $d->current_lng);
-            // Sürücünün kendi çapı; yoksa çağıranın verdiği varsayılan. Sistem tavanı ile sınırlı.
-            $radius = min(
-                (float) ($d->service_radius_km ?? $maxKm),
-                self::SERVICE_RADIUS_MAX_KM,
-            );
+            // ─── GEÇİCİ TEST: menzil sınırı kaldırıldı (uzak şehirlerde test için) ───
+            // Sonra geri al: $radius = min((float)($d->service_radius_km ?? $maxKm), self::SERVICE_RADIUS_MAX_KM);
+            $radius = 100000.0;
             return ['id' => (int) $d->id, 'km' => $km, 'radius' => $radius];
         })
             ->filter(fn ($x) => $x['km'] <= $x['radius'])
