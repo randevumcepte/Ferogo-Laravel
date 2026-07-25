@@ -208,6 +208,53 @@ class DriverController extends Controller
     }
 
     /**
+     * GET /api/v1/driver/history?limit=30
+     * Sürücünün yaptığı yolculuklar (tamamlanan + iptal), en yenisi üstte.
+     */
+    public function history(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver($request);
+        if (! $driver) return response()->json(['ok' => false], 404);
+
+        $limit = (int) min(100, max(1, (int) $request->query('limit', 30)));
+
+        $rides = Ride::query()
+            ->with(['customer:id,name', 'vehicleClass:id,name'])
+            ->where('driver_id', $driver->id)
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+
+        $terminal = ['completed', 'cancelled', 'no_show'];
+
+        $items = $rides->map(fn (Ride $r) => [
+            'public_id'        => $r->public_id,
+            'is_active'        => ! in_array($r->status, $terminal, true),
+            'status'           => $r->status,
+            'pickup_address'   => $r->pickup_address,
+            'dropoff_address'  => $r->dropoff_address,
+            'distance_km'      => (float) $r->distance_km,
+            'duration_minutes' => (int) $r->duration_minutes,
+            'total_fare'       => $r->total_fare ? (float) $r->total_fare : null,
+            'currency'         => $r->currency,
+            'customer_name'    => $r->customer?->name,
+            'my_rating'        => $r->customer_rating !== null ? (int) $r->customer_rating : null,
+            'completed_at'     => $r->completed_at?->toIso8601String(),
+            'created_at'       => $r->created_at->toIso8601String(),
+        ])->values()->all();
+
+        // Toplam tamamlanan sayısı (özet başlık için)
+        $completedTotal = Ride::where('driver_id', $driver->id)
+            ->where('status', 'completed')->count();
+
+        return response()->json([
+            'ok'              => true,
+            'items'           => $items,
+            'completed_total' => $completedTotal,
+        ]);
+    }
+
+    /**
      * POST /api/v1/driver/service-radius
      * Body: { radius_km: 2..20 }
      * Sürücünün görünürlük/hizmet çapı — yalnızca bu mesafedeki alış noktaları
