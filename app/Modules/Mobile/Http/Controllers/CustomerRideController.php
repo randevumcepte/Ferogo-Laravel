@@ -1160,6 +1160,10 @@ class CustomerRideController extends Controller
             'rating'             => (float) $d->rating,
             'trips'              => (int) $d->total_rides,
             'favorite_count'     => (int) ($d->favorite_count ?? 0),
+            // Canlı müsaitlik — mobil bunu okumazsa sürücü offline görünür.
+            // (nearby yalnızca online döndürür ama alanı da göndermeli.)
+            'availability_status' => $d->availability_status,
+            'is_online'           => $d->availability_status === 'online',
             'is_female'          => $d->user?->gender === 'female',
             'women_only'         => (bool) $d->women_passengers_only,
             'vehicle_class'      => $vClass?->name,
