@@ -50,14 +50,27 @@ class DriverController extends Controller
             ->first();
 
         // Yeni teklif sadece aktif yolculuk yokken (ve busy değilken)
+        // İki kaynak: (1) direkt 1:1 teklif (pending), (2) havuz teklifi (pool_expanded)
         $offer = null;
         if (! $activeRequest && $driver->availability_status !== 'busy') {
+            // Önce direkt teklif
             $offer = RideRequest::query()
                 ->where('offered_driver_id', $driver->id)
                 ->where('status', 'pending')
                 ->where('offer_expires_at', '>', now())
                 ->orderBy('created_at')
                 ->first();
+
+            // Direkt yoksa havuz teklifi (Tümü/Havuz/Kadın "hepsine gönder" + auto):
+            // pool_expanded ve bu sürücü aday listesinde.
+            if (! $offer) {
+                $offer = RideRequest::query()
+                    ->where('status', 'pool_expanded')
+                    ->where('offer_expires_at', '>', now())
+                    ->whereJsonContains('pool_candidate_driver_ids', $driver->id)
+                    ->orderBy('pool_expanded_at')
+                    ->first();
+            }
         }
 
         $messages = [];
