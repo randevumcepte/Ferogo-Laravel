@@ -368,13 +368,15 @@ class CustomerRideController extends Controller
                 'reviews'      => Ride::query()
                     ->where('driver_id', $driver->id)
                     ->whereNotNull('customer_rating')
+                    ->with('customer:id,name')
                     ->orderByDesc('completed_at')
                     ->limit(20)
-                    ->get(['customer_rating', 'customer_review', 'completed_at'])
+                    ->get(['id', 'customer_user_id', 'customer_rating', 'customer_review', 'completed_at'])
                     ->map(fn (Ride $r) => [
-                        'stars'        => (int) $r->customer_rating,
-                        'review'       => $r->customer_review,
-                        'completed_at' => $r->completed_at?->toIso8601String(),
+                        'stars'         => (int) $r->customer_rating,
+                        'review'        => $r->customer_review,
+                        'reviewer_name' => $this->shortName($r->customer?->name),
+                        'completed_at'  => $r->completed_at?->toIso8601String(),
                     ]),
             ],
         ]);
@@ -1130,6 +1132,19 @@ class CustomerRideController extends Controller
         }
 
         return $payload;
+    }
+
+    /** Tam ad → "Ad S." (soyadı gizli, baş harf + nokta). Gizlilik için. */
+    private function shortName(?string $fullName): string
+    {
+        $fullName = trim((string) $fullName);
+        if ($fullName === '') {
+            return 'Yolcu';
+        }
+        $parts = preg_split('/\s+/', $fullName);
+        return count($parts) > 1
+            ? $parts[0] . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.'
+            : $fullName;
     }
 
     private function driverShortPayload(?Driver $d): ?array
