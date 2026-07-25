@@ -53,25 +53,33 @@ class GeoService
 
         $cacheKey = 'geo:suggest:v2:' . sha1($q);
 
-        return Cache::remember($cacheKey, now()->addMinutes(60), function () use ($q) {
-            // 1) Yandex (zengin POI/işletme) — anahtar varsa
-            if ($this->suggestEnabled()) {
-                $r = $this->yandexSuggest($q);
-                if (! empty($r)) {
-                    return $r;
-                }
-                // Yandex boş/hata → sessizce Photon'a düş
-            }
+        // Yalnız DOLU sonuç cache'lenir (aşağıda). Boş sonucu cache'lemeyiz ki
+        // bir sağlayıcı geçici düşüp toparlayınca arama hemen tekrar çalışsın.
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && ! empty($cached)) {
+            return $cached;
+        }
 
-            // 2) Photon (OSM autocomplete)
-            $r = $this->photonSearch($q);
-            if (! empty($r)) {
-                return $r;
-            }
+        // 1) Yandex (zengin POI/işletme) — anahtar varsa
+        $result = [];
+        if ($this->suggestEnabled()) {
+            $result = $this->yandexSuggest($q);
+            // Yandex boş/hata (ör. 403) → sessizce Photon'a düş
+        }
+        // 2) Photon (OSM autocomplete)
+        if (empty($result)) {
+            $result = $this->photonSearch($q);
+        }
+        // 3) Nominatim yedeği
+        if (empty($result)) {
+            $result = $this->nominatimSearch($q);
+        }
 
-            // 3) Nominatim yedeği
-            return $this->nominatimSearch($q);
-        });
+        if (! empty($result)) {
+            Cache::put($cacheKey, $result, now()->addMinutes(60));
+        }
+
+        return $result;
     }
 
     /**
@@ -406,7 +414,7 @@ class GeoService
         try {
             $response = Http::withHeaders([
                 'User-Agent' => 'FerXGo/1.0 (+https://ferxgo.com.tr)',
-            ])->timeout(3)->get('https://photon.komoot.io/api/', [
+            ])->timeout(7)->get('https://photon.komoot.io/api/', [
                 'q'     => $q,
                 'lang'  => 'default',
                 'lat'   => 38.4237,
@@ -524,7 +532,7 @@ class GeoService
             $response = Http::withHeaders([
                 'User-Agent'      => 'FerXGo/1.0 (+https://ferxgo.com.tr)',
                 'Accept-Language' => 'tr,en',
-            ])->timeout(3)->get('https://nominatim.openstreetmap.org/search', [
+            ])->timeout(7)->get('https://nominatim.openstreetmap.org/search', [
                 'q'              => $q,
                 'format'         => 'json',
                 'addressdetails' => 0,
