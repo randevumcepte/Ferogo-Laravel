@@ -738,6 +738,51 @@ class CustomerRideController extends Controller
     }
 
     /**
+     * POST /api/v1/customer/ride-requests/{publicId}/rate
+     * Body: { stars: 1..5, review?: string }
+     * Yolculuk tamamlandıktan sonra yolcu sürücüyü puanlar; sürücü ortalaması güncellenir.
+     */
+    public function rateRide(Request $request, string $publicId): JsonResponse
+    {
+        $validated = $request->validate([
+            'stars'  => ['required', 'integer', 'min:1', 'max:5'],
+            'review' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $req  = $this->ownedRequest($publicId);
+        $ride = $req->ride;
+
+        if (! $ride) {
+            return response()->json(['ok' => false, 'message' => 'Yolculuk bulunamadı.'], 404);
+        }
+        if ($ride->status !== 'completed') {
+            return response()->json(['ok' => false, 'message' => 'Yolculuk henüz tamamlanmadı.'], 422);
+        }
+        // Zaten puanlandıysa idempotent
+        if ($ride->customer_rating !== null) {
+            return response()->json(['ok' => true, 'already' => true]);
+        }
+
+        $ride->update([
+            'customer_rating' => (int) $validated['stars'],
+            'customer_review' => $validated['review'] ?? null,
+        ]);
+
+        // Sürücü ortalama puanını yeniden hesapla (tüm puanlı yolculuklarının ortalaması)
+        if ($ride->driver_id) {
+            $avg = Ride::query()
+                ->where('driver_id', $ride->driver_id)
+                ->whereNotNull('customer_rating')
+                ->avg('customer_rating');
+            if ($avg !== null) {
+                Driver::where('id', $ride->driver_id)->update(['rating' => round((float) $avg, 2)]);
+            }
+        }
+
+        return response()->json(['ok' => true, 'message' => 'Değerlendirmen için teşekkürler!']);
+    }
+
+    /**
      * POST /api/v1/customer/ride-requests/{publicId}/counter
      * Body: { amount } — müşteri sürücünün karşı teklifine yeni fiyat verir.
      */
@@ -1027,6 +1072,9 @@ class CustomerRideController extends Controller
             'offered_driver'        => null,
             'accepted_driver'       => null,
             'ride_public_id'        => $req->ride?->public_id,
+            // Yolculuk tamamlandı mı + puanlandı mı (yolcuya değerlendirme ekranı için)
+            'completed_at'          => $req->ride?->completed_at?->toIso8601String(),
+            'rated'                 => $req->ride?->customer_rating !== null,
             // Buluşma noktası — sürücü→pickup ETA + haritada rota için
             'pickup_lat'            => $req->pickup_lat !== null ? (float) $req->pickup_lat : null,
             'pickup_lng'            => $req->pickup_lng !== null ? (float) $req->pickup_lng : null,
