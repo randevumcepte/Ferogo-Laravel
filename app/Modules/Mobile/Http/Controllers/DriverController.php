@@ -237,7 +237,7 @@ class DriverController extends Controller
             'duration_minutes' => (int) $r->duration_minutes,
             'total_fare'       => $r->total_fare ? (float) $r->total_fare : null,
             'currency'         => $r->currency,
-            'customer_name'    => $r->customer?->name,
+            'customer_name'    => $this->shortenName($r->customer?->name),
             'my_rating'        => $r->customer_rating !== null ? (int) $r->customer_rating : null,
             'completed_at'     => $r->completed_at?->toIso8601String(),
             'created_at'       => $r->created_at->toIso8601String(),
@@ -252,6 +252,20 @@ class DriverController extends Controller
             'items'           => $items,
             'completed_total' => $completedTotal,
         ]);
+    }
+
+    /**
+     * Gizlilik: yolcu adını "Ad S." biçimine indir (ad tam, soyadın ilk harfi + nokta).
+     */
+    private function shortenName(?string $fullName): ?string
+    {
+        $fullName = trim((string) $fullName);
+        if ($fullName === '') return null;
+
+        $parts = preg_split('/\s+/', $fullName);
+        if (count($parts) < 2) return $fullName;
+
+        return $parts[0] . ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.';
     }
 
     /**
