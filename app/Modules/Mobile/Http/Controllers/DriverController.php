@@ -3,6 +3,7 @@
 namespace App\Modules\Mobile\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Booking\Models\Ride;
 use App\Modules\Booking\Models\RideMessage;
 use App\Modules\Booking\Models\RideRequest;
 use App\Modules\Booking\Services\CustomerTrustService;
@@ -171,6 +172,39 @@ class DriverController extends Controller
         $driver->update(['women_passengers_only' => $validated['enabled']]);
 
         return response()->json(['ok' => true, 'women_only' => (bool) $driver->fresh()->women_passengers_only]);
+    }
+
+    /**
+     * GET /api/v1/driver/reviews
+     * Sürücünün kendi hakkındaki yolcu değerlendirmeleri (puan + yorum) + ortalama.
+     */
+    public function reviews(Request $request): JsonResponse
+    {
+        $driver = $this->currentDriver($request);
+        if (! $driver) return response()->json(['ok' => false], 404);
+
+        $q = Ride::query()
+            ->where('driver_id', $driver->id)
+            ->whereNotNull('customer_rating');
+        $count = (clone $q)->count();
+
+        $reviews = $q->orderByDesc('completed_at')
+            ->limit(50)
+            ->get(['customer_rating', 'customer_review', 'completed_at', 'pickup_address', 'dropoff_address'])
+            ->map(fn (Ride $r) => [
+                'stars'        => (int) $r->customer_rating,
+                'review'       => $r->customer_review,
+                'completed_at' => $r->completed_at?->toIso8601String(),
+                'pickup'       => $r->pickup_address,
+                'dropoff'      => $r->dropoff_address,
+            ]);
+
+        return response()->json([
+            'ok'      => true,
+            'average' => round((float) $driver->rating, 2),
+            'count'   => $count,
+            'reviews' => $reviews,
+        ]);
     }
 
     /**

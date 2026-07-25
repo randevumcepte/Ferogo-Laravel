@@ -107,6 +107,7 @@ Route::middleware(['auth:sanctum', 'device', 'role:driver', 'ability:driver:*'])
         Route::post('availability',          [DriverController::class, 'setAvailability']);
         Route::post('women-only',            [DriverController::class, 'setWomenOnly']);
         Route::post('service-radius',        [DriverController::class, 'setServiceRadius']);
+        Route::get('reviews',                [DriverController::class, 'reviews']);
         Route::middleware('throttle:30,1')->post('location', [DriverController::class, 'updateLocation']);
 
         // Teklifler

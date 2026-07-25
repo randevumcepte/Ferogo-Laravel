@@ -360,6 +360,43 @@
                 </button>
             </div>
         </form>
+
+        {{-- ===== Değerlendirmelerim (yolcuların bıraktığı puan + yorumlar) ===== --}}
+        <section class="bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden">
+            <div class="p-6 border-b border-white/5 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <h2 class="text-lg font-bold">Değerlendirmelerim</h2>
+                    <p class="text-xs text-zinc-500 mt-0.5">Yolcuların senin hakkında bıraktığı puan ve yorumlar</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-3xl font-black text-brand leading-none">{{ number_format((float) ($driver->rating ?? 0), 2) }}</span>
+                    <div class="flex flex-col leading-tight">
+                        <span class="text-amber-400 text-sm">★</span>
+                        <span class="text-[11px] text-zinc-500">{{ $ratingCount }} değerlendirme</span>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 space-y-3">
+                @forelse ($ratings as $r)
+                    <div class="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                            <span class="text-amber-400 text-sm tracking-wide">@for ($i = 1; $i <= 5; $i++){{ $i <= (int) $r->customer_rating ? '★' : '☆' }}@endfor</span>
+                            <span class="text-[11px] text-zinc-500">{{ optional($r->completed_at)->format('d.m.Y') }}</span>
+                        </div>
+                        @if ($r->customer_review)
+                            <p class="text-sm text-zinc-200 leading-relaxed">{{ $r->customer_review }}</p>
+                        @else
+                            <p class="text-sm text-zinc-500 italic">Yorum bırakılmadı</p>
+                        @endif
+                        @if ($r->pickup_address || $r->dropoff_address)
+                            <p class="text-[11px] text-zinc-600 mt-1.5 truncate">{{ $r->pickup_address }} → {{ $r->dropoff_address }}</p>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-sm text-zinc-500 text-center py-6">Henüz değerlendirme yok. İlk yolculukların tamamlandıktan sonra buraya düşecek.</p>
+                @endforelse
+            </div>
+        </section>
     </main>
 
     <script>

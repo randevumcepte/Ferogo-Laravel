@@ -92,6 +92,20 @@ class RidesTable
                         default => $state,
                     }),
 
+                TextColumn::make('customer_rating')
+                    ->label('Puan')
+                    ->formatStateUsing(fn ($state): string => $state ? str_repeat('★', (int) $state) . ' (' . (int) $state . ')' : '—')
+                    ->color('warning')
+                    ->sortable(),
+
+                TextColumn::make('customer_review')
+                    ->label('Yorum')
+                    ->limit(60)
+                    ->tooltip(fn ($state): ?string => $state)
+                    ->placeholder('—')
+                    ->wrap()
+                    ->toggleable(),
+
                 TextColumn::make('scheduled_at')
                     ->label('Tarih')
                     ->dateTime('d.m.Y H:i')

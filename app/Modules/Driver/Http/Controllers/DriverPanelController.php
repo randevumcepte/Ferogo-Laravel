@@ -136,12 +136,24 @@ class DriverPanelController extends Controller
             ->latest('id')
             ->first();
 
+        // Değerlendirmeler — bu sürücü hakkında yolcuların bıraktığı puan + yorumlar
+        $ratedQuery = \App\Modules\Booking\Models\Ride::query()
+            ->where('driver_id', $driver->id)
+            ->whereNotNull('customer_rating');
+        $ratingCount = (clone $ratedQuery)->count();
+        $ratings = $ratedQuery
+            ->orderByDesc('completed_at')
+            ->limit(30)
+            ->get(['id', 'customer_rating', 'customer_review', 'completed_at', 'pickup_address', 'dropoff_address']);
+
         return view('driver.profile', [
             'driver'                 => $driver->loadMissing('user', 'currentVehicle.vehicleClass'),
             'user'                   => $driver->user,
             'vehicle'                => $driver->currentVehicle,
             'vehicleClasses'         => \App\Modules\Vehicle\Models\VehicleClass::where('is_active', true)->orderBy('id')->get(['id', 'slug', 'name']),
             'pendingVehicleRequest'  => $pendingVehicleRequest,
+            'ratings'                => $ratings,
+            'ratingCount'            => $ratingCount,
         ]);
     }
 
