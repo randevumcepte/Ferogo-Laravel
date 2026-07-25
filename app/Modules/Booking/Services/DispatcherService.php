@@ -518,8 +518,8 @@ class DispatcherService
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
             ->where('is_suspended', false)
-            ->whereNotNull('package_active_until')
-            ->where('package_active_until', '>', now())
+            // ─── GEÇİCİ TEST: aktif paket şartı kaldırıldı ───
+            // Sonra geri al: ->whereNotNull('package_active_until')->where('package_active_until', '>', now())
             ->whereNotNull('current_lat')
             ->whereNotNull('current_lng')
             // ─── GEÇİCİ TEST: bayat konum penceresi 3dk → 6 saat (uzak/pasif test) ───

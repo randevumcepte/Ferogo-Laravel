@@ -144,7 +144,8 @@ class FavoriteDriverService
             ->where('approval_status', 'approved')
             ->where('availability_status', 'online')
             ->where('is_suspended', false)
-            ->when(config('services.driver.enforce_packages', true), fn ($q) => $q
+            // ─── GEÇİCİ TEST: aktif paket şartı kaldırıldı (eski when: config('services.driver.enforce_packages', true)) ───
+            ->when(false, fn ($q) => $q
                 ->whereNotNull('package_active_until')
                 ->where('package_active_until', '>', now()))
             ->when(! $customerIsFemale, fn ($q) => $q->where('women_passengers_only', false))
