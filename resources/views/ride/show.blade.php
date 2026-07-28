@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
-@section('title', 'Yolculuk Yap · FerXGo · Paylaşımlı Yolculuk')
-@section('description', 'Şehir içi, havalimanı veya uzun mesafe — bağımsız üye sürücüler, konforlu araçlar, şeffaf katkı payı. 60 saniyede paylaşımlı yolculuk eşleştirmesi.')
+@section('title', 'Yolculuk Yap · FerXGo · Yolculuk Eşleştirme')
+@section('description', 'Şehir içi, havalimanı veya uzun mesafe — bağımsız üye sürücüler, konforlu araçlar, şeffaf katkı payı. Hızlı ve güvenli yolculuk eşleştirmesi.')
 
 @php
     /** @var \App\Models\User|null $authedCustomer */
@@ -1167,7 +1167,7 @@
                     @foreach([
                         ['01', 'Adresini yaz', 'Alış ve bırakış adresini gir, araç sınıfını seç. Tahmini katkı payı anında ekranda.', '📍'],
                         ['02', 'Telefonunu doğrula', 'SMS ile gelen kodu gir. Hesabın 30 saniyede hazır, ödeme yolculuk sonunda.', '✓'],
-                        ['03', 'Yola çık', 'Üye sürücü ve plaka SMS ile gelir. Kapına gelir, paylaşımlı yolculuk başlar.', '🛣'],
+                        ['03', 'Yola çık', 'Üye sürücü ve plaka SMS ile gelir. Kapına gelir, yolculuk başlar.', '🛣'],
                     ] as $step)
                         <div class="relative text-center">
                             <div class="relative inline-flex items-center justify-center w-16 h-16 rounded-full bg-black border-2 border-brand text-2xl mb-5 mx-auto">
@@ -1319,7 +1319,7 @@
                     ['✈️', 'Havalimanı', 'Uçuş takipli kapı önü yolculuk'],
                     ['💼', 'İş Toplantısı', 'Zamanında, temsil eden araç'],
                     ['🎉', 'Düğün & Gece', 'Özel etkinlik, VIP karşılama'],
-                    ['🏙', 'Şehir İçi', 'Hızlı, güvenli, paylaşımlı yolculuk hattı'],
+                    ['🏙', 'Şehir İçi', 'Güvenli yolculuk eşleştirme hattı'],
                 ] as $uc)
                     <a href="{{ route('home') }}#rezervasyon" class="bento-card rounded-2xl p-6 border border-white/5 block group">
                         <div class="text-3xl mb-3">{{ $uc[0] }}</div>

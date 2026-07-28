@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'FerXGo · Paylaşımlı Yolculuk Platformu')</title>
-    <meta name="description" content="@yield('description', 'FerXGo, bağımsız üye sürücüleri ve yolcuları buluşturan dijital paylaşımlı yolculuk platformudur. Şeffaf katkı payı, 7/24 platform erişimi.')">
+    <title>@yield('title', 'FerXGo · İzmir Yolculuk Eşleştirme ve Ulaşım Teknolojisi')</title>
+    <meta name="description" content="@yield('description', 'FerXGo, yolcu ve bağımsız üye sürücüleri dijital ortamda buluşturan bir yolculuk eşleştirme ve ulaşım teknolojisi platformudur. Ticari taşımacılık hizmeti sunmaz; şeffaf katkı payı, 7/24 platform erişimi.')">
 
     @include('partials.seo')
 
@@ -155,7 +155,7 @@
                 <div class="text-2xl font-extrabold mb-3">
                     <span class="text-white">Fer</span><span class="text-brand italic">X</span><span class="text-white">Go</span>
                 </div>
-                <p class="leading-relaxed max-w-sm">FerXGo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk platformudur. Yolculuk hizmeti üye sürücü ile yolcu arasında gerçekleşir; FerXGo yalnızca aracılık ve eşleştirme hizmeti sunar.</p>
+                <p class="leading-relaxed max-w-sm">FerXGo, yolcu ve bağımsız üye sürücüleri dijital ortamda buluşturan bir yolculuk eşleştirme ve ulaşım teknolojisi platformudur. Yolculuk hizmeti üye sürücü ile yolcu arasında gerçekleşir; FerXGo yalnızca aracılık ve eşleştirme hizmeti sunar.</p>
 
                 {{-- Güven rozetleri --}}
                 <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs">
@@ -282,9 +282,9 @@
                 <div class="flex items-start gap-3">
                     <div class="w-9 h-9 rounded-xl bg-brand/15 text-brand flex items-center justify-center flex-shrink-0">🛡</div>
                     <div>
-                        <div class="font-semibold text-white mb-1">Paylaşımlı Yolculuk Platformu</div>
+                        <div class="font-semibold text-white mb-1">Yolculuk Eşleştirme Platformu</div>
                         <p class="text-zinc-400 leading-relaxed text-[13px]">
-                            FerXGo, bağımsız üye sürücüler ile yolcuları dijital ortamda buluşturan bir paylaşımlı yolculuk koordinasyon platformudur.
+                            FerXGo, yolcu ve bağımsız üye sürücüleri dijital ortamda buluşturan bir yolculuk eşleştirme ve koordinasyon platformudur.
                             6563 sayılı E-Ticaret Kanunu kapsamında <strong class="text-zinc-200">aracı hizmet sağlayıcı</strong> sıfatıyla faaliyet gösterir;
                             ticari taşımacılık hizmeti sağlamaz.
                         </p>
@@ -310,7 +310,7 @@
                         <div class="font-semibold text-white mb-1">Hizmet Bölgesi</div>
                         <p class="text-zinc-400 leading-relaxed text-[13px]">
                             FerXGo şu anda <strong class="text-zinc-200">İzmir</strong>'de aktiftir. Havalimanı yolculuğu, şehir içi ve
-                            kurumsal paylaşımlı yolculuk hizmetlerimiz mevcuttur. Hizmet kapsamımız yeni şehirlerle büyümeye devam etmektedir.
+                            kurumsal yolculuk eşleştirme hizmetlerimiz mevcuttur. Hizmet kapsamımız yeni şehirlerle büyümeye devam etmektedir.
                         </p>
                     </div>
                 </div>

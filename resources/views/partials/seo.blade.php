@@ -5,8 +5,8 @@
     değerlerini kullanır; yoksa mantıklı varsayılanlara düşer.
 --}}
 @php
-    $seoTitle       = trim($__env->yieldContent('title', 'FerXGo · İzmir Paylaşımlı Yolculuk Platformu'));
-    $seoDescription = trim($__env->yieldContent('description', 'FerXGo, İzmir\'de bağımsız üye sürücüler ile yolcuları buluşturan dijital paylaşımlı yolculuk platformudur. Havalimanı, şehir içi ve kurumsal yolculuklarda şeffaf katkı payı, 7/24 platform erişimi.'));
+    $seoTitle       = trim($__env->yieldContent('title', 'FerXGo · İzmir Yolculuk Eşleştirme ve Ulaşım Teknolojisi'));
+    $seoDescription = trim($__env->yieldContent('description', 'FerXGo, İzmir\'de yolcu ve bağımsız üye sürücüleri dijital ortamda buluşturan bir yolculuk eşleştirme ve ulaşım teknolojisi platformudur. Ticari taşımacılık hizmeti sunmaz; 6563 sayılı Kanun kapsamında aracı hizmet sağlayıcıdır. Şeffaf katkı payı, 7/24 platform erişimi.'));
     $seoCanonical   = trim($__env->yieldContent('canonical', url()->current()));
     $seoImage       = asset('images/og-image.png');
     $seoSiteUrl     = config('services.seo.site_url');
@@ -15,11 +15,11 @@
         '@context'      => 'https://schema.org',
         '@type'         => 'Organization',
         'name'          => 'FerXGo',
-        'alternateName' => 'FerXGo Paylaşımlı Yolculuk Platformu',
+        'alternateName' => 'FerXGo Yolculuk Eşleştirme Platformu',
         'url'           => $seoSiteUrl,
         'logo'          => asset('images/ferxgo-logo.png'),
         'image'         => $seoImage,
-        'description'   => 'FerXGo, İzmir\'de bağımsız üye sürücüler ile yolcuları buluşturan dijital paylaşımlı yolculuk ve yazılım platformudur. Ticari taşımacılık hizmeti sunmaz; aracı hizmet sağlayıcı olarak faaliyet gösterir.',
+        'description'   => 'FerXGo, İzmir\'de yolcu ve bağımsız üye sürücüleri buluşturan bir dijital yolculuk eşleştirme ve yazılım platformudur. Ticari taşımacılık hizmeti sunmaz; aracı hizmet sağlayıcı olarak faaliyet gösterir.',
         'telephone'     => config('services.seo.phone'),
         'areaServed'    => ['@type' => 'City', 'name' => 'İzmir'],
         'address'       => ['@type' => 'PostalAddress', 'addressLocality' => 'İzmir', 'addressCountry' => 'TR'],

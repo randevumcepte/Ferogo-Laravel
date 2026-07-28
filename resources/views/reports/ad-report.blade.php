@@ -108,7 +108,7 @@
     </div>
 
     <div class="foot">
-        FerXGo · İzmir Paylaşımlı Yolculuk Platformu · ferxgo.com.tr<br>
+        FerXGo · İzmir Yolculuk Eşleştirme Platformu · ferxgo.com.tr<br>
         Rakamlar teknik ölçüme dayanır. Konum verisi yalnızca kullanıcı izni olan etkileşimlerde toplanır (KVKK uyumlu, ham IP saklanmaz).
     </div>
 </div>

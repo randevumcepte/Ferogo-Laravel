@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
-@section('title', 'FerXGo · İzmir Paylaşımlı Yolculuk Platformu')
-@section('description', 'İzmir\'de bağımsız üye sürücüler ile yolcuları buluşturan paylaşımlı yolculuk platformu. Şeffaf katkı payı, 7/24 platform erişimi.')
+@section('title', 'FerXGo · İzmir Yolculuk Eşleştirme ve Ulaşım Teknolojisi')
+@section('description', 'İzmir\'de yolcu ve bağımsız üye sürücüleri buluşturan dijital yolculuk eşleştirme ve ulaşım teknolojisi platformu. Ticari taşımacılık hizmeti sunmaz; şeffaf katkı payı, 7/24 platform erişimi.')
 
 @push('head')
 <style>
@@ -108,10 +108,10 @@
             <div class="max-w-4xl mx-auto text-center">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold uppercase tracking-wider mb-6 backdrop-blur-sm">
                     <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
-                    İzmir · 7/24 Paylaşımlı Yolculuk
+                    İzmir · 7/24 Yolculuk Eşleştirme
                 </div>
                 <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 tracking-tight drop-shadow-2xl">
-                    <span class="text-shimmer">Paylaşımlı</span> yolculuğun<br>en kolay yolu
+                    <span class="text-shimmer">Yolculuğun</span><br>en kolay yolu
                 </h1>
                 <p class="text-lg md:text-xl text-zinc-200 max-w-2xl mx-auto leading-relaxed mb-10 drop-shadow-lg">
                     Bağımsız üye sürücüler, bakımlı araçlar, şeffaf katkı payı.<br>
@@ -421,7 +421,7 @@
                     </div>
 
                     <div class="text-center">
-                        <div class="text-sm text-zinc-300 mb-3">Yolculuk paylaşım tutarını belirle</div>
+                        <div class="text-sm text-zinc-300 mb-3">Mesafeye göre önerilen katkı payı</div>
 
                         <div class="flex items-center justify-center gap-4 sm:gap-6">
                             <button type="button" id="fare-minus" aria-label="Azalt"
@@ -450,7 +450,7 @@
                 </button>
 
                 <p class="text-center text-xs text-zinc-500">
-                    Tutarı sen belirlersin — FerXGo hiçbir komisyon almaz. Katkı payı doğrudan sürücüye aittir. Sürücü, teklifini kabul ederse yolculuk eşleşir.
+                    Katkı payı mesafeye göre önerilir — FerXGo hiçbir komisyon almaz, tutar doğrudan sürücüye aittir. Sürücü kabul ederse yolculuk eşleşir.
                 </p>
             </form>
         </div>
@@ -468,7 +468,7 @@
                     ['✈️', 'Havalimanı Yolculuğu', 'Uçuş takibi dahil zamanında eşleştirme'],
                     ['💼', 'Kurumsal Yolculuk', 'İş toplantıları için önceden rezervasyon'],
                     ['⭐', 'Premium Yolculuk', 'Konforlu araçlarla özel anlarınız için'],
-                    ['🏙️', 'Şehir İçi Yolculuk', 'Anlık paylaşımlı yolculuk eşleştirme'],
+                    ['🏙️', 'Şehir İçi Yolculuk', 'Önceden planlı yolculuk eşleştirme'],
                 ] as $service)
                     <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 hover:border-brand/30 transition">
                         <div class="text-3xl mb-3">{{ $service[0] }}</div>

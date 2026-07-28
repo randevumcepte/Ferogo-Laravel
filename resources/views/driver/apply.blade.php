@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
 @section('title', 'Üye Sürücü Olun · FerXGo · Aynı Yolun Yolcusuyla Buluş')
-@section('description', 'FerXGo paylaşımlı yolculuk platformuna bağımsız üye sürücü olarak katıl. Aynı güzergahtaki yolcularla buluş, yol masraflarını paylaş. Platform komisyon almaz; sabit üyelik ile erişirsin. FerXGo ticari taşımacılık değil, dijital eşleştirme hizmetidir.')
+@section('description', 'FerXGo yolculuk eşleştirme platformuna bağımsız üye sürücü olarak katıl. Aynı güzergahtaki yolcularla buluş, yol masraflarını paylaş. Platform komisyon almaz; sabit üyelik ile erişirsin. FerXGo ticari taşımacılık değil, dijital eşleştirme hizmetidir.')
 
 @push('head')
 <style>
@@ -160,7 +160,7 @@
                 @if(isset($categories) && $categories->count() > 0)
                 <section>
                     <div class="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 pb-3 border-b border-white/5">1. Sürücü Kategorisi</div>
-                    <p class="text-xs text-zinc-500 mb-4">Hangi tür araçla paylaşımlı yolculuk yapacaksın?</p>
+                    <p class="text-xs text-zinc-500 mb-4">Hangi tür araçla yolculuk yapacaksın?</p>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         @foreach($categories as $cat)
                             <label class="cursor-pointer">
@@ -458,7 +458,7 @@
                 </h1>
 
                 <p class="text-lg md:text-xl text-zinc-300 leading-relaxed mb-10 max-w-xl">
-                    İzmir'in büyüyen paylaşımlı yolculuk platformuna <strong>bağımsız üye sürücü</strong> olarak katıl. Aynı güzergahtaki yolcularla buluş, yol masraflarını paylaş. Esnek saatler, sabit üyelik, komisyonsuz katkı payı — kendi yolculuğunun sahibi sen ol.
+                    İzmir'in büyüyen yolculuk eşleştirme platformuna <strong>bağımsız üye sürücü</strong> olarak katıl. Aynı güzergahtaki yolcularla buluş, yol masraflarını paylaş. Esnek saatler, sabit üyelik, komisyonsuz katkı payı — kendi yolculuğunun sahibi sen ol.
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -708,7 +708,7 @@
                     <div class="text-xs uppercase tracking-[0.3em] text-brand mb-4">Gereksinimler</div>
                     <h2 class="display-font text-4xl md:text-5xl text-white mb-5">Sende olmalı.</h2>
                     <p class="text-zinc-400 leading-relaxed">
-                        Paylaşımlı yolculuk, doğrulanmış üye sürücüyle başlar. Aşağıdaki maddeler senin için zaten varsa, başvurun anında işleme alınır.
+                        Yolculuk eşleştirmesi, doğrulanmış üye sürücüyle başlar. Aşağıdaki maddeler senin için zaten varsa, başvurun anında işleme alınır.
                     </p>
                 </div>
 
