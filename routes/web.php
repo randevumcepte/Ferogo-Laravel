@@ -375,6 +375,8 @@ Route::view('/mesafeli-satis',      'legal.distance-sales')->name('legal.distanc
 Route::view('/cerez-politikasi',    'legal.cookies')->name('legal.cookies');
 Route::view('/gizlilik-guvenlik',   'legal.privacy-security')->name('legal.privacy-security');
 Route::view('/paylasimli-yolculuk', 'legal.ride-sharing')->name('legal.ride-sharing');
+// Hesap ve veri silme (Google Play zorunlu — herkese açık, girişsiz erişilebilir URL)
+Route::view('/hesap-silme',         'legal.account-deletion')->name('legal.account-deletion');
 
 // Hukuki onay audit log endpoint'i (click-wrap consent kaydı)
 Route::post('/api/legal-consent', [LegalConsentController::class, 'store'])
