@@ -24,6 +24,9 @@ Route::prefix('auth')->group(function () {
     Route::middleware('throttle:6,1')->post('customer/send-otp',   [AuthController::class, 'sendCustomerOtp']);
     Route::middleware('throttle:6,1')->post('customer/verify-otp', [AuthController::class, 'verifyCustomerOtp']);
     Route::middleware('throttle:10,1')->post('driver/login',       [AuthController::class, 'driverLogin']);
+    // Sürücü şifremi unuttum — SMS ile sıfırlama
+    Route::middleware('throttle:6,1')->post('driver/forgot-password', [AuthController::class, 'driverForgotPassword']);
+    Route::middleware('throttle:6,1')->post('driver/reset-password',  [AuthController::class, 'driverResetPassword']);
 });
 
 // ─── AUTHED — ortak (her iki rol) ──────────────────────────────

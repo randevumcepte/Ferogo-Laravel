@@ -128,8 +128,12 @@ class AuthController extends Controller
      */
     public function driverLogin(Request $request): JsonResponse
     {
+        // Geriye uyumluluk: eski uygulama `email` gönderir; yeni uygulama `login`
+        // (e-posta VEYA telefon) gönderir. İkisini de `login` alanında topla.
+        $request->merge(['login' => $request->input('login', $request->input('email'))]);
+
         $validated = $request->validate([
-            'email'        => ['required', 'email', 'max:120'],
+            'login'        => ['required', 'string', 'max:120'],
             'password'     => ['required', 'string', 'min:6', 'max:200'],
             'device_id'    => ['required', 'string', 'min:8', 'max:64'],
             'platform'     => ['nullable', Rule::in(['ios', 'android'])],
@@ -139,28 +143,33 @@ class AuthController extends Controller
             'locale'       => ['nullable', 'string', 'max:8'],
         ]);
 
-        // Brute-force: email başına 1 dk içinde 5 deneme + ip başına 1 saatte 30
-        $emailKey = 'driver_login_email:' . mb_strtolower($validated['email']);
-        $ipKey    = 'driver_login_ip:' . $request->ip();
+        $login   = trim($validated['login']);
+        $isEmail = str_contains($login, '@');
 
-        if (RateLimiter::tooManyAttempts($emailKey, 5)) {
+        // Brute-force: giriş kimliği başına 1 dk içinde 5 deneme + ip başına 1 saatte 30
+        $idKey = 'driver_login_id:' . mb_strtolower($login);
+        $ipKey = 'driver_login_ip:' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($idKey, 5)) {
             return $this->fail('Çok fazla yanlış deneme. 1 dakika bekle.', 429,
-                ['retry_after' => RateLimiter::availableIn($emailKey)]);
+                ['retry_after' => RateLimiter::availableIn($idKey)]);
         }
         if (RateLimiter::tooManyAttempts($ipKey, 30)) {
             return $this->fail('Bu cihazdan çok fazla deneme. Daha sonra dene.', 429,
                 ['retry_after' => RateLimiter::availableIn($ipKey)]);
         }
 
-        $user = User::where('email', $validated['email'])
-            ->where('type', 'driver')
-            ->first();
+        // E-posta ise email ile, değilse telefon ile sürücüyü bul.
+        $user = $isEmail
+            ? User::where('email', $login)->where('type', 'driver')->first()
+            : User::where('phone', $this->trustService->normalizePhone($login))
+                ->where('type', 'driver')->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
-            RateLimiter::hit($emailKey, 60);
+            RateLimiter::hit($idKey, 60);
             RateLimiter::hit($ipKey, 3600);
             // Time-safe failure — varlık sızdırma
-            return $this->fail('E-posta veya şifre hatalı.', 401);
+            return $this->fail('E-posta/telefon veya şifre hatalı.', 401);
         }
 
         if ($user->status !== 'active') {
@@ -177,6 +186,103 @@ class AuthController extends Controller
         return $this->issueMobileToken($user, $request, $validated, role: 'driver', extra: [
             'driver_id'            => $driver->id,
             'availability_status'  => $driver->availability_status,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  SÜRÜCÜ — ŞİFREMİ UNUTTUM (SMS ile sıfırlama)
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/auth/driver/forgot-password
+     * Body: { phone, device_id }
+     *
+     * Sürücünün kayıtlı telefonuna SMS ile 6 haneli sıfırlama kodu gönderir.
+     * Numara enumeration'ını önlemek için, numara kayıtlı bir sürücüye ait
+     * olmasa bile aynı genel başarı mesajı döner (SMS yalnızca gerçek sürücüye gider).
+     */
+    public function driverForgotPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'phone'     => ['required', 'string', 'max:32'],
+            'device_id' => ['required', 'string', 'min:8', 'max:64'],
+        ]);
+
+        $normalized = $this->trustService->normalizePhone($validated['phone']);
+
+        $user = User::where('phone', $normalized)->where('type', 'driver')->first();
+
+        // Anti-enumeration: sürücü yoksa SMS gönderme ama aynı cevabı ver.
+        if (! $user) {
+            return response()->json([
+                'ok'      => true,
+                'message' => 'Bu numara kayıtlıysa doğrulama kodu gönderildi.',
+            ]);
+        }
+
+        $result = $this->otpService->sendOtp($normalized, $request->ip(), $validated['device_id']);
+
+        if (! ($result['ok'] ?? false)) {
+            return $this->fail(
+                $result['message'] ?? 'Kod gönderilemedi.',
+                429,
+                isset($result['retry_after']) ? ['retry_after' => $result['retry_after']] : [],
+            );
+        }
+
+        $response = [
+            'ok'      => true,
+            'message' => 'Bu numara kayıtlıysa doğrulama kodu gönderildi.',
+        ];
+        // Debug modunda kodu cevapta da ver (UI testi kolaylığı)
+        if (isset($result['dev_code'])) {
+            $response['dev_code'] = $result['dev_code'];
+        }
+
+        return response()->json($response);
+    }
+
+    /**
+     * POST /api/v1/auth/driver/reset-password
+     * Body: { phone, code, password, device_id }
+     *
+     * SMS kodu doğrulanınca sürücünün şifresini günceller ve güvenlik için
+     * tüm mevcut bearer token'larını iptal eder (diğer cihaz oturumları düşer).
+     */
+    public function driverResetPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'phone'     => ['required', 'string', 'max:32'],
+            'code'      => ['required', 'string', 'size:6', 'regex:/^\d{6}$/'],
+            'password'  => ['required', 'string', 'min:6', 'max:200'],
+            'device_id' => ['required', 'string', 'min:8', 'max:64'],
+        ]);
+
+        $normalized = $this->trustService->normalizePhone($validated['phone']);
+
+        $verify = $this->otpService->verifyCodeForReset($normalized, $validated['code']);
+        if (! ($verify['ok'] ?? false)) {
+            return $this->fail($verify['message'] ?? 'Kod doğrulanamadı.', 422);
+        }
+
+        $user = User::where('phone', $normalized)->where('type', 'driver')->first();
+        if (! $user) {
+            return $this->fail('Bu numaraya bağlı sürücü hesabı bulunamadı.', 404);
+        }
+
+        $user->update(['password' => Hash::make($validated['password'])]);
+
+        // Güvenlik: tüm eski token'ları iptal et — başka cihazlardaki oturumlar kapansın.
+        $user->tokens()->delete();
+
+        Log::info('[mobile-auth] driver_password_reset', [
+            'user_id' => $user->id,
+            'ip'      => $request->ip(),
+        ]);
+
+        return response()->json([
+            'ok'      => true,
+            'message' => 'Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.',
         ]);
     }
 

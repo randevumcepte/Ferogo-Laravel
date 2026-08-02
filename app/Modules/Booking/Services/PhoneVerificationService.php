@@ -207,6 +207,54 @@ class PhoneVerificationService
     }
 
     /**
+     * SMS kodunu yalnızca DOĞRULAR — müşteri hesabı oluşturmaz, oturum açmaz.
+     * Sürücü şifre sıfırlama gibi, OTP'nin login yan etkisi istenmeyen akışlar için.
+     *
+     * @return array{ok: bool, message?: string}
+     */
+    public function verifyCodeForReset(string $phone, string $code): array
+    {
+        $normalized = $this->trustService->normalizePhone($phone);
+
+        // Brute-force koruması: telefon başına 1 dk içinde max 5 deneme (login akışından ayrı anahtar)
+        $rlKey = self::RL_VERIFY . 'reset:' . $normalized;
+        if (RateLimiter::tooManyAttempts($rlKey, self::MAX_ATTEMPTS)) {
+            return ['ok' => false, 'message' => 'Çok fazla yanlış deneme. 1 dakika bekle.'];
+        }
+        RateLimiter::hit($rlKey, 60);
+
+        $verification = PhoneVerification::where('phone', $normalized)
+            ->whereNull('verified_at')
+            ->where('expires_at', '>', now())
+            ->latest('id')
+            ->first();
+
+        if (! $verification) {
+            return ['ok' => false, 'message' => 'Kodun süresi dolmuş. Yeni kod iste.'];
+        }
+
+        $verification->increment('attempts');
+
+        if ($verification->attempts > self::MAX_ATTEMPTS) {
+            return ['ok' => false, 'message' => 'Çok fazla yanlış deneme. Yeni kod iste.'];
+        }
+
+        if (! Hash::check($code, $verification->code_hash)) {
+            return ['ok' => false, 'message' => 'Kod hatalı. Tekrar dene.'];
+        }
+
+        $verification->update(['verified_at' => now()]);
+
+        // Aynı telefona ait diğer bekleyen kodları temizle
+        PhoneVerification::where('phone', $normalized)
+            ->where('id', '!=', $verification->id)
+            ->whereNull('verified_at')
+            ->delete();
+
+        return ['ok' => true];
+    }
+
+    /**
      * Telefon ile müşteri kaydı bul/oluştur. Synthetic email kullanılır
      * çünkü müşteri girişi sadece OTP ile — email ile login yok.
      */
