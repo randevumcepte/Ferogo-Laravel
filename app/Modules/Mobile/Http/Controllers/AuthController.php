@@ -180,7 +180,7 @@ class AuthController extends Controller
             return $this->fail('Sürücü hesabın henüz onaylı değil.', 403, ['code' => 'driver_not_approved']);
         }
 
-        RateLimiter::clear($emailKey);
+        RateLimiter::clear($idKey);
 
         return $this->issueMobileToken($user, $request, $validated, role: 'driver', extra: [
             'driver_id'            => $driver->id,
