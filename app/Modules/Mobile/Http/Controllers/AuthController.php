@@ -55,6 +55,18 @@ class AuthController extends Controller
             'device_id' => ['required', 'string', 'min:8', 'max:64'],
         ]);
 
+        // DEMO/inceleme müşteri hesabı → gerçek SMS yok, sabit OTP döner.
+        // Uygulama `dev_code`'u kutuya otomatik doldurur (reviewer tek dokunuşla girer).
+        if ($this->demoCustomerByPhone($validated['phone'])) {
+            $code = (string) config('services.customer.demo_otp', '000000');
+            $this->otpService->seedFixedOtp($validated['phone'], $code);
+            return response()->json([
+                'ok'       => true,
+                'message'  => 'Doğrulama kodu gönderildi.',
+                'dev_code' => $code,
+            ]);
+        }
+
         // Ban + rate limit ortak kontrolü (web tarafıyla aynı koruma)
         $check = $this->trustService->canRequestRide(
             $validated['phone'],
@@ -451,6 +463,16 @@ class AuthController extends Controller
      */
     private function driverByPhone(string $input): ?User
     {
+        return $this->userByPhone($input, 'driver');
+    }
+
+    /**
+     * Telefonla kullanıcıyı FORMATTAN BAĞIMSIZ bul (tip filtreli).
+     * Telefon DB'de 5412908144 / 05... / 90... / +90... gibi kayıtlı olabilir;
+     * son 10 haneyi baz alıp tüm olası formatları birden sorgular.
+     */
+    private function userByPhone(string $input, string $type): ?User
+    {
         $digits = preg_replace('/\D/', '', $input); // yalnızca rakamlar
         $last10 = substr($digits, -10);             // sondaki 10 hane = asıl numara
         if (strlen($last10) < 10) {
@@ -465,9 +487,23 @@ class AuthController extends Controller
             $this->trustService->normalizePhone($input),
         ]);
 
-        return User::where('type', 'driver')
+        return User::where('type', $type)
             ->whereIn('phone', $candidates)
             ->first();
+    }
+
+    /**
+     * Girilen telefon bir DEMO/inceleme müşteri hesabına mı ait?
+     * (config services.customer.demo_user_ids)
+     */
+    private function demoCustomerByPhone(string $input): ?User
+    {
+        $ids = config('services.customer.demo_user_ids', []);
+        if (empty($ids)) {
+            return null;
+        }
+        $user = $this->userByPhone($input, 'customer');
+        return ($user && in_array((int) $user->id, $ids, true)) ? $user : null;
     }
 
     private function fail(string $message, int $status, array $extra = []): JsonResponse

@@ -42,6 +42,23 @@ return [
         ), fn ($id) => $id > 0)),
     ],
 
+    /*
+     * Müşteri (yolcu) ayarları.
+     *
+     * demo_user_ids: App Store/Play inceleme demo müşteri hesap id'leri.
+     *   Bu hesabın telefonuyla OTP istenince GERÇEK SMS gönderilmez; sabit
+     *   `demo_otp` kodu üretilir ve cevapta döner → uygulama kutuya otomatik
+     *   doldurur, reviewer tek dokunuşla giriş yapar.
+     * .env: DEMO_CUSTOMER_USER_IDS=2  ·  DEMO_CUSTOMER_OTP=000000
+     */
+    'customer' => [
+        'demo_user_ids' => array_values(array_filter(array_map(
+            'intval',
+            explode(',', (string) env('DEMO_CUSTOMER_USER_IDS', '2')),
+        ), fn ($id) => $id > 0)),
+        'demo_otp' => (string) env('DEMO_CUSTOMER_OTP', '000000'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

@@ -255,6 +255,27 @@ class PhoneVerificationService
     }
 
     /**
+     * Demo/inceleme hesabı için SABİT OTP kodunu doğrudan yazar — gerçek SMS GÖNDERMEZ.
+     * verifyOtp bu kodu normal akışta kabul eder; reviewer koda tek dokunuşla girer.
+     */
+    public function seedFixedOtp(string $phone, string $code): void
+    {
+        $normalized = $this->trustService->normalizePhone($phone);
+
+        // Aynı telefona ait eski bekleyen kodları temizle
+        PhoneVerification::where('phone', $normalized)
+            ->whereNull('verified_at')
+            ->delete();
+
+        PhoneVerification::create([
+            'phone'      => $normalized,
+            'code_hash'  => Hash::make($code),
+            'attempts'   => 0,
+            'expires_at' => now()->addMinutes(30), // reviewer'a bol süre
+        ]);
+    }
+
+    /**
      * Telefon ile müşteri kaydı bul/oluştur. Synthetic email kullanılır
      * çünkü müşteri girişi sadece OTP ile — email ile login yok.
      */
