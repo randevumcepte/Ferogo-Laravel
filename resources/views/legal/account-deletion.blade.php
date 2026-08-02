@@ -30,7 +30,7 @@
 <ul>
     <li>
         <strong>E-posta:</strong>
-        <a href="mailto:hesapsil@ferxgo.com.tr?subject=Hesap%20Silme%20Talebi">hesapsil@ferxgo.com.tr</a>
+        <a href="mailto:hesapsil@ferxgo.com?subject=Hesap%20Silme%20Talebi">hesapsil@ferxgo.com</a>
     </li>
     <li>
         E-postanızda hesabınızla ilişkili <strong>telefon numaranızı</strong> (yolcu hesabı) veya
@@ -65,7 +65,7 @@
 <h2>5. İletişim</h2>
 <p>
     Hesap silme veya kişisel verilerinize ilişkin diğer talepleriniz için bizimle iletişime geçebilirsiniz:
-    <a href="mailto:hesapsil@ferxgo.com.tr">hesapsil@ferxgo.com.tr</a>
+    <a href="mailto:hesapsil@ferxgo.com">hesapsil@ferxgo.com</a>
 </p>
 
 @endsection
