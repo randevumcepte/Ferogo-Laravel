@@ -159,11 +159,10 @@ class AuthController extends Controller
                 ['retry_after' => RateLimiter::availableIn($ipKey)]);
         }
 
-        // E-posta ise email ile, değilse telefon ile sürücüyü bul.
+        // E-posta ise email ile, değilse telefon ile (formattan bağımsız) sürücüyü bul.
         $user = $isEmail
             ? User::where('email', $login)->where('type', 'driver')->first()
-            : User::where('phone', $this->trustService->normalizePhone($login))
-                ->where('type', 'driver')->first();
+            : $this->driverByPhone($login);
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             RateLimiter::hit($idKey, 60);
@@ -208,9 +207,7 @@ class AuthController extends Controller
             'device_id' => ['required', 'string', 'min:8', 'max:64'],
         ]);
 
-        $normalized = $this->trustService->normalizePhone($validated['phone']);
-
-        $user = User::where('phone', $normalized)->where('type', 'driver')->first();
+        $user = $this->driverByPhone($validated['phone']);
 
         // Anti-enumeration: sürücü yoksa SMS gönderme ama aynı cevabı ver.
         // Korumalı demo/inceleme hesabı da aynı şekilde: SMS GÖNDERME, normal cevabı ver.
@@ -261,7 +258,7 @@ class AuthController extends Controller
 
         $normalized = $this->trustService->normalizePhone($validated['phone']);
 
-        $user = User::where('phone', $normalized)->where('type', 'driver')->first();
+        $user = $this->driverByPhone($validated['phone']);
 
         // Korumalı demo/inceleme hesabı → şifre DEĞİŞMEZ, token'lar iptal edilmez;
         // ama akış normalmiş gibi başarı döner (App Store/Play reviewer takılmasın).
@@ -442,6 +439,35 @@ class AuthController extends Controller
     private function isResetProtected(User $user): bool
     {
         return in_array((int) $user->id, config('services.driver.reset_protected_user_ids', []), true);
+    }
+
+    /**
+     * Telefonla sürücü kullanıcısını FORMATTAN BAĞIMSIZ bul.
+     *
+     * Sürücü telefonu DB'de farklı formatlarda kayıtlı olabilir:
+     *   5412908144 · 05412908144 · 905412908144 · +905412908144
+     * Bu yüzden girdiden son 10 haneyi (asıl numara) çıkarıp tüm olası
+     * formatları birden sorgularız.
+     */
+    private function driverByPhone(string $input): ?User
+    {
+        $digits = preg_replace('/\D/', '', $input); // yalnızca rakamlar
+        $last10 = substr($digits, -10);             // sondaki 10 hane = asıl numara
+        if (strlen($last10) < 10) {
+            return null;
+        }
+
+        $candidates = array_unique([
+            $last10,          // 5412908144
+            '0' . $last10,    // 05412908144
+            '90' . $last10,   // 905412908144
+            '+90' . $last10,  // +905412908144
+            $this->trustService->normalizePhone($input),
+        ]);
+
+        return User::where('type', 'driver')
+            ->whereIn('phone', $candidates)
+            ->first();
     }
 
     private function fail(string $message, int $status, array $extra = []): JsonResponse
