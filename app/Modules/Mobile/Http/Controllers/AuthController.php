@@ -366,6 +366,56 @@ class AuthController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Hesap silme — uygulama içinden (Apple Guideline 5.1.1(v) & Google Play zorunlu).
+     *
+     * Kişisel veriler geri döndürülemez şekilde anonimleştirilir, hesap pasifleştirilir
+     * ve kullanıcının tüm token'ları iptal edilir. Tamamlanmış yolculuk/fatura kayıtları
+     * yasal saklama yükümlülüğü gereği anonim olarak korunur (web deleteAccount ile aynı esas).
+     */
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        DB::transaction(function () use ($user) {
+            // Sürücü ise sürücü kaydını pasifleştir + son konumu temizle
+            if ($user->isDriver()) {
+                Driver::where('user_id', $user->id)->update([
+                    'availability_status' => 'offline',
+                    'is_suspended'        => true,
+                    'current_lat'         => null,
+                    'current_lng'         => null,
+                ]);
+            }
+
+            // Avatar dosyasını sil (yerel dosya ise)
+            if ($user->avatar && ! str_starts_with($user->avatar, 'http')) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            }
+
+            // Kişisel bilgileri anonimleştir, hesabı pasifleştir
+            $user->update([
+                'name'              => 'Silinmiş Kullanıcı #' . $user->id,
+                'email'             => 'deleted-' . $user->id . '@ferogo.local',
+                'phone'             => null,
+                'tc_no'             => null,
+                'birth_date'        => null,
+                'gender'            => null,
+                'avatar'            => null,
+                'phone_verified_at' => null,
+                'status'            => 'suspended',
+                'password'          => bcrypt(\Illuminate\Support\Str::random(60)),
+            ]);
+
+            // Tüm cihaz token'ları + Sanctum erişim token'larını iptal et
+            $tokenIds = $user->tokens()->pluck('id');
+            DeviceToken::whereIn('personal_access_token_id', $tokenIds)->delete();
+            $user->tokens()->delete();
+        });
+
+        return response()->json(['ok' => true, 'message' => 'Hesabın silindi.']);
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  Helpers
     // ─────────────────────────────────────────────────────────────

@@ -33,6 +33,8 @@ Route::prefix('auth')->group(function () {
 Route::middleware(['auth:sanctum', 'device'])->group(function () {
     Route::get('auth/me',     [AuthController::class, 'me']);
     Route::post('auth/logout',[AuthController::class, 'logout']);
+    // Hesap silme (Apple 5.1.1(v) & Google Play zorunlu — uygulama içinden)
+    Route::delete('auth/account', [AuthController::class, 'deleteAccount']);
 
     // Cihaz yönetimi
     Route::get('devices',                   [DeviceController::class, 'index']);
