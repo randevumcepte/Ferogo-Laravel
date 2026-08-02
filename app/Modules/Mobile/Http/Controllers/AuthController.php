@@ -213,7 +213,8 @@ class AuthController extends Controller
         $user = User::where('phone', $normalized)->where('type', 'driver')->first();
 
         // Anti-enumeration: sürücü yoksa SMS gönderme ama aynı cevabı ver.
-        if (! $user) {
+        // Korumalı demo/inceleme hesabı da aynı şekilde: SMS GÖNDERME, normal cevabı ver.
+        if (! $user || $this->isResetProtected($user)) {
             return response()->json([
                 'ok'      => true,
                 'message' => 'Bu numara kayıtlıysa doğrulama kodu gönderildi.',
@@ -260,12 +261,22 @@ class AuthController extends Controller
 
         $normalized = $this->trustService->normalizePhone($validated['phone']);
 
+        $user = User::where('phone', $normalized)->where('type', 'driver')->first();
+
+        // Korumalı demo/inceleme hesabı → şifre DEĞİŞMEZ, token'lar iptal edilmez;
+        // ama akış normalmiş gibi başarı döner (App Store/Play reviewer takılmasın).
+        if ($user && $this->isResetProtected($user)) {
+            return response()->json([
+                'ok'      => true,
+                'message' => 'Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.',
+            ]);
+        }
+
         $verify = $this->otpService->verifyCodeForReset($normalized, $validated['code']);
         if (! ($verify['ok'] ?? false)) {
             return $this->fail($verify['message'] ?? 'Kod doğrulanamadı.', 422);
         }
 
-        $user = User::where('phone', $normalized)->where('type', 'driver')->first();
         if (! $user) {
             return $this->fail('Bu numaraya bağlı sürücü hesabı bulunamadı.', 404);
         }
@@ -421,6 +432,16 @@ class AuthController extends Controller
                 ],
             ], $extra));
         });
+    }
+
+    /**
+     * Kullanıcı, şifre sıfırlamaya karşı korumalı mı (demo/inceleme hesabı)?
+     * config('services.driver.reset_protected_user_ids') listesindeki id'ler için
+     * SMS gönderilmez ve şifre değiştirilmez.
+     */
+    private function isResetProtected(User $user): bool
+    {
+        return in_array((int) $user->id, config('services.driver.reset_protected_user_ids', []), true);
     }
 
     private function fail(string $message, int $status, array $extra = []): JsonResponse

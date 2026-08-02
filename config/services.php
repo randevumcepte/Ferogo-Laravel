@@ -27,6 +27,19 @@ return [
      */
     'driver' => [
         'enforce_packages' => env('DRIVER_ENFORCE_PACKAGES', true),
+
+        /*
+         * Şifre sıfırlamaya karşı KORUMALI kullanıcı id'leri (demo/inceleme hesapları).
+         * App Store / Play inceleme ekibi bu hesaplarla "Şifremi unuttum" denese bile:
+         *   - SMS gönderilmez
+         *   - şifre DEĞİŞMEZ
+         * ama akış normalmiş gibi başarı döner (reviewer takılmasın).
+         * .env: DRIVER_RESET_PROTECTED_IDS=19,42 (virgülle çoklu). Varsayılan: 19.
+         */
+        'reset_protected_user_ids' => array_values(array_filter(array_map(
+            'intval',
+            explode(',', (string) env('DRIVER_RESET_PROTECTED_IDS', '19')),
+        ), fn ($id) => $id > 0)),
     ],
 
     'resend' => [
